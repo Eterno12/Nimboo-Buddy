@@ -1,0 +1,181 @@
+/*
+ * Layout da janela do mascote. Uma única árvore serve aos dois modos (o mascote
+ * nunca é remontado); `data-mode` e `data-open` só mudam as medidas.
+ *
+ * As medidas da ilha precisam acompanhar `shared/presentation.ts`. A janela é
+ * SEMPRE 352x380; a forma da janela (setShape) acompanha a ilha:
+ *   recolhida        176x58  = pílula 160x48 + folga (8px laterais, 10px embaixo)
+ *   expandida, home  352x174 = pílula 336x164 + a mesma folga
+ *   expandida, tarefas 352x380 = pílula 336x370 + a mesma folga
+ *
+ * A ilha é sempre desenhada no tamanho máximo (336x370) e o `clip-path`
+ * revela só a parte necessária. Animar o recorte evita layout a cada quadro.
+ * Como a janela é centralizada, o mesmo desenho serve para as duas janelas.
+ */
+.shell {
+  --island-ink: #2b2433;
+  --island-ink-raised: #342b3f;
+  --island-text: #f3eef7;
+  --island-accent: #8fd9a8;
+  --island-open-ms: 320ms;
+  --island-close-ms: 220ms;
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-cubic: cubic-bezier(0.645, 0.045, 0.355, 1);
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Camada animada de entrada/saída (a transformação é aplicada por Web Animations). */
+.presence {
+  position: absolute;
+  inset: 0;
+}
+
+.island-shadow {
+  display: none;
+}
+
+.shell-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.shell[data-mode='floating'] {
+  cursor: grab;
+}
+
+/* ---------- Modo ilha ---------- */
+
+.shell[data-mode='island'] {
+  cursor: pointer;
+  /* Saltos menores: o topo da janela é a borda da tela. */
+  --jump-y: -12px;
+  --hop-y: -6px;
+  --startle-y: -8px;
+}
+
+/* A sombra fica num pai: dentro do elemento recortado ela seria cortada. */
+.shell[data-mode='island'] .island-shadow {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 336px;
+  height: 370px;
+  margin-left: -168px;
+  filter: drop-shadow(0 6px 8px rgba(20, 12, 28, 0.38));
+  pointer-events: none;
+}
+
+.island {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--island-ink-raised) 0%, var(--island-ink) 100%);
+  /* Recolhida: pílula 160x48 centralizada, colada ao topo (370 - 48 = 322). */
+  clip-path: inset(0 88px 322px 88px round 0 0 24px 24px);
+  /* Fechar é mais rápido que abrir (~70%). */
+  transition: clip-path var(--island-close-ms) var(--ease-in-out-cubic);
+  pointer-events: auto;
+}
+
+/* Aberta: a altura depende da tela (home 164, tarefas 370). */
+.shell[data-open='true'] .island {
+  clip-path: inset(0 0 206px 0 round 0 0 28px 28px);
+  transition-duration: var(--island-open-ms);
+  transition-timing-function: var(--ease-out-quint);
+}
+
+/*
+ * O SVG tem 200 unidades de lado; com 59px a escala é ~0,295: a folha (y=48)
+ * encosta a 4px do topo da pílula e a base do corpo (y=184) fica ~4px acima da
+ * borda inferior. A posição não muda ao expandir (continuidade espacial).
+ */
+.shell[data-mode='island'] .shell-stage {
+  inset: auto;
+  top: -10px;
+  left: 50%;
+  width: 59px;
+  height: 59px;
+  margin-left: -29.5px;
+}
+
+.shell[data-open='true'][data-view='tasks'] .island {
+  clip-path: inset(0 0 0 0 round 0 0 28px 28px);
+}
+
+/* ---------- Conteúdo da ilha expandida ---------- */
+
+.island-content {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 52px;
+  opacity: 0;
+  transform: translateY(-6px);
+  /* Some antes de o recorte fechar. */
+  transition:
+    opacity 90ms ease-out,
+    transform 90ms ease-out;
+}
+
+.shell[data-open='true'] .island-content {
+  opacity: 1;
+  transform: none;
+  /* Aparece depois de o recorte já ter aberto um pouco. */
+  transition:
+    opacity 180ms ease-out 130ms,
+    transform 240ms var(--ease-out-quint) 130ms;
+}
+
+.island-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.island-shortcut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--island-text);
+  font: 500 12.5px/1.2 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  text-align: center;
+}
+
+.island-shortcut:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.island-shortcut:focus-visible {
+  outline: 2px solid var(--island-accent);
+  outline-offset: 2px;
+}
+
+/* Tela de tarefas: ocupa o espaço abaixo do mascote (370 - 52 - 12 = 306px). */
+.island-tasks {
+  height: 306px;
+  animation: island-fade 160ms ease-out;
+}
+
+@keyframes island-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

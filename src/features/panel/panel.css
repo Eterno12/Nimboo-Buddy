@@ -1,0 +1,7 @@
+.panel {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 16px 18px;
+  background: #fdf8f3;
+  color: #3b3040;
+}

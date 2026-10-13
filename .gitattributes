@@ -1,0 +1,11 @@
+# Normaliza finais de linha: o repositório guarda LF; o Git converte conforme o sistema.
+* text=auto
+
+# Arquivos que precisam manter LF mesmo no Windows (scripts executados pelo Node/esbuild).
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.md text eol=lf

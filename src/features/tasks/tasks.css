@@ -1,0 +1,397 @@
+/*
+ * Lista de tarefas. Duas variantes de tema: painel (claro) e ilha (escuro).
+ *
+ * Os tokens `--t-*` são cores SÓLIDAS em hexadecimal de propósito:
+ * `tests/contrast.test.ts` lê este arquivo e confere as razões de contraste
+ * (texto >= 4,5:1; bordas e ícones >= 3:1). Ao mudar uma cor, rode `npm test`.
+ */
+.tasks {
+  --t-bg: #fdf8f3; /* fundo do painel (precisa ser igual ao de panel.css) */
+  --t-text: #3b3040;
+  --t-muted: #6f6478;
+  --t-field-bg: #ffffff;
+  --t-field-border: #857b8e;
+  --t-hover: #f1ebe5;
+  --t-accent: #25754a; /* verde-menta escurecido: texto branco >= 4,5:1 */
+  --t-accent-text: #ffffff;
+  --t-danger: #b3364f;
+  --t-focus: #25754a;
+  --t-scroll-thumb: #857b8e;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+  color: var(--t-text);
+  font: 400 13.5px/1.35 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  user-select: none;
+}
+
+.tasks[data-variant='island'] {
+  --t-bg: #342b3f; /* extremo mais claro do degradê da ilha (pior caso) */
+  --t-text: #f3eef7;
+  --t-muted: #b9afc4;
+  --t-field-bg: #3d3548;
+  --t-field-border: #948b9f;
+  --t-hover: #40374c;
+  --t-accent: #8fd9a8;
+  --t-accent-text: #1f1a26;
+  --t-danger: #ff9fb2;
+  --t-focus: #8fd9a8;
+  --t-scroll-thumb: #948b9f;
+}
+
+/* Só para leitores de tela. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tasks-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  flex: none;
+}
+
+.tasks-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tasks-count {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--t-hover);
+  font-size: 12px;
+  color: var(--t-muted);
+}
+
+/* Campo + botão; o campo cresce até 4 linhas para mostrar o texto digitado inteiro. */
+.tasks-form {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.tasks-input {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  max-height: 96px;
+  padding: 8px 12px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 10px;
+  background: var(--t-field-bg);
+  color: var(--t-text);
+  font: inherit;
+  line-height: 1.35;
+  resize: none;
+  /* Cresce com o texto (até max-height); calculado pelo navegador, sem JS. */
+  field-sizing: content;
+  overflow-y: auto;
+  user-select: text;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-scroll-thumb) transparent;
+}
+
+.tasks-input::placeholder {
+  color: var(--t-muted);
+}
+
+.tasks-input[aria-invalid='true'] {
+  border-color: var(--t-danger);
+  border-width: 2px;
+  padding: 7px 11px;
+}
+
+.tasks-add {
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--t-accent);
+  color: var(--t-accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tasks-add:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.tasks-add:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tasks-meta {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  min-height: 16px;
+  margin-top: -4px;
+}
+
+.tasks-counter {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-muted);
+}
+
+.tasks-counter[data-over='true'] {
+  color: var(--t-danger);
+  font-weight: 600;
+}
+
+.tasks-error {
+  flex: none;
+  margin: 0;
+  color: var(--t-danger);
+  font-size: 12.5px;
+}
+
+.tasks-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-scroll-thumb) transparent;
+}
+
+.tasks-empty {
+  margin: 14px 4px;
+  color: var(--t-muted);
+}
+
+.tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 4px 0 2px;
+  border-radius: 10px;
+}
+
+.task:hover {
+  background: var(--t-hover);
+}
+
+.task-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.task[data-done='true'] .task-title {
+  color: var(--t-muted);
+  text-decoration: line-through;
+}
+
+.task[data-busy='true'] {
+  opacity: 0.6;
+}
+
+.task-date {
+  color: var(--t-muted);
+  font-size: 12px;
+}
+
+.task-primary,
+.tasks-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t-muted);
+  cursor: pointer;
+}
+
+.task-primary:hover:not(:disabled),
+.tasks-icon-button:hover:not(:disabled) {
+  background: var(--t-hover);
+  color: var(--t-text);
+}
+
+.task-primary:disabled,
+.tasks-icon-button:disabled {
+  cursor: default;
+}
+
+.task-circle {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--t-muted);
+  border-radius: 50%;
+}
+
+.task-primary:hover:not(:disabled) .task-circle {
+  border-color: var(--t-accent);
+}
+
+.task-remove:hover:not(:disabled) {
+  color: var(--t-danger);
+}
+
+/* "Desfazer": aparece abaixo da lista por ~5 s; a barra mostra o tempo restante. */
+.tasks-undo-area {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 84px;
+  overflow-y: auto;
+}
+
+.tasks-undo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 10px;
+  background: var(--t-field-bg);
+  overflow: hidden;
+}
+
+.tasks-undo-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tasks-undo-button {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tasks[data-variant='panel'] .tasks-undo-button {
+  color: var(--t-focus);
+}
+
+.tasks-undo-button:hover {
+  background: var(--t-hover);
+}
+
+.tasks-undo-timer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--t-accent);
+  transform-origin: left;
+  animation-name: tasks-undo-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes tasks-undo-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Rodapé fixo: a seção "Concluídas" nunca fica escondida atrás da rolagem. */
+.tasks-footer {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+  border-top: 1px solid var(--t-field-border);
+}
+
+.tasks-disclosure {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tasks-disclosure:hover:not(:disabled) {
+  color: var(--t-text);
+  background: var(--t-hover);
+}
+
+.tasks-disclosure:disabled {
+  cursor: default;
+}
+
+.tasks-disclosure svg {
+  transition: transform 160ms ease-out;
+}
+
+.tasks-disclosure svg[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+.tasks-completed-body {
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t-scroll-thumb) transparent;
+}
+
+.tasks-hint {
+  margin: 4px 4px 2px;
+  color: var(--t-muted);
+  font-size: 12px;
+}
+
+.tasks button:focus-visible,
+.tasks-input:focus-visible {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}

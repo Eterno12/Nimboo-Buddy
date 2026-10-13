@@ -1,0 +1,149 @@
+import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { IPC } from '../shared/ipc';
+import {
+  fail,
+  isTaskId,
+  ok,
+  type PendingRemoval,
+  type Task,
+  type TaskChange,
+  type TaskResult,
+  type TaskSnapshot,
+} from '../shared/tasks';
+import { openDatabase } from './tasks/database';
+import { SqliteTaskRepository } from './tasks/sqliteTaskRepository';
+import { RemovalScheduler } from './tasks/removalScheduler';
+import type { DatabaseSync } from 'node:sqlite';
+
+/** A limpeza das concluídas também roda de hora em hora enquanto o app está aberto. */
+const PURGE_INTERVAL_MS = 60 * 60 * 1000;
+
+export interface TasksService {
+  close(): void;
+}
+
+interface TasksServiceOptions {
+  dbPath: string;
+  /** URL de origem das páginas do app (servidor de desenvolvimento) ou `file://`. */
+  isAppUrl(url: string): boolean;
+}
+
+const STORAGE_DOWN = () => fail<never>('storage', 'As tarefas não estão disponíveis agora.');
+
+const CHANNELS = [
+  IPC.tasksList,
+  IPC.tasksCreate,
+  IPC.tasksComplete,
+  IPC.tasksReopen,
+  IPC.tasksScheduleRemove,
+  IPC.tasksUndoRemove,
+];
+
+/**
+ * Liga o repositório SQLite ao IPC. O banco só existe no processo principal; o
+ * renderer chama operações específicas e tipadas, e é avisado das mudanças.
+ */
+export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): TasksService {
+  let db: DatabaseSync | null = null;
+  let repo: SqliteTaskRepository | null = null;
+  let scheduler: RemovalScheduler | null = null;
+
+  /**
+   * Avisa todas as janelas. Cada envio é isolado: uma janela com problema não
+   * impede as demais de atualizar (nem afeta a operação já confirmada).
+   * "Concluída" é um evento à parte: só ela faz o Mochi comemorar.
+   */
+  const broadcast = (change?: TaskChange) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win.isDestroyed()) continue;
+      try {
+        win.webContents.send(IPC.tasksChanged);
+        if (change?.type === 'completed') win.webContents.send(IPC.tasksCompleted);
+      } catch (error) {
+        console.error('Falha ao avisar uma janela sobre mudanças nas tarefas:', error);
+      }
+    }
+  };
+
+  try {
+    db = openDatabase(dbPath);
+    repo = new SqliteTaskRepository(db, { onChange: (c) => broadcast(c) });
+    scheduler = new RemovalScheduler(repo, { onChange: () => broadcast() });
+    repo.purgeExpired(); // limpeza na inicialização
+  } catch (error) {
+    // O app segue funcionando (mascote, ilha); só as tarefas ficam indisponíveis.
+    console.error('Não foi possível abrir o banco de tarefas:', error);
+    try {
+      db?.close();
+    } catch {
+      /* já fechado */
+    }
+    db = null;
+    repo = null;
+    scheduler = null;
+  }
+
+  const timer = setInterval(() => {
+    try {
+      repo?.purgeExpired();
+    } catch (error) {
+      console.error('Falha na limpeza periódica de tarefas:', error);
+    }
+  }, PURGE_INTERVAL_MS);
+  timer.unref();
+
+  /** Só o quadro principal de uma janela do próprio app pode usar o banco. */
+  const trusted = (event: IpcMainInvokeEvent): boolean => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) return false;
+    if (event.senderFrame !== event.sender.mainFrame) return false;
+    return isAppUrl(event.senderFrame?.url ?? '');
+  };
+
+  interface Ctx {
+    repo: SqliteTaskRepository;
+    scheduler: RemovalScheduler;
+  }
+
+  /** Executa uma operação com validação do remetente (os argumentos são validados pelo repositório). */
+  const handle = <R>(channel: string, op: (ctx: Ctx, arg: unknown) => Promise<TaskResult<R>>) => {
+    ipcMain.handle(channel, async (event, arg: unknown): Promise<TaskResult<R>> => {
+      if (!trusted(event)) return fail('storage', 'Remetente não autorizado.');
+      if (!repo || !scheduler) return STORAGE_DOWN();
+      try {
+        return await op({ repo, scheduler }, arg);
+      } catch (error) {
+        console.error(`Falha em ${channel}:`, error);
+        return fail('storage', 'Não foi possível acessar as tarefas salvas.');
+      }
+    });
+  };
+
+  /** Uma tarefa com exclusão agendada já "não existe" para as demais operações. */
+  const gone = <T>(ctx: Ctx, id: unknown): TaskResult<T> | null =>
+    isTaskId(id) && ctx.scheduler.isPending(id) ? fail('not_found', 'A tarefa foi excluída.') : null;
+
+  handle<TaskSnapshot>(IPC.tasksList, async ({ repo: r, scheduler: s }) => ok(s.snapshot(await r.list())));
+  handle<Task>(IPC.tasksCreate, ({ repo: r }, title) => r.create(title as string)); // validado em validateTitle
+  handle<Task>(IPC.tasksComplete, async (ctx, id) => gone<Task>(ctx, id) ?? ctx.repo.complete(id as string));
+  handle<Task>(IPC.tasksReopen, async (ctx, id) => gone<Task>(ctx, id) ?? ctx.repo.reopen(id as string));
+  handle<PendingRemoval>(IPC.tasksScheduleRemove, ({ scheduler: s }, id) => s.schedule(id as string));
+  handle<Task>(IPC.tasksUndoRemove, ({ scheduler: s }, id) => s.undo(id as string));
+
+  return {
+    close() {
+      clearInterval(timer);
+      for (const channel of CHANNELS) ipcMain.removeHandler(channel);
+      // Exclusões ainda no prazo são canceladas: nada é apagado antes do tempo.
+      scheduler?.dispose();
+      try {
+        db?.close(); // fecha a conexão (e faz o checkpoint do WAL)
+      } catch (error) {
+        console.error('Falha ao fechar o banco de tarefas:', error);
+      }
+      db = null;
+      repo = null;
+      scheduler = null;
+    },
+  };
+}

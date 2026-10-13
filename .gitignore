@@ -1,0 +1,76 @@
+# ── Dependências ─────────────────────────────────────────────
+node_modules/
+
+# ── Saídas de build (regeneráveis com `npm run build`) ───────
+dist/
+dist-electron/
+out/
+release/
+.vite/
+*.tsbuildinfo
+
+# ── Logs e relatórios ────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+report.*.json
+
+# ── Dados locais do usuário (nunca versionar) ────────────────
+# Bancos SQLite e arquivos auxiliares (WAL/SHM/journal), inclusive os preservados
+# como `mochi.db.corrupt-<data>` e backups.
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.corrupt-*
+*.bak
+# Pasta de dados local do app, se alguém rodar com `--user-data-dir` na raiz.
+/data/
+/settings.json
+
+# ── Diretórios temporários de testes ─────────────────────────
+mochi-e2e-*/
+mochi-tasks-*/
+mochi-removal-*/
+mochi-settings-*/
+mochi-spike-*/
+ud-*/
+userdata/
+.tmp/
+tmp/
+temp/
+
+# ── Segredos e configuração local ────────────────────────────
+.env
+.env.*
+!.env.example
+.npmrc
+*.pem
+*.key
+*.pfx
+*.p12
+secrets.*
+
+# ── Cobertura ────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Editor e sistema operacional ─────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Claude Code: preferências locais (o restante de .claude/ pode ser versionado) ──
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
