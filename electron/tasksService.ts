@@ -29,8 +29,11 @@ interface TasksServiceOptions {
   dbPath: string;
   /** URL de origem das páginas do app (servidor de desenvolvimento) ou `file://`. */
   isAppUrl(url: string): boolean;
-  /** Chamado ao abrir e a cada mudança, com as tarefas visíveis (usado pelos lembretes de prazo). */
-  onTasksChanged?(tasks: Task[]): void;
+  /**
+   * Chamado ao abrir e a cada mudança, com as tarefas ativas (lembretes de prazo) e as origens
+   * (sourceRef) de todas as tarefas visíveis, ativas ou concluídas (lembretes de eventos da agenda).
+   */
+  onTasksChanged?(tasks: Task[], sourceRefs: string[]): void;
 }
 
 const STORAGE_DOWN = () => fail<never>('storage', 'As tarefas não estão disponíveis agora.');
@@ -84,7 +87,11 @@ export function startTasksService({ dbPath, isAppUrl, onTasksChanged }: TasksSer
     const currentScheduler = scheduler;
     void currentRepo
       .list()
-      .then((lists) => onTasksChanged(currentScheduler.snapshot(lists).active))
+      .then((lists) => {
+        const visible = currentScheduler.snapshot(lists);
+        const refs = [...visible.active, ...visible.completed].flatMap((t) => (t.sourceRef ? [t.sourceRef] : []));
+        onTasksChanged(visible.active, refs);
+      })
       .catch((error) => console.error('Falha ao publicar as tarefas:', error));
   };
 
@@ -161,8 +168,8 @@ export function startTasksService({ dbPath, isAppUrl, onTasksChanged }: TasksSer
   // Aceita só o título (texto) ou { title, dueAt }; tudo é validado pelo repositório.
   handle<Task>(IPC.tasksCreate, ({ repo: r }, arg) => {
     if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
-      const { title, dueAt } = arg as { title?: unknown; dueAt?: unknown };
-      return r.create(title as string, (dueAt ?? null) as string | null);
+      const { title, dueAt, sourceRef } = arg as { title?: unknown; dueAt?: unknown; sourceRef?: unknown };
+      return r.create(title as string, (dueAt ?? null) as string | null, (sourceRef ?? null) as string | null);
     }
     return r.create(arg as string);
   });

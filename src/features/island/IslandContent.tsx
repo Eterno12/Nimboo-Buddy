@@ -60,6 +60,10 @@ interface IslandContentProps {
   focus: FocusController;
   onOpenTasks: () => void;
   onOpenFocus: () => void;
+  /** Abre a janela de notas. */
+  onOpenNotes: () => void;
+  /** Abre a janela do assistente. */
+  onOpenAssistant: () => void;
   /** Abre o painel nas configurações. */
   onOpenSettings: () => void;
   onBack: () => void;
@@ -76,6 +80,8 @@ export function IslandContent({
   focus,
   onOpenTasks,
   onOpenFocus,
+  onOpenNotes,
+  onOpenAssistant,
   onOpenSettings,
   onBack,
 }: IslandContentProps) {
@@ -107,7 +113,7 @@ export function IslandContent({
       ) : (
         <ul className="island-shortcuts" aria-label="Atalhos">
           {SHORTCUTS.map((s) => {
-            const enabled = s.id === 'tasks' || s.id === 'timer';
+            const enabled = s.id === 'tasks' || s.id === 'timer' || s.id === 'notes' || s.id === 'assistant';
             return (
               <li key={s.id}>
                 <button
@@ -116,7 +122,9 @@ export function IslandContent({
                   className="island-shortcut"
                   disabled={!enabled}
                   title={enabled ? undefined : 'Em breve'}
-                  onClick={s.id === 'tasks' ? onOpenTasks : s.id === 'timer' ? onOpenFocus : undefined}
+                  onClick={
+                    s.id === 'tasks' ? onOpenTasks : s.id === 'timer' ? onOpenFocus : s.id === 'notes' ? onOpenNotes : s.id === 'assistant' ? onOpenAssistant : undefined
+                  }
                 >
                   <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
                     {s.icon}

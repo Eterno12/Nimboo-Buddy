@@ -255,11 +255,59 @@ receber `tasks:changed`.
   `SpeechBubble`). Falas: boas-vindas por hora, tarefa concluída, foco, sono/acordar, cócegas, ociosa.
 - **Cor:** paletas por `data-palette` + variáveis `--m-*` em `mascot.css`; `Mascot.tsx` usa `var()`.
 
-## 12. Agenda, tema escuro e física do arraste (rodada seguinte)
+## 12. Agenda e tema escuro (rodada seguinte)
 
 - **Agenda:** `shared/calendar.ts` (tipos, `validateCalendarUrl`, `todaysAgenda`) → `electron/calendar/ics.ts` (parser/expansão de recorrências) → `calendarSync.ts` (cofre, cópia local, 15 min, falhas) → `calendarService.ts` (IPC, `net.fetch`, `safeStorage`) → `useCalendar`/`AgendaSection`/configurações. Os eventos com horário alimentam uma 2ª instância do `ReminderScheduler`.
 - **Tema:** `settings.theme` + `useTheme` (resolve `auto` por `prefers-color-scheme`) → `data-theme` em `.panel`; tokens escuros em `tasks.css`/`settings.css`/`panel.css`.
-- **Arraste:** `dragPhysics.ts` (puro) + `useDragPhysics` (rAF, escreve `--drag-rot`) → camada `.mascot-drag`; estado `dizzy` no `mascotController`.
+- **Arraste:** voltou à primeira versão (D33): estado `grabbed` com balanço CSS; sem física nem enjoo.
+
+## 13. Personagens (registro, arte, som e ritmo)
+
+```
+shared/settings.ts          CHARACTERS, CharacterId, CHARACTER_LABELS, Settings.character (validado)
+src/features/mascot/
+  characters.ts             registro tipado: label, tagline, traits, face (dx/dy/scale), sound, lines
+  characterArt.tsx          arte por personagem: defs / behind / body / front (sem rosto)
+  Mascot.tsx                monta: defs → sombra → drag > breath > motion > tilt [behind, body, front, face]
+  mascot.css                [data-character] (cores) + complementos animados; reusa as variáveis de estado
+  mascotController.ts       setTraits(): ritmos (ambientPace, sleepAfter, blinkPace, curiosity)
+src/features/audio/
+  sounds.ts                 SoundProfile, applyProfile (dentro de SOUND_LIMITS), voicePlan(profile)
+  soundEngine.ts            configureSound({ enabled, volume, profile }); vibrato por LFO na frequência
+src/features/personality/   SpeechContext.extra: frases do personagem somadas às de sempre
+src/features/settings/      grade "Personagem" com prévias (usa <Mascot uid="pv-<id>">)
+electron/main.ts            submenu "Personagem" (radio) no menu da bandeja/contexto → chooseCharacter()
+```
+
+- **Fluxo da troca:** configurações/bandeja → `settings.update({character})` (main valida) → `settings:changed`
+  para todas as janelas → `MascotView` recalcula `characterInfo(settings.character)` → `<Mascot character>`,
+  `configureSound({profile})` e `setTraits(traits)`. Nenhum remount do controlador; estado e timers seguem.
+- **Rosto compartilhado:** fica sempre em coordenadas do Mochi; cada personagem só o posiciona com um
+  `<g transform>` (atributo, não CSS) em volta de `.mascot-face`, para não colidir com as animações CSS.
+- **Camadas de movimento:** um único dono de `transform` por grupo. Atenção: um grupo com atributo
+  `transform` não deve receber `transform-origin`/`transform-box` por CSS (o origin passa a valer para o
+  atributo); aninhe um grupo para a animação (foi o bug do anel do planeta).
+- **Adicionar um personagem:** (1) id em `CHARACTERS` e rótulo em `CHARACTER_LABELS`; (2) entrada no registro;
+  (3) função de arte em `characterArt.tsx` e variáveis em `mascot.css`; (4) o e2e `characters-ui` já
+  percorre `CHARACTERS` (renderização, rosto dentro do corpo, nada cortado em 12 estados, persistência).
+
+## 14. Evento da agenda → tarefa
+
+- `shared/calendar.ts`: `taskFromEvent` / `canBecomeTask` (puros, testados). `AgendaSection` mostra o botão e usa `useTasks` para saber quais eventos já têm tarefa (`task.sourceRef`).
+- `TaskRepository.create(title, due, sourceRef)` idempotente; migração v3 `source_ref` + índice único parcial.
+- `main.ts`: `agendaEvents` + `linkedEventIds` → `syncEventReminders` (sem lembrete duplicado). Ver D35.
+
+## 15. Notas
+
+- `shared/notes.ts`: modelo, `validateNoteDoc` (lista de permissões), `describeNote`, `searchText`. `electron/notes/sqliteNotesRepository.ts` (migração v4) → `electron/notesService.ts` (IPC `notes:*`, janelas flutuantes, janela de notas) → `window.mochi.notes`.
+- Renderer: `src/features/notes/` — `NoteEditor` (TipTap + barra), `NotesManager` (`#notes`), `NoteWindow` (`#note=<id>`), `useNote` (carregar/salvar em ordem/sincronizar).
+- Fluxo de edição: `onUpdate` → atraso de 600 ms (e ao perder o foco/fechar) → `notes.update` → main valida e grava → `notes:changed` para todas as janelas. Ver D36.
+
+## 16. Assistente
+
+- `shared/assistant.ts` (parser pt-BR → `AssistantCommand`) → `AssistantView` + `assistantActions.ts` (executa pelas APIs existentes).
+- `electron/assistantService.ts`: IPC `assistant:*`, janela, voz (`speech.ts`), conhecimento (`assistantAi.ts`: Wikipédia + Ollama). Contratos em `shared/assistantApi.ts`.
+- Preferências: `assistantWeb`, `assistantLocalAi`, `assistantModel` (todas desligadas por padrão). Ver D37.
 
 ## 11. Foco evoluído, prazos/lembretes e empacotamento
 

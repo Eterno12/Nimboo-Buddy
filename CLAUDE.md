@@ -28,7 +28,6 @@ npm run test:e2e     # interface de tarefas no app REAL via CDP; compila antes; 
 npm run test:e2e:focus # modo foco no app REAL (~1,5 min: inclui uma sessão de 1 min até o fim)
 npm run test:e2e:settings # configurações (tamanhos, cor, balões, painel, prazo/lembrete) no app REAL
 node tests/e2e/calendar-ui.e2e.mjs   # agenda (sem rede, com o gancho de arquivo)
-node tests/e2e/drag-ui.e2e.mjs       # arraste com física/enjoo no app REAL
 npm run pack         # app empacotado em release/win-unpacked (depois: node tests/e2e/packaged.e2e.mjs)
 npm run dist         # instalador release/Mochi Setup <versão>.exe (NSIS por usuário, sem assinatura)
 ```
@@ -45,6 +44,9 @@ interface de tarefas ou na ilha, também `npm run test:e2e`; se mexeu no modo fo
   *flutuante* (240×240 arrastável). Estado do mascote vive no renderer e sobrevive às trocas.
 - **Ciclo (modo ilha):** ilha desce → recolhe/esconde por inatividade → Mochi surge num canto
   inferior → cursor na borda superior traz a ilha de volta.
+- **Personagens:** 8 (Mochi + 7) em UM registro (`src/features/mascot/characters.ts`) sobre o mesmo
+  controlador, rosto, sons e interação; só corpo/complementos (`characterArt.tsx`), cores (`[data-character]`),
+  ritmo e perfil de som mudam. O Mochi original não pode ser alterado. Ver D34.
 - **Tarefas:** SQLite só no main; renderer chama IPC; `tasks:changed` mantém todas as janelas em sincronia.
 - **Contrato compartilhado** em `shared/` (canais IPC, tipos, geometria, regras das tarefas).
 - Detalhes e diagramas: `docs/ARCHITECTURE.md`.
@@ -58,7 +60,7 @@ interface de tarefas ou na ilha, também `npm run test:e2e`; se mexeu no modo fo
 - O banco só é aberto no processo principal. O renderer nunca recebe SQL, caminho de arquivo nem conexão.
 - Handlers `ipcMain` validam o remetente (janela do app, quadro principal, URL do app) e validam os argumentos.
 - Manter a CSP de `index.html`, navegação/`window.open` bloqueados e permissões negadas.
-- **Rede:** só o processo principal fala com a internet, e só para a agenda (iCal) quando a pessoa cola o endereço (D31): https, sem IP/localhost, endereço criptografado com `safeStorage`, nunca devolvido ao renderer. O renderer continua sem rede (CSP). Qualquer chamada externa nova (IA, sync) exige decisão explícita registrada em `docs/DECISIONS.md`.
+- **Rede:** só o processo principal fala com a internet, e só em 3 casos opt-in: a agenda (iCal) quando a pessoa cola o endereço (D31: https, sem IP/localhost, endereço criptografado com `safeStorage`, nunca devolvido ao renderer); a Wikipédia (`pt.wikipedia.org`) e a IA local do Ollama (`127.0.0.1:11434`) quando ligadas em Configurações > Assistente (D37). O renderer continua sem rede (CSP). Qualquer chamada externa nova (IA em nuvem, sync) exige decisão explícita registrada em `docs/DECISIONS.md`.
 
 ## Convenções e armadilhas
 

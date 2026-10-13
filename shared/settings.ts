@@ -24,6 +24,22 @@ export const SHORTCUT_PRESETS = [
 export const MOCHI_COLORS = ['mint', 'peach', 'sky', 'lilac', 'lemon', 'rose'] as const;
 export type MochiColor = (typeof MOCHI_COLORS)[number];
 
+/** Personagens selecionáveis. mochi é o original e o padrão; um valor desconhecido volta a ele. */
+export const CHARACTERS = ['mochi', 'pineapple', 'square', 'mushroom', 'cactus', 'cloud', 'planet', 'ghost'] as const;
+export type CharacterId = (typeof CHARACTERS)[number];
+export const DEFAULT_CHARACTER: CharacterId = 'mochi';
+/** Nomes exibidos (painel, bandeja e leitores de tela): uma única fonte para o main e o renderer. */
+export const CHARACTER_LABELS: Record<CharacterId, string> = {
+  mochi: 'Mochi',
+  pineapple: 'Abacaxi',
+  square: 'Quadrado',
+  mushroom: 'Cogumelo',
+  cactus: 'Cacto',
+  cloud: 'Nuvem',
+  planet: 'Planeta',
+  ghost: 'Fantasma',
+};
+
 /** Tema do painel e das configurações: segue o Windows (automático) ou fixo. A ilha é sempre escura. */
 export const THEMES = ['auto', 'light', 'dark'] as const;
 export type ThemePreference = (typeof THEMES)[number];
@@ -54,7 +70,9 @@ export interface Settings {
   bubbles: boolean;
   /** Esconder a ilha/Mochi enquanto há um app em tela cheia (jogo, vídeo, apresentação). */
   doNotDisturb: boolean;
-  /** Cor do Mochi. */
+  /** Personagem na área de trabalho. */
+  character: CharacterId;
+  /** Cor do Mochi (só o personagem original tem paletas; os demais têm as próprias cores). */
   color: MochiColor;
   /** Tema do painel/configurações. */
   theme: ThemePreference;
@@ -70,6 +88,12 @@ export interface Settings {
   remindersEnabled: boolean;
   /** Aviso antecipado em minutos (0 = só na hora marcada). */
   reminderLeadMin: number;
+  /** O assistente pode pesquisar na Wikipédia quando a pergunta não é um comando (usa a internet). */
+  assistantWeb: boolean;
+  /** O assistente pode usar uma IA local (Ollama, em 127.0.0.1) para conversar. */
+  assistantLocalAi: boolean;
+  /** Modelo do Ollama (ex.: "qwen2.5:3b"). */
+  assistantModel: string;
 }
 
 /** Antecedências oferecidas para o lembrete de prazo (minutos). */
@@ -90,6 +114,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   soundVolume: 0.4,
   bubbles: true,
   doNotDisturb: true,
+  character: 'mochi',
   color: 'mint',
   theme: 'auto',
   focusMinutes: 25,
@@ -99,7 +124,13 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   pomodoroAuto: false,
   remindersEnabled: true,
   reminderLeadMin: 10,
+  assistantWeb: false,
+  assistantLocalAi: false,
+  assistantModel: 'qwen2.5:3b',
 });
+
+/** Nome de modelo aceito (formato do Ollama: nome[:tag], com / para bibliotecas de usuários). */
+export const MODEL_NAME_RE = /^[a-z0-9][a-z0-9._-]{0,40}(?:\/[a-z0-9][a-z0-9._-]{0,40})?(?::[a-z0-9][a-z0-9._-]{0,30})?$/i;
 
 /** Número inteiro dentro de [min, max]; qualquer outra coisa volta ao padrão. */
 function intInRange(v: unknown, min: number, max: number, fallback: number): number {
@@ -153,6 +184,9 @@ export function parseSettings(raw: unknown): Settings {
     if (typeof r.color === 'string' && (MOCHI_COLORS as readonly string[]).includes(r.color)) {
       out.color = r.color as MochiColor;
     }
+    if (typeof r.character === 'string' && (CHARACTERS as readonly string[]).includes(r.character)) {
+      out.character = r.character as CharacterId;
+    }
     if (typeof r.theme === 'string' && (THEMES as readonly string[]).includes(r.theme)) {
       out.theme = r.theme as ThemePreference;
     }
@@ -163,6 +197,9 @@ export function parseSettings(raw: unknown): Settings {
     if (typeof r.pomodoroAuto === 'boolean') out.pomodoroAuto = r.pomodoroAuto;
     if (typeof r.remindersEnabled === 'boolean') out.remindersEnabled = r.remindersEnabled;
     if (isFiniteNumber(r.reminderLeadMin)) out.reminderLeadMin = nearestOf(REMINDER_LEADS_MIN, r.reminderLeadMin);
+    if (typeof r.assistantWeb === 'boolean') out.assistantWeb = r.assistantWeb;
+    if (typeof r.assistantLocalAi === 'boolean') out.assistantLocalAi = r.assistantLocalAi;
+    if (typeof r.assistantModel === 'string' && MODEL_NAME_RE.test(r.assistantModel)) out.assistantModel = r.assistantModel;
   }
   return out;
 }

@@ -40,7 +40,8 @@ export function useTasks() {
     status,
     error,
     reload,
-    create: (title: string, dueAt?: string | null) => api.create(title, dueAt ?? null),
+    create: (title: string, dueAt?: string | null, sourceRef?: string | null) =>
+      api.create(title, dueAt ?? null, sourceRef ?? null),
     setDue: (id: string, dueAt: string | null) => api.setDue(id, dueAt),
     complete: (id: string) => api.complete(id),
     reopen: (id: string) => api.reopen(id),

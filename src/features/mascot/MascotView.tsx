@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Mascot } from './Mascot';
+import { characterInfo } from './characters';
 import { useMascot } from './useMascot';
-import { useDragPhysics } from './useDragPhysics';
 import { MASCOT_STATES } from './mascotStates';
 import { AMBIENT_SOUNDS } from '../audio/sounds';
 import { ANIMATION_LINE, ANIMATION_SOUND } from '../personality/animationReactions';
@@ -42,8 +42,6 @@ export function MascotView() {
   const mascot = useMascot();
   const { pet, activity, debugSet, cursor, grab, release, greet, celebrate } = mascot;
   const svgRef = useRef<SVGSVGElement | null>(null);
-  // Segurar e arrastar: balança para onde vai, gira se for sacudido e fica enjoado se girar demais.
-  const drag = useDragPhysics({ svgRef, onDizzy: mascot.dizzy });
   const press = useRef<{ x: number; y: number; dragging: boolean } | null>(null);
 
   // `island` é referenciado pelo callback de presença antes de ser criado: usa ref.
@@ -87,9 +85,13 @@ export function MascotView() {
   useEffect(() => {
     setHideMs(settings.hideDelaySec === 0 ? Infinity : settings.hideDelaySec * 1000);
   }, [settings.hideDelaySec, setHideMs]);
+  // Personagem escolhido: o som ganha a "voz" dele e o controlador, o ritmo dele (sem reiniciar nada).
+  const character = characterInfo(settings.character);
+  const { setTraits } = mascot;
   useEffect(() => {
-    configureSound({ enabled: settings.soundEnabled, volume: settings.soundVolume });
-  }, [settings.soundEnabled, settings.soundVolume]);
+    configureSound({ enabled: settings.soundEnabled, volume: settings.soundVolume, profile: character.sound });
+  }, [settings.soundEnabled, settings.soundVolume, character]);
+  useEffect(() => setTraits(character.traits), [character, setTraits]);
 
   // Campo de tarefa com foco ou com rascunho: a ilha não recolhe por inatividade.
   const { hold } = useDraft();
@@ -121,6 +123,7 @@ export function MascotView() {
     mood: mascot.mood,
     focusActive,
     suppressed: inIsland && island.open,
+    extra: character.lines,
   });
   sayRef.current = speech.say;
   sayTextRef.current = speech.sayText;
@@ -301,10 +304,7 @@ export function MascotView() {
     e.currentTarget.setPointerCapture(e.pointerId);
     press.current = { x: e.screenX, y: e.screenY, dragging: false };
     activity();
-    if (draggable) {
-      window.mochi.startDrag();
-      drag.begin(e.screenX);
-    }
+    if (draggable) window.mochi.startDrag();
   };
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
@@ -316,7 +316,6 @@ export function MascotView() {
       p.dragging = true;
       grab();
     }
-    drag.move(e.screenX);
     window.mochi.moveDrag();
   };
 
@@ -325,10 +324,7 @@ export function MascotView() {
     if (!p) return;
     press.current = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
-    if (draggable) {
-      window.mochi.endDrag();
-      drag.end();
-    }
+    if (draggable) window.mochi.endDrag();
     if (p.dragging) release();
     else if (inIsland) island.toggle();
     else pet();
@@ -377,6 +373,8 @@ export function MascotView() {
               focus={focus}
               onOpenTasks={() => void openTasks()}
               onOpenFocus={() => void openFocus()}
+              onOpenNotes={() => window.mochi.notes.openManager()}
+              onOpenAssistant={() => window.mochi.assistant.open()}
               onOpenSettings={() => window.mochi.openSettings()}
               onBack={() => setView('home')}
             />
@@ -391,6 +389,7 @@ export function MascotView() {
             hop={mascot.hop}
             blinking={mascot.blinking}
             mood={mascot.mood}
+            character={character.id}
             palette={settings.color}
             onHopEnd={mascot.endHop}
             onHoverChange={mascot.hoverChange}

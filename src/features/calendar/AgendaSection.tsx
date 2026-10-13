@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { eventTimeLabel, todaysAgenda } from '../../../shared/calendar';
+import { canBecomeTask, eventTimeLabel, taskFromEvent, todaysAgenda, type CalendarEvent } from '../../../shared/calendar';
+import { useTasks } from '../tasks/useTasks';
 import { useCalendar } from './useCalendar';
 import './calendar.css';
 
@@ -24,6 +25,11 @@ interface AgendaSectionProps {
  */
 export function AgendaSection({ variant }: AgendaSectionProps) {
   const { state } = useCalendar();
+  const tasks = useTasks();
+  /** Eventos que já viraram tarefa (ativa ou concluída ainda guardada), por id do evento. */
+  const linked = new Set([...tasks.active, ...tasks.completed].flatMap((t) => (t.sourceRef ? [t.sourceRef] : [])));
+  const [busy, setBusy] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(readCollapsed);
   // Reavalia "já passou" a cada minuto sem recarregar nada.
   const [now, setNow] = useState(() => new Date());
@@ -45,6 +51,17 @@ export function AgendaSection({ variant }: AgendaSectionProps) {
   const limit = variant === 'island' ? 3 : 5;
   const shown = collapsed ? [] : today.slice(0, limit);
   const more = today.length - shown.length;
+
+  /** O evento do Google vira uma tarefa do app (título e, se ainda for futuro, o horário como prazo). */
+  const makeTask = async (event: CalendarEvent) => {
+    if (busy) return;
+    const data = taskFromEvent(event, new Date());
+    setBusy(event.id);
+    setProblem(null);
+    const result = await tasks.create(data.title, data.dueAt, data.sourceRef);
+    setBusy(null);
+    if (!result.ok) setProblem(result.error.message);
+  };
 
   const toggle = () => {
     const next = !collapsed;
@@ -79,9 +96,35 @@ export function AgendaSection({ variant }: AgendaSectionProps) {
               <li key={event.id} className="agenda-item" data-past={past} title={event.location ?? undefined}>
                 <span className="agenda-time">{eventTimeLabel(event)}</span>
                 <span className="agenda-title">{event.title}</span>
+                {linked.has(event.id) ? (
+                  <span className="agenda-linked" role="img" aria-label="Já é uma tarefa">
+                    ✓ Tarefa
+                  </span>
+                ) : (
+                  canBecomeTask(event, now) && (
+                    <button
+                      type="button"
+                      className="agenda-make-task"
+                      aria-label={`Virar tarefa: ${event.title}`}
+                      title="Transforma este evento em uma tarefa na sua lista"
+                      disabled={busy === event.id}
+                      onClick={() => void makeTask(event)}
+                    >
+                      <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" focusable="false">
+                        <path d="M5 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Virar tarefa
+                    </button>
+                  )
+                )}
               </li>
             );
           })}
+          {problem && (
+            <li className="agenda-problem" role="alert">
+              {problem}
+            </li>
+          )}
           {more > 0 && <li className="agenda-more">+ {more} {more === 1 ? 'evento' : 'eventos'}</li>}
         </ul>
       )}

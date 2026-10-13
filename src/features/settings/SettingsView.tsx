@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
+import { Mascot } from '../mascot/Mascot';
+import { characterInfo } from '../mascot/characters';
 import {
+  CHARACTERS,
   DEFAULT_SETTINGS,
   HIDE_DELAYS_SEC,
+  MODEL_NAME_RE,
   ISLAND_SCALES,
   MOCHI_COLORS,
   MOCHI_SCALES,
@@ -182,10 +186,16 @@ export function SettingsView({ onBack }: SettingsViewProps) {
 
   // O botão "Ouvir" toca nesta janela: usa os mesmos valores salvos.
   useEffect(() => {
-    configureSound({ enabled: settings.soundEnabled, volume: settings.soundVolume });
-  }, [settings.soundEnabled, settings.soundVolume]);
+    configureSound({
+      enabled: settings.soundEnabled,
+      volume: settings.soundVolume,
+      profile: characterInfo(settings.character).sound,
+    });
+  }, [settings.soundEnabled, settings.soundVolume, settings.character]);
 
   const set = (patch: Partial<Omit<Settings, 'version'>>) => void update(patch);
+  const [modelDraft, setModelDraft] = useState(settings.assistantModel);
+  useEffect(() => setModelDraft(settings.assistantModel), [settings.assistantModel]);
   const resetAll = () =>
     set({
       islandScale: DEFAULT_SETTINGS.islandScale,
@@ -196,6 +206,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       soundVolume: DEFAULT_SETTINGS.soundVolume,
       bubbles: DEFAULT_SETTINGS.bubbles,
       doNotDisturb: DEFAULT_SETTINGS.doNotDisturb,
+      character: DEFAULT_SETTINGS.character,
       color: DEFAULT_SETTINGS.color,
       theme: DEFAULT_SETTINGS.theme,
       focusMinutes: DEFAULT_SETTINGS.focusMinutes,
@@ -204,6 +215,9 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       pomodoroCycle: DEFAULT_SETTINGS.pomodoroCycle,
       pomodoroAuto: DEFAULT_SETTINGS.pomodoroAuto,
       remindersEnabled: DEFAULT_SETTINGS.remindersEnabled,
+      assistantWeb: DEFAULT_SETTINGS.assistantWeb,
+      assistantLocalAi: DEFAULT_SETTINGS.assistantLocalAi,
+      assistantModel: DEFAULT_SETTINGS.assistantModel,
       reminderLeadMin: DEFAULT_SETTINGS.reminderLeadMin,
     });
 
@@ -289,6 +303,37 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       </fieldset>
 
       <fieldset className="settings-group">
+        <legend>Personagem</legend>
+        <div className="settings-characters" role="radiogroup" aria-label="Personagem">
+          {CHARACTERS.map((id) => {
+            const info = characterInfo(id);
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={settings.character === id}
+                aria-label={info.label}
+                title={`${info.label}: ${info.tagline}`}
+                className="settings-character"
+                data-character-id={id}
+                onClick={() => set({ character: id })}
+              >
+                <span className="settings-character-preview">
+                  <Mascot state="idle" replay={0} hop={false} blinking={false} mood="mid" character={id} palette={settings.color} uid={`pv-${id}`} />
+                </span>
+                <span>{info.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="settings-hint">
+          {characterInfo(settings.character).tagline}. A troca vale na hora, com o mesmo som e as mesmas
+          animações.
+        </p>
+      </fieldset>
+
+      <fieldset className="settings-group">
         <legend>Cor do Mochi</legend>
         <div className="settings-swatches" role="radiogroup" aria-label="Cor do Mochi">
           {MOCHI_COLORS.map((c) => (
@@ -305,7 +350,11 @@ export function SettingsView({ onBack }: SettingsViewProps) {
             />
           ))}
         </div>
-        <p className="settings-hint">Em breve: outros personagens além do blob.</p>
+        <p className="settings-hint">
+          {settings.character === 'mochi'
+            ? 'A cor vale na hora.'
+            : 'A cor vale para o Mochi original; os outros personagens têm as próprias cores.'}
+        </p>
       </fieldset>
 
       <fieldset className="settings-group">
@@ -340,6 +389,50 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </label>
       </fieldset>
 
+      <fieldset className="settings-group">
+        <legend>Assistente</legend>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.assistantWeb}
+            onChange={(e) => set({ assistantWeb: e.target.checked })}
+          />
+          <span>
+            Pesquisar na Wikipédia quando eu perguntar algo
+            <small>Usa a internet (só o texto da pergunta é enviado). Desligado por padrão.</small>
+          </span>
+        </label>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.assistantLocalAi}
+            onChange={(e) => set({ assistantLocalAi: e.target.checked })}
+          />
+          <span>
+            Conversar com uma IA local (Ollama)
+            <small>Grátis e privada: roda no seu computador, sem tokens. Precisa do Ollama instalado.</small>
+          </span>
+        </label>
+        <label className="settings-row">
+          <span>Modelo da IA local</span>
+          <input
+            className="settings-text"
+            type="text"
+            value={modelDraft}
+            maxLength={70}
+            spellCheck={false}
+            aria-invalid={!MODEL_NAME_RE.test(modelDraft)}
+            onChange={(e) => setModelDraft(e.target.value)}
+            onBlur={() => {
+              if (MODEL_NAME_RE.test(modelDraft)) set({ assistantModel: modelDraft });
+              else setModelDraft(settings.assistantModel);
+            }}
+          />
+        </label>
+        <p className="settings-hint">
+          O microfone usa o reconhecimento de fala do Windows (Configurações &gt; Privacidade &gt; Fala).
+        </p>
+      </fieldset>
       <fieldset className="settings-group">
         <legend>Sons</legend>
         <label className="settings-row settings-check">

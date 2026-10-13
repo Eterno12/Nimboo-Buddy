@@ -11,8 +11,7 @@ export type MascotState =
   | 'annoyed'
   | 'stretch'
   | 'yawn'
-  | 'lookaround'
-  | 'dizzy';
+  | 'lookaround';
 
 export const MASCOT_STATES: readonly MascotState[] = [
   'idle',
@@ -27,7 +26,6 @@ export const MASCOT_STATES: readonly MascotState[] = [
   'stretch',
   'yawn',
   'lookaround',
-  'dizzy',
 ];
 
 /** Humor de longo prazo, derivado do carinho recebido. */
@@ -43,8 +41,6 @@ export const STATE_DURATION_MS: Partial<Record<MascotState, number>> = {
   stretch: 1500,
   yawn: 2200,
   lookaround: 2400,
-  /** Enjoado de tanto girar: ~5 s e volta ao repouso. */
-  dizzy: 5000,
 };
 
 /** Um estado só interrompe outro de prioridade igual ou menor. */
@@ -60,7 +56,6 @@ export const STATE_PRIORITY: Record<MascotState, number> = {
   giggle: 3,
   annoyed: 3,
   celebrate: 4,
-  dizzy: 4,
   grabbed: 5,
 };
 

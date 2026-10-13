@@ -69,8 +69,10 @@
 
 .agenda-item,
 .agenda-empty,
-.agenda-more {
+.agenda-more,
+.agenda-problem {
   display: flex;
+  align-items: center;
   gap: 8px;
   padding: 2px 0;
   font-size: 12.5px;
@@ -85,6 +87,7 @@
 }
 
 .agenda-title {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   color: var(--t-text);
@@ -117,4 +120,50 @@
 .agenda-connect:hover {
   background: var(--t-hover);
   color: var(--t-text);
+}
+
+/* Botão "Virar tarefa": o evento do Google passa a ser uma tarefa do app. */
+.agenda-make-task {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t-text);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agenda-make-task:hover:not(:disabled) {
+  background: var(--t-accent);
+  border-color: var(--t-accent);
+  color: var(--t-accent-text);
+}
+
+.agenda-make-task:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.agenda-make-task:focus-visible {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}
+
+.agenda-linked {
+  flex: none;
+  color: var(--t-accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.agenda-problem {
+  color: var(--t-danger);
 }

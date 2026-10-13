@@ -12,13 +12,15 @@ copiado de planos. Legenda de evidência:
 | Verificação | Resultado |
 |---|---|
 | `npm run build` | limpo (`tsc` sem erros) |
-| `npm test` | **253/253** — `tasks` 29, `geometry` 26, `focus` 21, `personality` 18, `island` 17, `calendar` 16, `settings` 16, `durability` 14, `mascotController` 14, `contrast` 13, `reminders` 11, `removal` 10, `calendarSync` 10, `dragPhysics` 8, `backup` 6, `sounds` 5, `focusLog` 5, `dnd` 5, `draft` 5, `dueFormat` 4 |
-| `npm run test:tasks` | **53/53** (`tasks` + `removal` + `durability`) |
+| `npm test` | **298/298** — `tasks` 34, `geometry` 26, `focus` 21, `personality` 18, `island` 17, `calendar` 20, `settings` 16, `durability` 14, `mascotController` 13, `notes` 13, `contrast` 13, `characters` 12, `reminders` 11, `assistant` 10, `assistantAi` 10, `removal` 10, `calendarSync` 10, `backup` 6, `sounds` 5, `focusLog` 5, `dnd` 5, `draft` 5, `dueFormat` 4 |
+| `npm run test:tasks` | **58/58** (`tasks` + `removal` + `durability`) |
 | `npm run test:e2e` | **14/14** passos (tarefas; app real via CDP, dados isolados) |
 | `npm run test:e2e:focus` | **11/11** passos (tempo livre, tarefa vinculada, sessão real de 1 min com a ilha escondida; ~1,5 min) |
 | `npm run test:e2e:settings` | **13/13** passos (abre como ilha, tamanhos, cor, balões, validação, painel, prazo e lembrete) |
-| `npm run test:e2e:calendar` (`node tests/e2e/calendar-ui.e2e.mjs`) | **8/8** passos (sem rede, com o gancho de arquivo: endereço inválido, conexão, "Agenda de hoje", lembrete, segredo criptografado e persistente, remoção) |
-| `node tests/e2e/drag-ui.e2e.mjs` | **4/4** passos (segurar, balançar, girar e enjoar no app real) |
+| `npm run test:e2e:calendar` (`node tests/e2e/calendar-ui.e2e.mjs`) | **12/12** passos (sem rede, com o gancho de arquivo: endereço inválido, conexão, "Agenda de hoje", lembrete, segredo criptografado e persistente, botão "Virar tarefa" — aparece, converte, não duplica, volta ao excluir —, remoção) |
+| `npm run test:e2e:characters` | **10/10** passos, 2 execuções seguidas após a reversão do arraste (8 personagens renderizam com rosto completo; rosto dentro do corpo; 8 personagens × 12 estados × 4 instantes sem nenhum ponto fora da área; troca sem quebrar o clique; valor inválido; painel; persistência entre reinícios; config antiga/inválida; modo flutuante) |
+| `npm run test:e2e:notes` | **11/11** passos (criar/buscar sem acento; segurança do documento; janela de notas; formatação completa pelo editor real; busca; fixar → folha flutuante; cor do papel sincronizada; edição em duas janelas; soltar; reabrir no mesmo lugar ao reiniciar; excluir + desfazer) |
+| `npm run test:e2e:assistant` | **9/9** passos (nota por frase + desfazer; nota sem texto; tarefa com prazo, listar e concluir por nome; foco; trocar personagem; pergunta sem fonte → ativar → resposta com fonte [arquivo-fixture, sem rede]; microfone até a mensagem de privacidade do Windows; privacidade por padrão) |
 | Rede real | agenda pública do Google (feriados do Brasil) lida em ~0,6 s; endereço errado → "não encontrada (código 404)" |
 | `npm run pack` + `node tests/e2e/packaged.e2e.mjs` | **5/5** passos no `Mochi.exe` empacotado (ilha, `packaged`, banco, foco, preferências) |
 | `npm run dist` | gera `release/Mochi Setup 0.3.0.exe` (106 MB, NSIS por usuário, **sem assinatura**) |
@@ -60,15 +62,24 @@ Vite 8.3, TypeScript 7.0. Máquina de desenvolvimento com 1 monitor a 100 % de e
 | **Tarefas com prazo e lembrete:** data/hora opcional, atrasada/hoje destacados, lembrete na hora e N min antes (balão + som + notificação se oculto) | repositório, validação, agendador [auto]; e2e (lembrete real) |
 | **Migração v2 do banco** (`due_at`, `focus_sessions`) com backup automático | [auto] |
 | **Empacotamento:** `npm run pack`/`dist` (electron-builder, NSIS por usuário, ícone do blob); app empacotado reconhece `isPackaged` | e2e empacotado [auto]; instalador **construído**, não instalado nesta máquina |
-| **Segurar o Mochi:** balança para onde vai, gira se for sacudido, enjoa (~5 s) com 2 voltas em 3 s; som e fala próprios (D33) | física [auto] (8); app real [auto] e2e (4 passos) + capturas |
+| **Segurar o Mochi:** primeira versão (D33): cara de espanto, balanço e pulinho ao soltar; sem física e sem enjoo | estados e prioridades [auto] (`mascotController`); app real [manual] |
+| **Personagens (D34):** Mochi original + Abacaxi, Quadrado, Cogumelo, Cacto, Nuvem, Planeta e Fantasma sobre o mesmo controlador, rosto, sons e interação; seleção nas configurações (prévias) e na bandeja; ritmo e som próprios; persistência | registro, validação, limites de som, personalidade, ritmos [auto] (12); renderização, nada cortado, painel, persistência, config inválida, flutuante [auto] e2e (10); aparência [manual] (capturas de todos os personagens em 9 estados) |
 | **Modo noturno do painel:** Automático (segue o Windows) / Claro / Escuro, em tarefas, foco, agenda e configurações (D32) | contraste dos tokens escuros [auto]; capturas [manual] |
+| **Evento → tarefa (D35):** botão "→ Virar tarefa" (título, horário como prazo, dia inteiro sem prazo), "✓ Tarefa" depois, sem duplicar, lembrete único; migração v3 | repositório, migração e conversão [auto] (9 testes); e2e (4 passos) + captura |
+| **Notas com formatação (D36):** negrito/itálico/sublinhado/tachado/código, títulos, listas, tarefas, citação, bloco de código, alinhamento, cor, marca-texto, link; busca sem acento; cor do papel; **nota flutuante** na área de trabalho (posição lembrada, reabre com o app); excluir com desfazer; migração v4 | validação do documento, repositório e migração [auto] (13); e2e (11 passos); aparência [manual] (capturas do editor e da folha) |
+| **Assistente (D37):** conversa por texto ou microfone; cria notas/tarefas com prazo, lista, conclui, foco, troca de personagem (com *Desfazer*); perguntas via Wikipédia e/ou IA local (Ollama), ambas opt-in | analisador (10), Wikipédia/Ollama/voz (10) [auto]; e2e (9 passos, sem rede); microfone com fala real **não verificado** |
 | **Google Agenda (iCal, somente leitura):** "Agenda de hoje", lembretes dos eventos, segredo criptografado (D31) | parser (16) e sincronização (10) [auto]; e2e (8); rede real [manual] |
 | Contraste das cores (tarefas, configurações, balão, painel escuro) calculado sobre o CSS real | [auto] |
 
 ## Parcialmente implementado
 
-- **Atalhos da ilha:** **Tarefas**, **Foco** e a engrenagem funcionam. *Notas* e *Assistente* são botões
-  desabilitados ("Em breve") — não há código por trás.
+- **Atalhos da ilha:** **Tarefas**, **Foco**, **Notas**, **Assistente** e a engrenagem funcionam. Notas e
+  Assistente abrem janelas próprias (não dentro da ilha).
+- **Voz do assistente:** usa o ditado do Windows e depende de "Reconhecimento de fala online" ligado no
+  Windows (nesta máquina estava desligado: o app mostra o aviso e abre a página). **Nunca ouviu uma fala
+  real** nos testes; um modo 100 % offline (Whisper local) não existe.
+- **Nota flutuante:** é uma janela comum do Windows (não "atrás" dos outros apps; some com "Mostrar área de
+  trabalho"). Não fica sobre os aplicativos nem na barra de tarefas.
 - **Iniciar com o Windows:** a preferência é aplicada com `app.setLoginItemSettings` **só no app
   empacotado** (`app.isPackaged`). O instalador existe, mas a opção ainda **não foi exercitada** com o app
   instalado de verdade (o teste empacotado roda o `win-unpacked`).
@@ -83,10 +94,12 @@ Vite 8.3, TypeScript 7.0. Máquina de desenvolvimento com 1 monitor a 100 % de e
 
 ## Não existe (não presumir)
 
-Notas, assistente de IA, login, sincronização, versão mobile, assinatura de código do instalador,
+IA em nuvem (o assistente só usa Wikipédia e Ollama local), assistente que executa ações por conta própria (só o
+analisador local executa), reconhecimento de voz offline, login, sincronização, versão mobile, assinatura de código do instalador,
 atualização automática, recorrência de tarefas (prazo é uma data só), escrever na agenda/login Google (OAuth), várias agendas, internacionalização (textos fixos em
 pt-BR), tema escuro do painel, opção de movimento reduzido (decidido: o mascote sempre anima), edição de
-título de tarefa, ordenação manual de tarefas, outros personagens (só o blob verde, com paletas), atalho
+título de tarefa, ordenação manual de tarefas, personagens fora dos 8 do registro (nem importar/criar
+personagem pela interface), paleta de cores para os personagens novos (só o Mochi original tem), atalho
 global personalizado livre (só os predefinidos), escolha do monitor da ilha pela interface.
 
 ## Problemas conhecidos e limitações
@@ -114,6 +127,13 @@ global personalizado livre (só os predefinidos), escolha do monitor da ilha pel
 | 25 | A agenda só atualiza a cada 15 min e só por endereço iCal (sem login) | informativa | "Atualizar agora" nas configurações; eventos recém-criados podem demorar a aparecer (limite do Google para o endereço secreto) |
 | 26 | O endereço secreto do Google Agenda é um segredo de longa duração | média | fica criptografado (DPAPI) e nunca volta à interface; quem o tem lê a agenda — regenerar no Google invalida o antigo |
 | 27 | O app passa a usar internet (só se a agenda for conectada) | informativa | regra atualizada em `CLAUDE.md`; D31 |
+| 28 | Sons dos personagens nunca foram ouvidos por uma pessoa | média | os planos de notas são testados (limites de frequência, volume e duração; assinaturas distintas), mas o timbre "agradável" depende de audição; os perfis são só números em `characters.ts` e ajustáveis |
+| 29 | Submenu "Personagem" da bandeja/menu de contexto não exercitado com clique real | baixa | o menu nativo não é acionável por CDP; a troca em si (`chooseCharacter` → mesmo caminho de `settings.update`) é a mesma testada pelo painel; compila e tipa |
+| 30 | Personagens novos vistos só em 1 monitor/100 % | baixa | a janela é a mesma do Mochi; o teste mede pontos do contorno (não caixas) em 12 estados |
+| 31 | Microfone do assistente depende de "Reconhecimento de fala online" do Windows e nunca foi testado com fala | média | sem a opção, o app explica e abre a página; áudio processado pelo serviço de fala da Microsoft quando ligada; alternativa offline (Whisper local) não existe |
+| 32 | IA local exige o Ollama instalado pela própria pessoa (+ ~2 GB de modelo); qualidade depende do modelo | baixa | detecção, conversa e download testados com respostas simuladas; **nunca rodou com um Ollama real** nesta máquina |
+| 33 | TipTap (3.x) entrou como dependência; `npm audit` aponta 8 vulnerabilidades moderadas na árvore de dev (electron-builder etc.) | baixa | são de ferramentas de build, não do app empacotado; revisar antes de distribuir |
+| 34 | Instalador 0.3.0 gerado antes de notas, assistente e personagens | informativa | refazer `npm run dist` para incluir tudo (não feito) |
 | 20 | Um teste de durabilidade (`mutações continuam aplicando a retenção...`) falhou **uma vez** com a máquina carregada | baixa | passou em 3 execuções seguintes; usa espera curta por bloqueio entre conexões; se repetir, aumentar `busy_timeout` do teste |
 | 21 | Vigia de tela cheia é um processo PowerShell oculto (um por execução) | baixa | sem módulos nativos e sem `-EncodedCommand`/`-ExecutionPolicy` (parecem malware para antivírus); se o PowerShell estiver bloqueado, só a função "não incomodar" some |
 
@@ -123,6 +143,6 @@ global personalizado livre (só os predefinidos), escolha do monitor da ilha pel
    Windows", reiniciar e ver se abre como ilha.
 2. **Experimentar com a sua agenda real:** colar o endereço secreto e conferir eventos recorrentes, fusos e lembretes.
 3. **Notas rápidas** (fase D do `ROADMAP.md`): a migração v3 já tem backup automático.
-4. **Segundo personagem** (o quadradinho): o desenho (`Mascot.tsx`) e o catálogo de falas são os pontos de troca.
+4. **Ouvir e ajustar os sons dos personagens** (e a cara do cogumelo, a menor): são valores em `characters.ts`.
 5. **Assinatura de código** e atualização automática, se for distribuir para outras pessoas.
 6. Higiene: decidir o destino de `.agents/` e `skills-lock.json`; configurar a identidade do git.

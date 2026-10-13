@@ -1,5 +1,7 @@
 import type { IslandExtent, PresentationState } from './presentation';
 import type { TasksApi } from './tasks';
+import type { NotesApi } from './notes';
+import type { AssistantApi } from './assistantApi';
 import type { FocusApi } from './focus';
 import type { Settings } from './settings';
 import type { CalendarResult, CalendarState } from './calendar';
@@ -33,6 +35,26 @@ export const IPC = {
   /** renderer -> main (invoke): ajusta até onde a forma da ilha aberta se estende. */
   islandExtent: 'island:extent',
   /** renderer -> main (invoke): operações de tarefas (cada uma é específica e tipada). */
+  assistantOpen: 'assistant:open',
+  assistantListen: 'assistant:listen',
+  assistantListenCancel: 'assistant:listen-cancel',
+  assistantOpenSpeechSettings: 'assistant:open-speech-settings',
+  assistantAsk: 'assistant:ask',
+  assistantAiStatus: 'assistant:ai-status',
+  assistantPullModel: 'assistant:pull-model',
+  /** main -> assistente: progresso do download de modelo ({ status, fraction }). */
+  assistantPullProgress: 'assistant:pull-progress',
+  notesList: 'notes:list',
+  notesGet: 'notes:get',
+  notesCreate: 'notes:create',
+  notesUpdate: 'notes:update',
+  notesRemove: 'notes:remove',
+  /** main -> renderer: uma nota mudou ({ type, id, fields? }). */
+  notesChanged: 'notes:changed',
+  /** renderer -> main: abrir a janela de notas (opcionalmente em uma nota). */
+  notesOpenManager: 'notes:open-manager',
+  /** main -> janela de notas: abra esta nota. */
+  notesOpen: 'notes:open',
   tasksList: 'tasks:list',
   tasksCreate: 'tasks:create',
   tasksComplete: 'tasks:complete',
@@ -128,6 +150,8 @@ export interface MochiApi {
   islandClosed(): void;
   /** Tarefas (armazenamento local; só operações específicas, nunca SQL). */
   tasks: TasksApi;
+  notes: NotesApi;
+  assistant: AssistantApi;
   /** Modo foco (temporizador; o relógio vive no processo principal). */
   focus: FocusApi;
   /** Preferências: lê, altera (validadas no main) e acompanha mudanças feitas em qualquer janela. */

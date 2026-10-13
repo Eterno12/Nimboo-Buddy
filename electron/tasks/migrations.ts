@@ -55,6 +55,45 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Origem da tarefa (hoje: o id do evento da agenda de onde ela veio). Índice único parcial:
+    // no máximo uma tarefa por origem, o que torna "Virar tarefa" idempotente mesmo com duas janelas.
+    version: 3,
+    name: 'task_source_ref',
+    up(db) {
+      db.exec(`
+        ALTER TABLE tasks ADD COLUMN source_ref TEXT;
+        CREATE UNIQUE INDEX idx_tasks_source_ref ON tasks (source_ref) WHERE source_ref IS NOT NULL;
+      `);
+    },
+  },
+  {
+    // Notas com formatação: o documento do editor (JSON) + título/prévia/texto derivados para a lista e a
+    // busca. `pinned` = aberta como nota flutuante na área de trabalho, com a última posição/tamanho.
+    version: 4,
+    name: 'notes',
+    up(db) {
+      db.exec(`
+        CREATE TABLE notes (
+          id         TEXT    NOT NULL PRIMARY KEY,
+          title      TEXT    NOT NULL,
+          preview    TEXT    NOT NULL DEFAULT '',
+          plain      TEXT    NOT NULL DEFAULT '',
+          doc        TEXT    NOT NULL,
+          color      TEXT    NOT NULL DEFAULT 'yellow',
+          pinned     INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
+          win_x      INTEGER,
+          win_y      INTEGER,
+          win_w      INTEGER,
+          win_h      INTEGER,
+          created_at TEXT    NOT NULL,
+          updated_at TEXT    NOT NULL
+        ) STRICT;
+        CREATE INDEX idx_notes_updated ON notes (updated_at);
+        CREATE INDEX idx_notes_pinned ON notes (pinned) WHERE pinned = 1;
+      `);
+    },
+  },
 ];
 
 /** O banco foi criado por uma versão mais nova do app; não é seguro abri-lo. */

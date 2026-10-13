@@ -12,12 +12,14 @@ import {
   type Tray,
 } from 'electron';
 import { IPC, type PanelView, type SettingsSnapshot } from '../shared/ipc';
-import type { Settings } from '../shared/settings';
+import { CHARACTERS, CHARACTER_LABELS, type CharacterId, type Settings } from '../shared/settings';
 import { createPanelWindow } from './windows';
 import { createTray } from './tray';
 import { createSettingsStore, type SettingsStore } from './settingsStore';
 import { createWindowModeManager, type WindowModeManager } from './windowMode';
 import { startTasksService, type TasksService } from './tasksService';
+import { startNotesService, type NotesService } from './notesService';
+import { startAssistantService, type AssistantService } from './assistantService';
 import { startFocusService, type FocusService } from './focusService';
 import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
@@ -25,6 +27,7 @@ import { ReminderScheduler, type Reminder } from './reminders';
 import { FocusLog } from './focus/focusLog';
 import { startCalendarService, type CalendarService } from './calendarService';
 import type { FocusConfig } from '../shared/focus';
+import type { CalendarEvent } from '../shared/calendar';
 
 let mascot: BrowserWindow | null = null;
 let windowMode: WindowModeManager | null = null;
@@ -35,7 +38,20 @@ let settingsService: SettingsService | null = null;
 let reminders: ReminderScheduler | null = null;
 let eventReminders: ReminderScheduler | null = null;
 let calendar: CalendarService | null = null;
+let notes: NotesService | null = null;
+let assistant: AssistantService | null = null;
 let focusLog: FocusLog | null = null;
+/** Eventos da agenda e quais já viraram tarefa: o lembrete passa a ser o da tarefa (sem aviso duplo). */
+let agendaEvents: CalendarEvent[] = [];
+let linkedEventIds = new Set<string>();
+
+function syncEventReminders(): void {
+  eventReminders?.sync(
+    agendaEvents
+      .filter((e) => !e.allDay && !linkedEventIds.has(e.id))
+      .map((e) => ({ id: e.id, title: e.title, dueAt: e.start, completed: false })),
+  );
+}
 let panel: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
@@ -190,6 +206,15 @@ function applySettingsChange(previous: Settings, next: Settings): void {
   eventReminders?.setConfig(reminderConfig);
 }
 
+/** Troca de personagem pela bandeja/menu de contexto: mesma validação e o mesmo aviso às janelas. */
+function chooseCharacter(id: CharacterId): void {
+  if (!settingsStore) return;
+  const previous = settingsStore.get();
+  settingsStore.update({ character: id });
+  applySettingsChange(previous, settingsStore.get());
+  settingsService?.broadcast();
+}
+
 function buildMenu(): Menu {
   const mascotVisible = !!mascot && !mascot.isDestroyed() && mascot.isVisible();
   const mode = windowMode?.getMode();
@@ -212,9 +237,20 @@ function buildMenu(): Menu {
     modeItems.push({ label: 'Usar modo ilha', click: () => void windowMode?.setMode('island') });
   }
 
+  const current = settingsStore?.get().character;
+  const characterItems: Electron.MenuItemConstructorOptions[] = CHARACTERS.map((id) => ({
+    label: CHARACTER_LABELS[id],
+    type: 'radio',
+    checked: id === current,
+    click: () => chooseCharacter(id),
+  }));
+
   return Menu.buildFromTemplate([
     { label: 'Mostrar painel', click: () => showPanel() },
+    { label: 'Notas', click: () => notes?.openManager() },
+    { label: 'Assistente', click: () => assistant?.openWindow() },
     { label: 'Configurações', click: () => showPanel('settings') },
+    { label: 'Personagem', submenu: characterItems },
     { label: mascotVisible ? 'Ocultar mascote' : 'Mostrar mascote', click: toggleMascot },
     ...modeItems,
     { type: 'separator' },
@@ -307,10 +343,23 @@ if (!app.requestSingleInstanceLock()) {
     tasks = startTasksService({
       dbPath: path.join(app.getPath('userData'), 'data', 'mochi.db'),
       isAppUrl,
-      onTasksChanged: (list) => reminders?.sync(list),
+      onTasksChanged: (list, sourceRefs) => {
+        reminders?.sync(list);
+        linkedEventIds = new Set(sourceRefs);
+        syncEventReminders();
+      },
     });
     const database = tasks.database();
     if (database) {
+      // Notas com formatação (mesmo arquivo do SQLite); as fixadas reabrem como notas flutuantes.
+      notes = startNotesService({
+        db: database,
+        isAppUrl,
+        isDark: () => {
+          const preference = settingsStore?.get().theme ?? 'auto';
+          return preference === 'dark' || (preference === 'auto' && nativeTheme.shouldUseDarkColors);
+        },
+      });
       focusLog = new FocusLog(database);
       try {
         focusLog.purge();
@@ -352,14 +401,21 @@ if (!app.requestSingleInstanceLock()) {
     calendar = startCalendarService({
       userDataDir: app.getPath('userData'),
       isAppUrl,
-      onEvents: (events) =>
-        eventReminders?.sync(
-          events
-            .filter((e) => !e.allDay)
-            .map((e) => ({ id: e.id, title: e.title, dueAt: e.start, completed: false })),
-        ),
+      onEvents: (events) => {
+        agendaEvents = events;
+        syncEventReminders();
+      },
     });
 
+    // Assistente: janela de conversa, voz (Windows) e conhecimento opcional (Wikipédia / IA local).
+    assistant = startAssistantService({
+      isAppUrl,
+      settings: () => settings.get(),
+      isDark: () => {
+        const preference = settings.get().theme;
+        return preference === 'dark' || (preference === 'auto' && nativeTheme.shouldUseDarkColors);
+      },
+    });
     // O temporizador vive no main; ao terminar, a ilha volta (se estava escondida) ou
     // avisa por notificação quando o mascote está oculto.
     focus = startFocusService({
@@ -394,6 +450,8 @@ if (!app.requestSingleInstanceLock()) {
     reminders?.dispose();
     eventReminders?.dispose();
     calendar?.close();
+    notes?.close();
+    assistant?.close();
     tasks?.close();
     tray?.destroy();
   });

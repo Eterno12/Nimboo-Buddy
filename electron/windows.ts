@@ -79,6 +79,79 @@ export function createPanelWindow(dark = false): BrowserWindow {
   return win;
 }
 
+/** Janela de conversa do assistente. */
+export function createAssistantWindow(dark: boolean): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 440,
+    height: 660,
+    minWidth: 340,
+    minHeight: 420,
+    title: 'Assistente — Mochi',
+    autoHideMenuBar: true,
+    show: false,
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
+    webPreferences: secureWebPreferences(),
+  });
+  lockNavigation(win);
+  loadRenderer(win, 'assistant');
+  win.once('ready-to-show', () => win.show());
+  return win;
+}
+/** Cor de fundo das janelas de nota (igual à do papel em notes.css; a janela nasce já pintada). */
+const NOTE_PAPER: Record<string, string> = {
+  yellow: '#fff3a8',
+  pink: '#ffd9e4',
+  blue: '#d6ecff',
+  green: '#d9f5d3',
+  lilac: '#e6dcff',
+  white: '#fffdf8',
+};
+
+/** Janela de gerenciamento das notas (lista, busca e editor), redimensionável. */
+export function createNotesWindow(openId: string | null, dark: boolean): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 860,
+    height: 600,
+    minWidth: 560,
+    minHeight: 380,
+    title: 'Notas — Mochi',
+    autoHideMenuBar: true,
+    show: false,
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
+    webPreferences: secureWebPreferences(),
+  });
+  lockNavigation(win);
+  loadRenderer(win, openId ? `notes=${openId}` : 'notes');
+  win.once('ready-to-show', () => win.show());
+  return win;
+}
+
+/**
+ * Nota flutuante: uma folha solta na área de trabalho. NÃO fica sobre os outros aplicativos (não é
+ * "sempre no topo": é uma janela comum, sem borda e fora da barra de tarefas).
+ */
+export function createNoteWindow(id: string, color: string, bounds: Rect): BrowserWindow {
+  const win = new BrowserWindow({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    minWidth: 220,
+    minHeight: 160,
+    frame: false,
+    skipTaskbar: true,
+    alwaysOnTop: false,
+    hasShadow: true,
+    show: false,
+    title: 'Nota — Mochi',
+    backgroundColor: NOTE_PAPER[color] ?? NOTE_PAPER.yellow,
+    webPreferences: secureWebPreferences(),
+  });
+  lockNavigation(win);
+  loadRenderer(win, `note=${id}`);
+  win.once('ready-to-show', () => win.show());
+  return win;
+}
 /**
  * HTML mínimo da linha-dica (sem JavaScript, sem preload). A CSP bloqueia tudo
  * exceto o estilo embutido.

@@ -5,6 +5,7 @@ import {
   bubbleDurationMs,
   createPersonality,
   type Personality,
+  type SpeechContext,
   type SpeechEvent,
 } from './personality';
 
@@ -22,20 +23,22 @@ interface SpeechOptions {
   focusActive: boolean;
   /** A ilha está aberta: sem balões por cima do conteúdo. */
   suppressed: boolean;
+  /** Frases extras do personagem escolhido (somadas às de sempre). */
+  extra?: SpeechContext['extra'];
 }
 
 /**
  * O Mochi "fala": escolhe a frase (personalidade), mostra o balão por um tempo proporcional ao
  * texto e toca a vozinha. Avisa o main quando há balão para a forma da janela incluí-lo.
  */
-export function useSpeech({ enabled, mood, focusActive, suppressed }: SpeechOptions) {
+export function useSpeech({ enabled, mood, focusActive, suppressed, extra }: SpeechOptions) {
   const [bubble, setBubble] = useState<Bubble | null>(null);
   const personality = useRef<Personality | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const counter = useRef(0);
   // Valores correntes lidos dentro de `say` sem recriar o callback a cada render.
-  const live = useRef({ enabled, mood, focusActive, suppressed });
-  live.current = { enabled, mood, focusActive, suppressed };
+  const live = useRef({ enabled, mood, focusActive, suppressed, extra });
+  live.current = { enabled, mood, focusActive, suppressed, extra };
 
   const hide = useCallback(() => {
     window.clearTimeout(timer.current);
@@ -47,7 +50,12 @@ export function useSpeech({ enabled, mood, focusActive, suppressed }: SpeechOpti
     const now = live.current;
     if (!now.enabled || now.suppressed) return;
     personality.current ??= createPersonality();
-    const text = personality.current.pick(event, { now: new Date(), mood: now.mood, focusActive: now.focusActive });
+    const text = personality.current.pick(event, {
+      now: new Date(),
+      mood: now.mood,
+      focusActive: now.focusActive,
+      extra: now.extra,
+    });
     if (!text) return;
     window.clearTimeout(timer.current);
     setBubble({ id: ++counter.current, text });

@@ -265,3 +265,47 @@ test('regras antigas (semanal/mensal/anual desde anos atrás) chegam à janela a
     assert.equal(days % 14, 0, e.start);
   }
 });
+
+// Evento da agenda → tarefa ----------------------------------------------------
+import { canBecomeTask, taskFromEvent } from '../shared/calendar.ts';
+
+const sampleEvent = (over: Partial<CalendarEvent> = {}): CalendarEvent => ({
+  id: 'uid-1@google.com|1777640400000',
+  title: 'Reunião de equipe',
+  start: '2026-05-01T13:00:00.000Z',
+  end: '2026-05-01T14:00:00.000Z',
+  allDay: false,
+  location: null,
+  ...over,
+});
+
+test('virar tarefa: evento futuro com horário usa o título, o início como prazo e o id como origem', () => {
+  const now = new Date('2026-05-01T09:00:00.000Z');
+  assert.deepEqual(taskFromEvent(sampleEvent(), now), {
+    title: 'Reunião de equipe',
+    dueAt: '2026-05-01T13:00:00.000Z',
+    sourceRef: 'uid-1@google.com|1777640400000',
+  });
+});
+
+test('virar tarefa: dia inteiro e evento em andamento ficam sem prazo', () => {
+  const now = new Date('2026-05-01T13:30:00.000Z');
+  assert.equal(taskFromEvent(sampleEvent(), now).dueAt, null, 'já começou');
+  assert.equal(taskFromEvent(sampleEvent({ allDay: true, start: '2026-05-01T03:00:00.000Z' }), new Date('2026-05-01T01:00:00.000Z')).dueAt, null);
+});
+
+test('virar tarefa: título longo é cortado em 200 caracteres, espaços normalizados, vazio ganha nome', () => {
+  const now = new Date('2026-05-01T09:00:00.000Z');
+  const long = taskFromEvent(sampleEvent({ title: 'ab'.repeat(150) }), now).title;
+  assert.equal([...long].length, 200);
+  assert.equal(taskFromEvent(sampleEvent({ title: '  Almoço \n  com   a Ana ' }), now).title, 'Almoço com a Ana');
+  assert.equal(taskFromEvent(sampleEvent({ title: '   ' }), now).title, 'Evento sem título');
+  const emoji = taskFromEvent(sampleEvent({ title: '😀'.repeat(250) }), now).title;
+  assert.equal([...emoji].length, 200, 'conta pontos de código, não unidades UTF-16');
+});
+
+test('virar tarefa: só eventos que ainda não terminaram', () => {
+  assert.equal(canBecomeTask(sampleEvent(), new Date('2026-05-01T13:59:00.000Z')), true);
+  assert.equal(canBecomeTask(sampleEvent(), new Date('2026-05-01T14:00:00.000Z')), false);
+  assert.equal(canBecomeTask(sampleEvent({ allDay: true }), new Date('2026-05-01T20:00:00.000Z')), true);
+});

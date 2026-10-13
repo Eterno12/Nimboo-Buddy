@@ -23,6 +23,11 @@ export interface Task {
   updatedAt: string;
   /** Prazo opcional: ISO 8601 em UTC. O Mochi avisa na hora (e um pouco antes, se ligado). */
   dueAt: string | null;
+  /**
+   * De onde a tarefa veio (hoje: o id estável de um evento da agenda, `<uid>|<início em ms>`) ou `null`.
+   * Serve para o botão "Virar tarefa" não duplicar e para os lembretes não avisarem duas vezes.
+   */
+  sourceRef: string | null;
 }
 
 export interface TaskLists {
@@ -50,6 +55,7 @@ export type TaskErrorCode =
   | 'invalid_title'
   | 'invalid_id'
   | 'invalid_due'
+  | 'invalid_source'
   | 'not_found'
   | 'limit_reached'
   | 'storage';
@@ -77,7 +83,11 @@ export interface TaskRepository {
   list(): Promise<TaskLists>;
   /** Busca uma tarefa (aplicando a retenção: uma concluída expirada não existe mais). */
   get(id: string): Promise<TaskResult<Task>>;
-  create(title: string, dueAt?: string | null): Promise<TaskResult<Task>>;
+  /**
+   * Cria uma tarefa. Com `sourceRef`, é idempotente: se já existe uma tarefa (ativa ou concluída
+   * ainda guardada) com a mesma origem, devolve ela em vez de criar outra.
+   */
+  create(title: string, dueAt?: string | null, sourceRef?: string | null): Promise<TaskResult<Task>>;
   /** Define (ou remove, com `null`) o prazo. */
   setDue(id: string, dueAt: string | null): Promise<TaskResult<Task>>;
   complete(id: string): Promise<TaskResult<Task>>;
@@ -133,6 +143,21 @@ export function validateDue(input: unknown): TaskResult<string | null> {
   return ok(date.toISOString());
 }
 
+/** Tamanho máximo da referência de origem (um id de evento da agenda cabe com folga). */
+export const SOURCE_REF_MAX = 300;
+
+/** Valida a origem: `null`/ausente = sem origem; senão um texto curto, sem caracteres de controle. */
+export function validateSourceRef(input: unknown): TaskResult<string | null> {
+  if (input === null || input === undefined) return ok(null);
+  if (typeof input !== 'string') return fail('invalid_source', 'Origem da tarefa inválida.');
+  const text = input.trim();
+  // eslint-disable-next-line no-control-regex
+  if (text.length === 0 || text.length > SOURCE_REF_MAX || /[\u0000-\u001f\u007f]/.test(text)) {
+    return fail('invalid_source', 'Origem da tarefa inválida.');
+  }
+  return ok(text);
+}
+
 /** Situação do prazo em relação a `now`, para destacar a tarefa na lista. */
 export type DueStatus = 'none' | 'overdue' | 'today' | 'later';
 
@@ -157,7 +182,8 @@ export interface TaskReminder {
 /** API de tarefas exposta ao renderer (`window.mochi.tasks`). */
 export interface TasksApi {
   list(): Promise<TaskResult<TaskSnapshot>>;
-  create(title: string, dueAt?: string | null): Promise<TaskResult<Task>>;
+  /** `sourceRef` (ex.: id de um evento da agenda) torna a criação idempotente: não duplica. */
+  create(title: string, dueAt?: string | null, sourceRef?: string | null): Promise<TaskResult<Task>>;
   /** Define (ou remove, com `null`) o prazo de uma tarefa. */
   setDue(id: string, dueAt: string | null): Promise<TaskResult<Task>>;
   complete(id: string): Promise<TaskResult<Task>>;

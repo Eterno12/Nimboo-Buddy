@@ -29,6 +29,9 @@ import {
   type MascotState,
   type Mood,
 } from './mascotStates.ts';
+import type { CharacterTraits } from './characters.ts';
+
+const NEUTRAL: CharacterTraits = { ambientPace: 1, sleepAfter: 1, blinkPace: 1, curiosity: 0 };
 
 export interface MascotSnapshot {
   state: MascotState;
@@ -66,13 +69,13 @@ export interface MascotController {
   activity(): void;
   /** O usuário começou a arrastar o mascote. */
   grab(): void;
-  /** Girou demais (física do arraste): fica enjoado por alguns segundos. */
-  dizzy(): void;
   /** O usuário soltou o mascote. */
   release(): void;
   endHop(): void;
   /** Força um estado (apenas para depuração). */
   debugSet(state: MascotState): void;
+  /** Troca a personalidade (ritmos) do personagem; vale a partir do próximo temporizador. */
+  setTraits(traits: CharacterTraits): void;
 }
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
@@ -91,6 +94,7 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
   let affection = AFFECTION_START;
   let lastStartle = 0;
   let clicks: number[] = [];
+  let traits: CharacterTraits = NEUTRAL;
   const timers: Record<'timed' | 'sleep' | 'ambient' | 'blink' | 'blinkEnd' | 'mood', number | undefined> = {
     timed: undefined,
     sleep: undefined,
@@ -114,7 +118,7 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
     if (mood !== snap.mood) emit({ mood });
   }
 
-  function armSleep(ms = SLEEP_AFTER_MS) {
+  function armSleep(ms = SLEEP_AFTER_MS * traits.sleepAfter) {
     window.clearTimeout(timers.sleep);
     timers.sleep = window.setTimeout(() => {
       // Boceja antes de dormir. Se estiver no meio de algo (curioso, feliz...), tenta de novo logo.
@@ -161,18 +165,23 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
         timers.blinkEnd = window.setTimeout(() => emit({ blinking: false }), BLINK_DURATION_MS);
       }
       scheduleBlink();
-    }, rand(BLINK_MIN_MS, BLINK_MAX_MS));
+    }, rand(BLINK_MIN_MS, BLINK_MAX_MS) * traits.blinkPace);
   }
 
   /** Comportamentos espontâneos; humor alto é mais animado, humor baixo é mais quieto. */
   function scheduleAmbient() {
-    const pace = snap.mood === 'high' ? 0.75 : snap.mood === 'low' ? 1.7 : 1;
+    const pace = (snap.mood === 'high' ? 0.75 : snap.mood === 'low' ? 1.7 : 1) * traits.ambientPace;
     timers.ambient = window.setTimeout(() => {
       if (snap.state === 'idle') {
+        // A curiosidade do personagem troca um pouco de pulinho/espreguiçada por "olhar em volta".
+        const c = traits.curiosity;
+        const hop = 0.35 - c / 2;
+        const look = hop + 0.3 + c;
+        const stretch = look + 0.2 - c / 2;
         const r = Math.random();
-        if (r < 0.35) emit({ hop: true });
-        else if (r < 0.65) enter('lookaround', false, undefined, true);
-        else if (r < 0.85) enter('stretch', false, undefined, true);
+        if (r < hop) emit({ hop: true });
+        else if (r < look) enter('lookaround', false, undefined, true);
+        else if (r < stretch) enter('stretch', false, undefined, true);
         else enter('yawn', false, undefined, true);
       }
       scheduleAmbient();
@@ -247,10 +256,6 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
       else armSleep();
     },
     grab: () => enter('grabbed', true),
-    dizzy() {
-      setAffection(affection - 0.02); // um pouquinho menos feliz depois de rodar tanto
-      enter('dizzy', true);
-    },
     release() {
       if (snap.state !== 'grabbed') return;
       enter(rest(), true);
@@ -260,5 +265,10 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
       if (snap.hop) emit({ hop: false });
     },
     debugSet: (state) => enter(state, true),
+    setTraits(next) {
+      traits = next;
+      // O contador de sono já armado usa o ritmo anterior: rearma só se estiver em repouso.
+      if (snap.state === 'idle' || snap.state === 'curious') armSleep();
+    },
   };
 }

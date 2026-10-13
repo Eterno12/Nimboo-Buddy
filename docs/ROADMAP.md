@@ -101,8 +101,8 @@ as funcionalidades da v1 estabilizarem.
 
 ## Próximos passos já combinados (após configurações, sons, balões e "não incomodar")
 - **Empacotamento** (instalador, ícone): habilita "iniciar com o Windows" de verdade e a distribuição.
-- **Outros personagens**: o blob ganhou paletas; novos personagens (ex.: quadradinho de cantos arredondados)
-  trocam o desenho e o catálogo de falas, sem mudar balões, sons nem janela.
+- ~~**Outros personagens**~~ **feito** (D34): 7 personagens novos em um registro único; novos personagens
+  entram só como dados (registro + arte + variáveis de cor), sem mudar balões, sons nem janela.
 - **Tarefas com data e lembrete** (balão + som discretos), depois **Notas** (fase D, com backup já pronto).
 - **Foco evoluído**: ciclo Pomodoro, duração livre, vínculo com tarefa, contagem diária.
 - **Escolha do monitor da ilha** pela interface; atalho global personalizado livre.
@@ -110,5 +110,8 @@ as funcionalidades da v1 estabilizarem.
 ## Estado desta rodada (2026-10-13)
 - ✅ Abrir sempre como ilha; som e fala por animação; foco com tempo livre/Pomodoro/tarefa/contador;
   tarefas com prazo e lembrete; migração v2; empacotamento (instalador NSIS).
-- ✅ Física ao segurar + enjoo; modo noturno do painel; Google Agenda por endereço iCal (somente leitura).
-- ⏳ Próximo: notas (migração v3), segundo personagem, assinatura de código, atualização automática, login Google (OAuth) se a agenda precisar de escrita.
+- ✅ Modo noturno do painel (a física ao segurar + enjoo foi feita e depois **revertida**, D33); Google Agenda por endereço iCal (somente leitura).
+- ✅ Sistema de personagens: Mochi + 7 (abacaxi, quadrado, cogumelo, cacto, nuvem, planeta, fantasma), com
+  seleção nas configurações e na bandeja, som e ritmo próprios (D34).
+- ✅ Evento da agenda → tarefa (D35), notas com formatação e nota flutuante (D36), assistente com voz, comandos locais e perguntas via Wikipédia/IA local opt-in (D37).
+- ⏳ Próximo: modo de voz 100 % offline (Whisper local), assinatura de código, atualização automática, instalador novo, login Google (OAuth) se a agenda precisar de escrita.

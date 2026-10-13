@@ -267,10 +267,98 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   ilha (`#342b3f`…), então o contraste já medido vale, e `contrast.test.ts` os verifica no CSS real. A janela
   do painel nasce com o fundo certo (sem "piscar" claro).
 
-## D33 — Física do arraste e estado "enjoado"
-- **Decisão:** módulo puro `dragPhysics.ts`: pêndulo com mola e amortecimento alimentado pela aceleração
-  horizontal do cursor (inclina para onde vai). Sacudir com força (aceleração da mão presente) tira a
-  mola e vira **giro livre** com atrito; a mola sozinha nunca reinicia um giro. 2 voltas em 3 s →
-  estado `dizzy` por 5 s (olhos em espiral, cambaleio, estrelas, som e fala próprios).
-- **Detalhes:** o pivô é o centro do corpo (girar em volta de si não sai da janela de 240 px); só
-  `transform` é escrito (variável CSS, sem re-render do React). Vale no modo flutuante e no Mochi do canto.
+## D33 — Física do arraste e estado "enjoado" (REVERTIDA)
+- **Decisão atual:** ao segurar o Mochi vale a **primeira versão**: estado `grabbed` (olhos e boca de espanto,
+  balanço de pêndulo por CSS `dangle`, sombra menor, folha pendendo) e, ao soltar, um pulinho. Sem física,
+  sem giro e sem estado `dizzy`.
+- **Por que:** a física (pêndulo com mola, giro livre, enjoo por 2 voltas em 3 s, amostragem do cursor no main)
+  funcionava, mas foi considerada desnecessária; o código foi removido por inteiro (`dragPhysics`,
+  `useDragPhysics`, canal `drag:sample`, som e fala do enjoo) em vez de ficar desligado.
+- **Mantido do processo:** o arraste continua lendo o cursor no main (`dragMove`), o que evita os desvios
+  de coordenadas do renderer; a janela do mascote continua sem cortes (o teste e2e mede o contorno de
+  todos os personagens em 12 estados).
+
+## D34 — Personagens: um registro, a mesma infraestrutura (arte, som e ritmo por personagem)
+- **Decisão:** 8 personagens selecionáveis (`mochi` original, `pineapple`, `square`, `mushroom`, `cactus`,
+  `cloud`, `planet`, `ghost`) como **dados**, não como 8 mascotes. O que é compartilhado e NÃO foi
+  duplicado: `mascotController` (estados, prioridades, afeto), rosto SVG (olhos e bocas de todos os estados), camadas de
+  movimento, física do arraste, catálogo de sons/falas por animação, motor de áudio, interação e IPC.
+- **O que muda por personagem:**
+  - `src/features/mascot/characters.ts` — registro tipado (`CharacterId` vem de `shared/settings.ts`):
+    nome/descrição, `traits` (ritmo dos comportamentos espontâneos, sono, piscadas, curiosidade), ajuste
+    do rosto sobre o corpo (`face`: dx/dy/escala), `sound` (perfil) e frases próprias.
+  - `characterArt.tsx` — só o corpo e os complementos (coroa, chapéu, braços, anel, vapor, bracinhos);
+    contrato `defs / behind / body / front`; ids de gradiente com prefixo (`mochi` na janela do mascote,
+    `pv-<id>` nas prévias).
+  - `mascot.css` — variáveis de cor por `[data-character]` e animações de complemento (balanço da coroa,
+    inclinação do chapéu, braços, anel, flutuar). Os complementos reagem às MESMAS variáveis de estado
+    (`--leaf-rot`, `data-state`); o balanço contínuo fica num grupo interno (`.mascot-sway`) para não
+    brigar com a postura do estado.
+- **Som:** `SoundProfile` (altura, duração, volume, timbre, camada, vibrato, deslize, clique, voz do
+  balão) aplicado por `applyProfile` a QUALQUER plano de `SOUNDS` e a `voicePlan`, sempre dentro de
+  `SOUND_LIMITS`. Sem arquivos, sem laço, sem serviço externo; o volume geral continua mandando.
+- **Escolha e persistência:** `settings.character` (v3; valor desconhecido/antigo → `mochi`), editável pelo
+  canal normal de preferências e validado no main. Seleção na grade "Personagem" das configurações (com
+  prévias vivas) e no submenu "Personagem" da bandeja/menu de contexto. A troca vale na hora, sem reiniciar
+  e sem interromper a animação em curso.
+- **Cor:** as paletas do Mochi continuam só para o original; os outros têm cores próprias (a interface avisa).
+- **Alternativas descartadas:** um componente por personagem com seu próprio controlador (duplica estados e
+  testes); sprites/PNG (perde cor por variável, escala e tema); trocar o rosto por personagem (quebra a
+  família visual e as expressões já prontas).
+
+## D35 — Evento da agenda vira tarefa (`source_ref`, migração v3)
+- **Decisão:** botão "→ Virar tarefa" em cada evento que ainda não terminou (ilha e painel). Título = o do
+  evento (cortado em 200 caracteres); evento com horário que ainda não começou usa o início como **prazo**
+  (os lembretes de tarefas já existentes passam a valer); evento de **dia inteiro** ou em andamento fica
+  **sem prazo**. Depois de criada, o botão vira "✓ Tarefa".
+- **Sem duplicar:** a migração v3 adiciona `tasks.source_ref` (id estável do evento, `<uid>|<início>`) com
+  **índice único parcial**; `create(title, due, sourceRef)` é idempotente (devolve a tarefa existente, ativa
+  ou concluída, sem avisar de novo). Excluir a tarefa libera a origem (o botão volta).
+- **Sem aviso duplo:** eventos que já viraram tarefa saem do agendador de lembretes de eventos; quem avisa é
+  o da tarefa (`onTasksChanged(ativas, origens)` → `syncEventReminders` no main).
+- **Segurança:** a origem é só um texto curto validado (sem controle, até 300); a agenda continua somente
+  leitura e nada é escrito no Google.
+
+## D36 — Notas com formatação (TipTap), documento JSON validado e notas flutuantes
+- **Decisão:** notas ricas (negrito, itálico, sublinhado, tachado, código, títulos H1–H3, listas, listas de
+  tarefas, citação, bloco de código, linha divisória, alinhamento, cor do texto, marca-texto, link) com o
+  **TipTap** (ProseMirror). Dependência nova de desenvolvimento (empacotada pelo Vite): `@tiptap/*` 3.x,
+  MIT. Foi escolhida em vez de um editor próprio por causa do desfazer/refazer, listas aninhadas, colar e
+  atalhos já prontos e testados.
+- **Armazenamento:** migração v4 (`notes`): o documento do editor em JSON + título/prévia/texto de busca
+  derivados (a busca ignora acentos e maiúsculas). Mesmo arquivo SQLite das tarefas, com backup automático
+  antes de migrar. Limites: 200 KB por nota, 2000 notas.
+- **Segurança:** o main **normaliza o documento por lista de permissões** (`validateNoteDoc`): só os nós e
+  marcas acima; atributos fora da lista somem; cores só `#rrggbb`; links só `http/https/mailto`;
+  profundidade, nós e texto limitados. Nada de HTML cru: o renderer nunca usa `innerHTML` com conteúdo da
+  nota. Ctrl+clique em link abre só `https` pelo navegador (`setWindowOpenHandler`).
+- **Nota flutuante:** janela própria por nota fixada (`#note=<id>`): sem borda, **fora da barra de tarefas**
+  e **não** "sempre no topo", com aparência de papel (cor, linhas, canto dobrado); posição e tamanho
+  lembrados; reabre ao iniciar o app. Fechar a folha (✕) só "solta" a nota. Limitação: é uma janela
+  comum do Windows (não fica *atrás* dos outros apps nem some com "Mostrar área de trabalho").
+- **Janela de notas:** `#notes` (lista + busca + editor); aberta pelo atalho "Notas" da ilha e pela bandeja.
+  Excluir tem "Desfazer" (recria a nota); a mesma nota aberta em duas janelas sincroniza sem sobrescrever o
+  que está sendo digitado.
+
+## D37 — Assistente: comandos locais, voz do Windows e conhecimento sem tokens (opt-in)
+- **Decisão:** janela `#assistant` (atalho "Assistente" da ilha e item da bandeja). Três camadas:
+  1. **Comandos locais** (`shared/assistant.ts`, puro e testado): entende frases em português — criar nota,
+     criar tarefa/lembrete com prazo ("amanhã às 15h", "em 30 minutos", "na sexta"), listar tarefas/agenda/notas,
+     concluir tarefa por nome, foco (iniciar/pausar/retomar/cancelar), trocar de personagem, abrir notas e
+     configurações. Executa pelas MESMAS APIs da interface (`assistantActions.ts`); criações têm "Desfazer".
+  2. **Voz:** `electron/speech.ts` roda `Windows.Media.SpeechRecognition` (ditado pt-BR) numa sessão curta
+     de PowerShell oculto. O texto vai para a caixa de mensagem e **só é enviado quando a pessoa aperta Enviar**.
+     O ditado do Windows exige "Reconhecimento de fala online" ligado (Privacidade > Fala): o app não liga isso
+     sozinho (é configuração do sistema) — mostra a mensagem e um botão que abre a página certa.
+  3. **Perguntas livres, sem chave e sem tokens:** (a) **IA local pelo Ollama** (`127.0.0.1:11434`, grátis e
+     privada; o app detecta, conversa e pede o download do modelo ao próprio Ollama) e/ou (b) **Wikipédia**
+     (`pt.wikipedia.org`, resumo + link). Ambas **desligadas por padrão** (`assistantLocalAi`,
+     `assistantWeb`): perguntar com tudo desligado só explica e oferece ativar. Só o texto da pergunta
+     (e as últimas trocas, no caso da IA local) sai do processo principal.
+- **Rede:** só o processo principal, só esses dois destinos (https para a Wikipédia; loopback para o
+  Ollama), via `net.fetch`. O renderer continua sem rede (CSP). Atualiza a regra do `CLAUDE.md`.
+- **Limites assumidos:** a IA não executa ações (só responde texto) — ações vêm do analisador local; a qualidade
+  das respostas da IA local depende do modelo (padrão `qwen2.5:3b`, ~2 GB, cabe em 4 GB de VRAM/CPU).
+  Reconhecimento **offline** de verdade (Whisper local) ficou como evolução: exigiria baixar um modelo
+  de 75–500 MB e uma dependência nativa/WASM.
+- **Teste:** `MOCHI_E2E_AI_FIXTURE` (só app não empacotado) troca a rede por um arquivo.

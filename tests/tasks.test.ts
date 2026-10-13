@@ -47,7 +47,7 @@ test('banco: cria arquivo, aplica migrações e configura WAL', () => {
     const cols = t.db.prepare('PRAGMA table_info(tasks)').all() as { name: string; notnull: number }[];
     assert.deepEqual(
       cols.map((c) => c.name),
-      ['id', 'title', 'completed', 'created_at', 'completed_at', 'updated_at', 'due_at'],
+      ['id', 'title', 'completed', 'created_at', 'completed_at', 'updated_at', 'due_at', 'source_ref'],
     );
     assert.equal((t.db.prepare('PRAGMA journal_mode').get() as { journal_mode: string }).journal_mode, 'wal');
     assert.equal((t.db.prepare('PRAGMA integrity_check').get() as { integrity_check: string }).integrity_check, 'ok');
@@ -663,4 +663,115 @@ test('titleLength: conta pontos de código sem os espaços das pontas (base do c
   // O contador da interface e a validação do backend usam a mesma função.
   assert.ok(validateTitle('a'.repeat(250)).ok === false);
   assert.ok(validateTitle(`${'a'.repeat(200)}   `).ok === true);
+});
+
+// Origem da tarefa (evento da agenda → tarefa) ---------------------------------
+test('origem: criar com sourceRef é idempotente (não duplica nem avisa de novo)', async () => {
+  const t = setup();
+  try {
+    const first = await t.repo.create('Reunião de equipe', '2026-05-01T13:00:00.000Z', 'abc123@google.com|1777640400000');
+    assert.ok(first.ok);
+    if (!first.ok) return;
+    assert.equal(first.value.sourceRef, 'abc123@google.com|1777640400000');
+    const created = t.events.filter((e) => e.type === 'created').length;
+    const again = await t.repo.create('Reunião de equipe (outro título)', null, 'abc123@google.com|1777640400000');
+    assert.ok(again.ok);
+    if (!again.ok) return;
+    assert.equal(again.value.id, first.value.id, 'devolve a mesma tarefa');
+    assert.equal(again.value.title, 'Reunião de equipe', 'não altera a existente');
+    assert.equal(t.events.filter((e) => e.type === 'created').length, created, 'sem novo aviso de criação');
+    const lists = await t.repo.list();
+    assert.equal(lists.active.length, 1);
+  } finally {
+    t.db.close();
+    t.cleanup();
+  }
+});
+
+test('origem: concluída continua marcada (não recria); excluída libera a origem', async () => {
+  const t = setup();
+  try {
+    const a = await t.repo.create('Dentista', null, 'evento-1');
+    assert.ok(a.ok);
+    if (!a.ok) return;
+    await t.repo.complete(a.value.id);
+    const again = await t.repo.create('Dentista', null, 'evento-1');
+    assert.ok(again.ok && again.value.id === a.value.id && again.value.completed, 'a concluída é devolvida');
+    assert.ok((await t.repo.remove(a.value.id)).ok);
+    const fresh = await t.repo.create('Dentista', null, 'evento-1');
+    assert.ok(fresh.ok && fresh.value.id !== a.value.id, 'depois de excluída pode virar tarefa de novo');
+  } finally {
+    t.db.close();
+    t.cleanup();
+  }
+});
+
+test('origem: tarefas sem origem não colidem; origem inválida é recusada', async () => {
+  const t = setup();
+  try {
+    assert.ok((await t.repo.create('a')).ok);
+    assert.ok((await t.repo.create('b', null, null)).ok);
+    for (const bad of ['', '   ', 'x'.repeat(301), 'com\nquebra', 42 as unknown as string]) {
+      const r = await t.repo.create('c', null, bad);
+      assert.equal(r.ok, false, JSON.stringify(bad));
+      if (!r.ok) assert.equal(r.error.code, 'invalid_source');
+    }
+    const lists = await t.repo.list();
+    assert.equal(lists.active.length, 2);
+    assert.equal(lists.active[0].sourceRef, null);
+  } finally {
+    t.db.close();
+    t.cleanup();
+  }
+});
+
+test('origem: o índice único garante no máximo uma tarefa por origem mesmo por outra conexão', async () => {
+  const t = setup();
+  try {
+    await t.repo.create('um', null, 'dup');
+    const other = openDatabase(t.file);
+    try {
+      assert.throws(
+        () =>
+          other
+            .prepare(
+              "INSERT INTO tasks (id, title, completed, created_at, completed_at, updated_at, due_at, source_ref) VALUES ('99999999-9999-4999-8999-999999999999', 'dois', 0, 'x', NULL, 'x', NULL, 'dup')",
+            )
+            .run(),
+        /UNIQUE/,
+      );
+    } finally {
+      other.close();
+    }
+  } finally {
+    t.db.close();
+    t.cleanup();
+  }
+});
+
+test('migração v3: bancos v2 ganham source_ref sem perder tarefas nem prazos', async () => {
+  const tmp = tempDb();
+  try {
+    const v2 = openDatabase(tmp.file, { migrations: MIGRATIONS.slice(0, 2) });
+    v2.prepare(
+      `INSERT INTO tasks (id, title, completed, created_at, completed_at, updated_at, due_at)
+       VALUES ('33333333-3333-4333-8333-333333333333', 'com prazo', 0, '2026-01-01T00:00:00.000Z', NULL, '2026-01-01T00:00:00.000Z', '2026-12-01T10:00:00.000Z')`,
+    ).run();
+    v2.close();
+    const db = openDatabase(tmp.file);
+    try {
+      assert.equal(currentVersion(db), MIGRATIONS.length);
+      assert.ok((db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[]).some((c) => c.name === 'source_ref'));
+      const repo = new SqliteTaskRepository(db);
+      const list = await repo.list();
+      assert.equal(list.active.length, 1);
+      assert.equal(list.active[0].dueAt, '2026-12-01T10:00:00.000Z');
+      assert.equal(list.active[0].sourceRef, null);
+    } finally {
+      db.close();
+    }
+    assert.ok(fs.readdirSync(path.dirname(tmp.file)).some((n) => n.startsWith('mochi.db.bak-v2-')), 'backup antes de migrar');
+  } finally {
+    tmp.cleanup();
+  }
 });

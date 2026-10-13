@@ -62,7 +62,7 @@ test('migração v2: bancos v1 ganham due_at e focus_sessions sem perder tarefas
     v1.close();
     const db = openDatabase(file);
     try {
-      assert.equal((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 2);
+      assert.equal((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, MIGRATIONS.length);
       const repo = new SqliteTaskRepository(db);
       const list = await repo.list();
       assert.equal(list.active.length, 1);

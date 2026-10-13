@@ -86,12 +86,30 @@ No painel (modo flutuante) ou na ilha expandida (botão **Tarefas**).
 - Falhas ao concluir/reabrir/excluir aparecem como mensagem; mudanças e erros são anunciados para leitores
   de tela. Todas as janelas se atualizam sozinhas.
 
+### Agenda → tarefa
+
+Com o Google Agenda conectado, cada evento que ainda não terminou tem o botão **→ Virar tarefa**: ele cria a tarefa com o mesmo título (e o horário do evento como prazo, com lembrete; eventos de dia inteiro ficam sem prazo). Depois aparece **✓ Tarefa** no lugar.
+
+### Notas
+
+Atalho **Notas** da ilha (ou *Notas* na bandeja): lista com busca à esquerda e o editor à direita, com **negrito, itálico, sublinhado, tachado, código, títulos, listas, listas de tarefas, citação, bloco de código, alinhamento, cor do texto, marca-texto e links**. Cada nota tem a cor do papel (amarelo, rosa, azul, verde, lilás, branco) e pode ser **fixada na área de trabalho** como uma folha flutuante (fora da barra de tarefas e sem ficar por cima dos outros aplicativos). A nota flutuante lembra o lugar e reabre com o app.
+
+### Assistente
+
+Atalho **Assistente** da ilha (ou na bandeja): converse por texto ou **pelo microfone** (a fala vira texto e só vai quando você aperta *Enviar*). Ele entende pedidos como *"crie uma nota escrito comprar pão"*, *"me lembre de ligar para o João amanhã às 15h"*, *"quais são minhas tarefas?"*, *"iniciar foco de 25 minutos"* e *"mudar para o cacto"* (com *Desfazer*). Para perguntas livres ele usa, se você ligar nas configurações, a **Wikipédia** e/ou uma **IA local grátis (Ollama)** — sem chaves e sem tokens. Veja os requisitos do microfone e da IA local em *Configurações > Assistente*.
+
 ### Configurações
 
 Engrenagem na ilha aberta, na barra do painel, ou *Configurações* no menu da bandeja.
 
 - **Tamanho da ilha** (80–140 %) e **do Mochi solto** (70–160 %), separados; valem na hora.
-- **Cor do Mochi** (menta, pêssego, céu, lilás, limão, rosa). Outros personagens virão depois.
+- **Personagem:** Mochi (original), Abacaxi, Quadrado, Cogumelo, Cacto, Nuvem, Planeta e Fantasma, com
+  prévia de cada um. Todos têm o mesmo rosto, as mesmas animações e reações; mudam o corpo, os
+  complementos (folhas, chapéu, braços, anel...), o ritmo (mais agitado, mais sonolento...) e o "som"
+  (altura e timbre). Também dá para trocar no menu da bandeja → *Personagem*. A escolha é lembrada e vale
+  na hora, na ilha e no modo flutuante.
+- **Cor do Mochi** (menta, pêssego, céu, lilás, limão, rosa): vale para o Mochi original; os outros
+  personagens têm as próprias cores.
 - **Esconder a ilha depois de** 3 s, 6 s, 10 s ou nunca.
 - **Não incomodar:** o Mochi sai da frente quando um app está em tela cheia (jogo, vídeo, apresentação) e
   volta depois.
@@ -120,7 +138,7 @@ Em Configurações → **Google Agenda**, cole o "endereço secreto no formato i
 
 ### Aparência e brincadeiras
 
-Em Configurações: tema **Automático/Claro/Escuro** do painel. Segurando o Mochi, ele balança para onde você o leva, gira se for sacudido e fica **enjoado** se girar demais.
+Em Configurações: tema **Automático/Claro/Escuro** do painel. Segurando o Mochi, ele fica com cara de espanto e balança no ar; ao soltar, dá um pulinho.
 
 ### Instalador
 

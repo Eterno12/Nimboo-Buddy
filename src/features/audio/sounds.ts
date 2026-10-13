@@ -18,6 +18,8 @@ export interface Note {
   wave: WaveShape;
   /** Se presente, a frequência desliza até este valor (bicos e tecs). */
   glideTo?: number;
+  /** Vibrato (profundidade em cents); o motor aplica um LFO lento na frequência. */
+  vibrato?: number;
 }
 
 export type SoundName =
@@ -42,8 +44,7 @@ export type SoundName =
   | 'stretch'
   | 'lookaround'
   | 'sleepy'
-  | 'pop'
-  | 'dizzy';
+  | 'pop';
 
 /** Limites que todo som precisa respeitar (verificados em `tests/sounds.test.ts`). */
 export const SOUND_LIMITS = { maxDuration: 1.6, maxGain: 0.6, minFreq: 150, maxFreq: 2400 } as const;
@@ -116,12 +117,6 @@ export const SOUNDS: Record<SoundName, readonly Note[]> = {
     { at: 0.35, freq: 260, dur: 0.6, gain: 0.18, wave: 'sine', glideTo: 170 },
   ],
   pop: [{ at: 0, freq: 480, dur: 0.05, gain: 0.35, wave: 'triangle', glideTo: 700 }],
-  // enjoado: três notas descendo, "cambaleando", bem moles
-  dizzy: [
-    { at: 0, freq: 460, dur: 0.26, gain: 0.26, wave: 'sine', glideTo: 330 },
-    { at: 0.22, freq: 400, dur: 0.26, gain: 0.24, wave: 'sine', glideTo: 280 },
-    { at: 0.44, freq: 340, dur: 0.5, gain: 0.22, wave: 'sine', glideTo: 210 },
-  ],
 };
 
 /**
@@ -130,6 +125,91 @@ export const SOUNDS: Record<SoundName, readonly Note[]> = {
  */
 export const AMBIENT_SOUNDS: readonly SoundName[] = ['curious', 'yawn', 'stretch', 'lookaround', 'sleepy', 'pop'];
 
+/**
+ * Identidade sonora de um personagem: transformações aplicadas a QUALQUER som, para todos usarem a
+ * mesma infraestrutura (planos de notas, motor, volume) com timbres e ritmos próprios.
+ */
+export interface SoundProfile {
+  /** Multiplica todas as frequências. */
+  pitch: number;
+  /** Multiplica as durações e os intervalos (< 1 = mais curto e saltitante; > 1 = mais longo e suave). */
+  durationScale: number;
+  /** Multiplica o volume relativo de cada nota. */
+  gainScale: number;
+  /** Troca o timbre das notas (ex.: triângulo mais "firme", seno mais macio); `null` mantém. */
+  wave: WaveShape | null;
+  /** Camada extra por nota: razão de frequência (2 = oitava acima, 1.5 = quinta) e ganho relativo. */
+  layer: { ratio: number; gain: number } | null;
+  /** Vibrato em cents (0 = nenhum). */
+  vibrato: number;
+  /** Notas sem deslize ganham um deslize para cima/baixo de `glide` (fração da frequência). */
+  glide: number;
+  /** Um "tique" agudo e curtíssimo no começo do som (estalidos do cacto). */
+  click: boolean;
+  /** Voz do balão: multiplicador de altura e deslize extra. */
+  voicePitch: number;
+  voiceGlide: number;
+}
+
+export const NEUTRAL_PROFILE: SoundProfile = Object.freeze({
+  pitch: 1,
+  durationScale: 1,
+  gainScale: 1,
+  wave: null,
+  layer: null,
+  vibrato: 0,
+  glide: 0,
+  click: false,
+  voicePitch: 1,
+  voiceGlide: 0,
+});
+
+/**
+ * Aplica um perfil a um plano de notas, mantendo SEMPRE os limites (`SOUND_LIMITS`): frequências
+ * presas à faixa agradável, volume máximo e duração total máxima.
+ */
+export function applyProfile(notes: readonly Note[], profile: SoundProfile): Note[] {
+  const clampFreq = (f: number) => Math.min(SOUND_LIMITS.maxFreq, Math.max(SOUND_LIMITS.minFreq, f));
+  const out: Note[] = [];
+  notes.forEach((n, i) => {
+    const freq = clampFreq(n.freq * profile.pitch);
+    const at = n.at * profile.durationScale;
+    const dur = n.dur * profile.durationScale;
+    const glideTo =
+      n.glideTo !== undefined
+        ? clampFreq(n.glideTo * profile.pitch)
+        : profile.glide !== 0
+          ? clampFreq(freq * (1 + profile.glide))
+          : undefined;
+    const base: Note = {
+      at,
+      freq,
+      dur,
+      gain: Math.min(SOUND_LIMITS.maxGain, n.gain * profile.gainScale),
+      wave: profile.wave ?? n.wave,
+      glideTo,
+      vibrato: profile.vibrato || n.vibrato || undefined,
+    };
+    out.push(base);
+    if (profile.layer) {
+      out.push({
+        at,
+        freq: clampFreq(freq * profile.layer.ratio),
+        dur: dur * 0.9,
+        gain: Math.min(SOUND_LIMITS.maxGain, base.gain * profile.layer.gain),
+        wave: 'sine',
+        glideTo: glideTo !== undefined ? clampFreq(glideTo * profile.layer.ratio) : undefined,
+      });
+    }
+    if (profile.click && i === 0) {
+      out.push({ at, freq: clampFreq(1900), dur: 0.018, gain: Math.min(SOUND_LIMITS.maxGain, 0.3 * profile.gainScale), wave: 'triangle', glideTo: clampFreq(1100) });
+    }
+  });
+  // Duração total máxima: o que passar disso é cortado (nunca estende o som).
+  return out
+    .filter((n) => n.at < SOUND_LIMITS.maxDuration)
+    .map((n) => ({ ...n, dur: Math.min(n.dur, SOUND_LIMITS.maxDuration - n.at) }));
+}
 /** Fim do som (último início + duração), em segundos. */
 export function planDuration(notes: readonly Note[]): number {
   return notes.reduce((end, n) => Math.max(end, n.at + n.dur), 0);
@@ -142,7 +222,7 @@ const VOICE_SCALE = [698.46, 783.99, 880, 1046.5, 1174.66];
  * "Tu-tu-tu" do balão: uma sequência de bips finos, mais longa para frases maiores.
  * `random` é injetável para testes (deve devolver valores em [0, 1)).
  */
-export function voicePlan(text: string, random: () => number = Math.random): Note[] {
+export function voicePlan(text: string, random: () => number = Math.random, profile: SoundProfile = NEUTRAL_PROFILE): Note[] {
   const letters = [...text].filter((c) => /\p{L}/u.test(c)).length;
   const blips = Math.min(9, Math.max(3, Math.ceil(letters / 3)));
   const notes: Note[] = [];
@@ -152,9 +232,17 @@ export function voicePlan(text: string, random: () => number = Math.random): Not
     let index = Math.floor(random() * VOICE_SCALE.length);
     if (index === last) index = (index + 2) % VOICE_SCALE.length; // evita repetir a mesma nota
     last = index;
-    const freq = VOICE_SCALE[index];
-    notes.push({ at, freq, dur: 0.055, gain: 0.3, wave: 'sine', glideTo: freq * (1 + (random() - 0.35) * 0.08) });
-    at += 0.085;
+    const freq = VOICE_SCALE[index] * profile.voicePitch;
+    notes.push({
+      at,
+      freq: Math.min(SOUND_LIMITS.maxFreq, Math.max(SOUND_LIMITS.minFreq, freq)),
+      dur: 0.055 * profile.durationScale,
+      gain: 0.3 * profile.gainScale,
+      wave: profile.wave ?? 'sine',
+      glideTo: freq * (1 + (random() - 0.35) * 0.08 + profile.voiceGlide),
+      vibrato: profile.vibrato || undefined,
+    });
+    at += 0.085 * profile.durationScale;
   }
   return notes;
 }

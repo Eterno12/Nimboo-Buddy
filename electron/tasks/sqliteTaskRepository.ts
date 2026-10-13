@@ -7,6 +7,7 @@ import {
   isTaskId,
   ok,
   validateDue,
+  validateSourceRef,
   validateTitle,
   type Task,
   type TaskChange,
@@ -32,6 +33,7 @@ interface Row {
   completed_at: string | null;
   updated_at: string;
   due_at: string | null;
+  source_ref: string | null;
 }
 
 const toTask = (r: Row): Task => ({
@@ -42,6 +44,7 @@ const toTask = (r: Row): Task => ({
   completedAt: r.completed_at,
   updatedAt: r.updated_at,
   dueAt: r.due_at ?? null,
+  sourceRef: r.source_ref ?? null,
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -181,14 +184,26 @@ export class SqliteTaskRepository implements TaskRepository {
       return row ? ok(toTask(row)) : fail('not_found', 'A tarefa não existe mais.');
     });
   }
-  async create(title: string, dueAt: string | null = null): Promise<TaskResult<Task>> {
+
+  async create(
+    title: string,
+    dueAt: string | null = null,
+    sourceRef: string | null = null,
+  ): Promise<TaskResult<Task>> {
     const valid = validateTitle(title);
     if (!valid.ok) return valid;
     const due = validateDue(dueAt);
     if (!due.ok) return due;
+    const source = validateSourceRef(sourceRef);
+    if (!source.ok) return source;
     const result = this.guard(() => {
-      const task = this.transaction((): TaskResult<Task> => {
+      const task = this.transaction((): TaskResult<Task> & { existing?: boolean } => {
         this.purgeInside();
+        if (source.value !== null) {
+          // Idempotente: a mesma origem devolve a tarefa que já existe (sem criar outra nem avisar).
+          const found = this.db.prepare('SELECT * FROM tasks WHERE source_ref = ?').get(source.value) as unknown as Row | undefined;
+          if (found) return { ...ok(toTask(found)), existing: true };
+        }
         const total = this.db.prepare('SELECT COUNT(*) AS n FROM tasks').get() as { n: number };
         if (total.n >= TASK_LIMIT) return fail('limit_reached', 'Há tarefas demais guardadas. Exclua algumas.');
         const at = this.now().toISOString();
@@ -200,18 +215,21 @@ export class SqliteTaskRepository implements TaskRepository {
           completed_at: null,
           updated_at: at,
           due_at: due.value,
+          source_ref: source.value,
         };
         this.db
           .prepare(
-            'INSERT INTO tasks (id, title, completed, created_at, completed_at, updated_at, due_at) VALUES (?, ?, 0, ?, NULL, ?, ?)',
+            'INSERT INTO tasks (id, title, completed, created_at, completed_at, updated_at, due_at, source_ref) VALUES (?, ?, 0, ?, NULL, ?, ?, ?)',
           )
-          .run(row.id, row.title, row.created_at, row.updated_at, row.due_at);
+          .run(row.id, row.title, row.created_at, row.updated_at, row.due_at, row.source_ref);
         return ok(toTask(row));
       });
       return task;
     });
-    if (result.ok) this.notify({ type: 'created', id: result.value.id });
-    return result;
+    if (!result.ok) return result;
+    const { existing, ...plain } = result as TaskResult<Task> & { existing?: boolean };
+    if (!existing) this.notify({ type: 'created', id: result.value.id });
+    return plain as TaskResult<Task>;
   }
 
   /** Grava o prazo. Idempotente: mesmo prazo não muda nada nem avisa. */

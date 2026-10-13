@@ -114,6 +114,46 @@
   box-shadow: 0 0 0 2px var(--s-bg), 0 0 0 4px var(--s-accent);
 }
 
+/* Escolha do personagem: grade de cartões com uma prévia viva de cada um. */
+.settings-characters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.settings-character {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px 5px;
+  border: 1px solid var(--s-border);
+  border-radius: 12px;
+  background: var(--s-field-bg);
+  color: var(--s-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-character:hover {
+  background: var(--s-hover);
+}
+
+.settings-character[aria-checked='true'] {
+  border-color: var(--s-accent);
+  box-shadow: 0 0 0 1px var(--s-accent);
+}
+
+.settings-character-preview {
+  display: block;
+  width: 54px;
+  height: 54px;
+  overflow: visible;
+  pointer-events: none;
+}
+
 .settings-hint {
   margin: 6px 0 0;
   color: var(--s-muted);
@@ -298,4 +338,19 @@
 .settings-help ol {
   margin: 6px 0 0;
   padding-left: 18px;
+}
+
+.settings-text {
+  width: 170px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--s-border);
+  border-radius: 8px;
+  background: var(--s-field-bg);
+  color: var(--s-text);
+  font: inherit;
+}
+
+.settings-text[aria-invalid='true'] {
+  border-color: var(--s-danger);
 }

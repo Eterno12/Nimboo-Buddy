@@ -45,7 +45,8 @@ const api: MochiApi = {
   islandClosed: () => ipcRenderer.send(IPC.islandClosed),
   tasks: {
     list: () => ipcRenderer.invoke(IPC.tasksList),
-    create: (title, dueAt) => ipcRenderer.invoke(IPC.tasksCreate, { title, dueAt: dueAt ?? null }),
+    create: (title, dueAt, sourceRef) =>
+      ipcRenderer.invoke(IPC.tasksCreate, { title, dueAt: dueAt ?? null, sourceRef: sourceRef ?? null }),
     setDue: (id, dueAt) => ipcRenderer.invoke(IPC.tasksSetDue, id, dueAt),
     complete: (id) => ipcRenderer.invoke(IPC.tasksComplete, id),
     reopen: (id) => ipcRenderer.invoke(IPC.tasksReopen, id),
@@ -89,6 +90,35 @@ const api: MochiApi = {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
     update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
     onChange: (listener) => listen<[SettingsSnapshot]>(IPC.settingsChanged, (s) => listener(s)),
+  },
+  assistant: {
+    open: () => ipcRenderer.send(IPC.assistantOpen),
+    listen: () => ipcRenderer.invoke(IPC.assistantListen),
+    cancelListen: () => ipcRenderer.send(IPC.assistantListenCancel),
+    openSpeechSettings: () => ipcRenderer.send(IPC.assistantOpenSpeechSettings),
+    ask: (question, history) => ipcRenderer.invoke(IPC.assistantAsk, question, history),
+    status: () => ipcRenderer.invoke(IPC.assistantAiStatus),
+    pullModel: (model) => ipcRenderer.invoke(IPC.assistantPullModel, model ?? null),
+    onPullProgress: (listener) =>
+      listen<[{ status?: unknown; fraction?: unknown }]>(IPC.assistantPullProgress, (p) =>
+        listener({ status: typeof p?.status === 'string' ? p.status : '', fraction: typeof p?.fraction === 'number' ? p.fraction : null }),
+      ),
+  },
+  notes: {
+    list: (query) => ipcRenderer.invoke(IPC.notesList, query ?? null),
+    get: (id) => ipcRenderer.invoke(IPC.notesGet, id),
+    create: (input) => ipcRenderer.invoke(IPC.notesCreate, input ?? {}),
+    update: (id, patch) => ipcRenderer.invoke(IPC.notesUpdate, id, patch),
+    remove: (id) => ipcRenderer.invoke(IPC.notesRemove, id),
+    openManager: (id) => ipcRenderer.send(IPC.notesOpenManager, id ?? null),
+    onChange: (listener) =>
+      listen<[{ type?: unknown; id?: unknown; fields?: unknown }]>(IPC.notesChanged, (c) => {
+        const type = c?.type === 'created' || c?.type === 'updated' || c?.type === 'removed' ? c.type : 'updated';
+        const id = typeof c?.id === 'string' ? c.id : '';
+        const fields = Array.isArray(c?.fields) ? c.fields.filter((f): f is 'doc' | 'color' | 'pinned' | 'bounds' => ['doc', 'color', 'pinned', 'bounds'].includes(f as string)) : [];
+        listener(type === 'updated' ? { type, id, fields } : { type, id });
+      }),
+    onOpen: (listener) => listen<[unknown]>(IPC.notesOpen, (id) => listener(typeof id === 'string' ? id : null)),
   },
   calendar: {
     get: async () => (await ipcRenderer.invoke(IPC.calendarGet)) ?? EMPTY_CALENDAR,

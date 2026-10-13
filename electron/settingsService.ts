@@ -14,6 +14,7 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'soundVolume',
   'bubbles',
   'doNotDisturb',
+  'character',
   'color',
   'theme',
   'focusMinutes',
@@ -23,6 +24,9 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'pomodoroAuto',
   'remindersEnabled',
   'reminderLeadMin',
+  'assistantWeb',
+  'assistantLocalAi',
+  'assistantModel',
 ];
 
 export interface SettingsService {

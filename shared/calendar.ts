@@ -3,6 +3,8 @@
  * do Google Agenda). Tipos e regras puras, sem Electron nem rede.
  */
 
+import { TASK_TITLE_MAX } from './tasks.ts';
+
 export interface CalendarEvent {
   /** Estável por ocorrência: `<uid>|<início em ms>`. */
   id: string;
@@ -104,4 +106,32 @@ export function todaysAgenda(events: readonly CalendarEvent[], now: Date): Calen
   const ms = now.getTime();
   const rank = (e: CalendarEvent) => (e.allDay ? 0 : Date.parse(e.end) <= ms ? 2 : 1);
   return [...today].sort((a, b) => rank(a) - rank(b) || Date.parse(a.start) - Date.parse(b.start));
+}
+
+/** Dados para criar a tarefa de um evento (o botão "Virar tarefa"). */
+export interface TaskFromEvent {
+  title: string;
+  /** Início do evento, se ainda for futuro; dia inteiro e eventos em andamento ficam sem prazo. */
+  dueAt: string | null;
+  /** Id estável do evento: a tarefa guarda isso para não duplicar e para não avisar duas vezes. */
+  sourceRef: string;
+}
+
+/** O evento ainda pode virar tarefa (não terminou). */
+export function canBecomeTask(event: CalendarEvent, now: Date): boolean {
+  return event.allDay || Date.parse(event.end) > now.getTime();
+}
+
+/**
+ * Como um evento da agenda vira tarefa: o mesmo título (cortado em 200 caracteres) e, se o evento é
+ * com horário e ainda não começou, o início como prazo (os lembretes já existentes passam a valer).
+ * Evento de dia inteiro vira tarefa sem prazo.
+ */
+export function taskFromEvent(event: CalendarEvent, now: Date): TaskFromEvent {
+  const chars = [...event.title.trim().replace(/\s+/g, ' ')];
+  let title = chars.slice(0, TASK_TITLE_MAX).join('').trimEnd();
+  if (title.length === 0) title = 'Evento sem título';
+  const start = Date.parse(event.start);
+  const future = !event.allDay && Number.isFinite(start) && start > now.getTime();
+  return { title, dueAt: future ? new Date(start).toISOString() : null, sourceRef: event.id };
 }

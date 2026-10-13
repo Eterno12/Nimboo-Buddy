@@ -27,7 +27,7 @@ const stamp = (d) =>
   `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
 const dateOnly = (d) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
 const now = new Date();
-const soon = new Date(now.getTime() + 70_000);
+const soon = new Date(now.getTime() + 45_000);
 const past = new Date(now.getTime() - 3 * 3600_000);
 const later = new Date(now.getTime() + 2 * 3600_000);
 const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -114,7 +114,20 @@ async function connect(target) {
     }
     throw new Error(`tempo esgotado esperando: ${label}`);
   };
-  return { ev, waitFor, close: () => ws.close() };
+  // Com MOCHI_SHOTS=<pasta>, grava uma captura (inspeção visual).
+  const shot = (file) =>
+    new Promise((resolve) => {
+      const my = ++id;
+      pending.set(my, (d) => {
+        if (d.result?.data && process.env.MOCHI_SHOTS) {
+          fs.mkdirSync(process.env.MOCHI_SHOTS, { recursive: true });
+          fs.writeFileSync(path.join(process.env.MOCHI_SHOTS, file), Buffer.from(d.result.data, 'base64'));
+        }
+        resolve();
+      });
+      ws.send(JSON.stringify({ id: my, method: 'Page.captureScreenshot', params: { format: 'png' } }));
+    });
+  return { ev, waitFor, shot, close: () => ws.close() };
 }
 
 let page;
@@ -158,7 +171,13 @@ try {
     for (const f of fs.readdirSync(userData)) {
       if (f === 'fixture.ics' || f === 'calendar-url.bin') continue;
       const p = path.join(userData, f);
-      if (fs.statSync(p).isFile()) assert.ok(!fs.readFileSync(p, 'latin1').includes('segredo9876'), `vazou em ${f}`);
+      let text = null;
+      try {
+        if (fs.statSync(p).isFile()) text = fs.readFileSync(p, 'latin1');
+      } catch {
+        continue; // arquivos temporários do Chromium somem enquanto listamos
+      }
+      if (text !== null) assert.ok(!text.includes('segredo9876'), `vazou em ${f}`);
     }
   });
 
@@ -180,10 +199,79 @@ try {
   });
 
   await step('lembrete: na hora do evento o Mochi mostra o balão com o nome dele', async () => {
-    await page.waitFor(
-      `(document.querySelector('.speech')?.textContent ?? '').includes('Chegou a hora: Consulta de teste')`,
-      'balão do evento',
-      100000,
+    const seen = new Set();
+    const t0 = Date.now();
+    let found = false;
+    while (Date.now() - t0 < 100000 && !found) {
+      const text = await page.ev(`document.querySelector('.speech')?.textContent ?? ''`);
+      if (text) seen.add(text);
+      found = text.includes('Chegou a hora: Consulta de teste');
+      if (!found) await sleep(250);
+    }
+    assert.ok(found, `balões vistos: ${JSON.stringify([...seen])}; ${Math.round((Date.now() - t0) / 1000)} s`);
+  });
+  await step('"Virar tarefa": só aparece em eventos que ainda não terminaram', async () => {
+    const rows = await panel.ev(
+      `[...document.querySelectorAll('.agenda-item')].map((li) => ({ t: li.querySelector('.agenda-title').textContent, btn: !!li.querySelector('.agenda-make-task'), label: li.querySelector('.agenda-make-task')?.textContent.trim() ?? null }))`,
+    );
+    const by = (title) => rows.find((r) => r.t === title);
+    assert.equal(by('Reunião passada').btn, false, 'o que já terminou não vira tarefa');
+    assert.equal(by('Almoço com a equipe').btn, true);
+    assert.equal(by('Dia de folga').btn, true, 'dia inteiro também pode');
+    assert.equal(by('Almoço com a equipe').label, 'Virar tarefa');
+  });
+
+  await step('clicar vira tarefa: título do evento, horário como prazo (dia inteiro sem prazo), e o botão vira "✓ Tarefa"', async () => {
+    const events = (await page.ev(`window.mochi.calendar.get()`)).events;
+    const lunch = events.find((e) => e.title === 'Almoço com a equipe');
+    const click = (title) =>
+      panel.ev(
+        `[...document.querySelectorAll('.agenda-item')].find((li) => li.querySelector('.agenda-title').textContent === ${JSON.stringify(title)}).querySelector('.agenda-make-task').click()`,
+      );
+    await click('Almoço com a equipe');
+    await panel.waitFor(
+      `[...document.querySelectorAll('.agenda-item')].find((li) => li.querySelector('.agenda-title').textContent === 'Almoço com a equipe')?.querySelector('.agenda-linked')?.textContent.includes('Tarefa')`,
+      'marcado como tarefa',
+    );
+    await click('Dia de folga');
+    await panel.waitFor(`document.querySelectorAll('.agenda-linked').length === 2`, 'segunda tarefa');
+    const list = await panel.ev(`window.mochi.tasks.list()`);
+    assert.equal(list.ok, true);
+    const mine = list.value.active.filter((t) => t.sourceRef);
+    assert.equal(mine.length, 2);
+    const lunchTask = mine.find((t) => t.title === 'Almoço com a equipe');
+    assert.equal(lunchTask.dueAt, new Date(lunch.start).toISOString());
+    assert.equal(lunchTask.sourceRef, lunch.id);
+    assert.equal(mine.find((t) => t.title === 'Dia de folga').dueAt, null);
+    await panel.shot('agenda-virar-tarefa.png');
+  });
+
+  await step('não duplica: criar de novo com a mesma origem devolve a mesma tarefa', async () => {
+    const events = (await page.ev(`window.mochi.calendar.get()`)).events;
+    const lunch = events.find((e) => e.title === 'Almoço com a equipe');
+    const before = await panel.ev(`window.mochi.tasks.list().then((l) => l.value.active.length)`);
+    const again = await panel.ev(
+      `window.mochi.tasks.create('Almoço com a equipe', null, ${JSON.stringify(lunch.id)})`,
+    );
+    assert.equal(again.ok, true);
+    const after = await panel.ev(`window.mochi.tasks.list().then((l) => l.value.active.length)`);
+    assert.equal(after, before);
+    const bad = await panel.ev(`window.mochi.tasks.create('x', null, 'com\\nquebra')`);
+    assert.equal(bad.ok, false);
+  });
+
+  await step('excluir a tarefa devolve o botão; desfazer marca de novo', async () => {
+    const list = await panel.ev(`window.mochi.tasks.list()`);
+    const lunchTask = list.value.active.find((t) => t.title === 'Almoço com a equipe');
+    await panel.ev(`window.mochi.tasks.scheduleRemove(${JSON.stringify(lunchTask.id)})`);
+    await panel.waitFor(
+      `!!([...document.querySelectorAll('.agenda-item')].find((li) => li.querySelector('.agenda-title').textContent === 'Almoço com a equipe')?.querySelector('.agenda-make-task'))`,
+      'botão de volta',
+    );
+    await panel.ev(`window.mochi.tasks.undoRemove(${JSON.stringify(lunchTask.id)})`);
+    await panel.waitFor(
+      `!!([...document.querySelectorAll('.agenda-item')].find((li) => li.querySelector('.agenda-title').textContent === 'Almoço com a equipe')?.querySelector('.agenda-linked'))`,
+      'marcado de novo',
     );
   });
 
