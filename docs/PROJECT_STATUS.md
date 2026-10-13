@@ -12,11 +12,13 @@ copiado de planos. Legenda de evidência:
 | Verificação | Resultado |
 |---|---|
 | `npm run build` | limpo (`tsc` sem erros) |
-| `npm test` | **178/178** — `tasks` 29, `geometry` 26, `island` 17, `durability` 14, `settings` 14, `focus` 13, `mascotController` 12, `contrast` 11, `personality` 11, `removal` 10, `backup` 6, `dnd` 5, `sounds` 5, `draft` 5 |
+| `npm test` | **214/214** — `tasks` 29, `geometry` 26, `focus` 21, `personality` 18, `island` 17, `settings` 15, `durability` 14, `mascotController` 12, `contrast` 11, `reminders` 11, `removal` 10, `backup` 6, `dnd` 5, `sounds` 5, `draft` 5, `focusLog` 5, `dueFormat` 4 |
 | `npm run test:tasks` | **53/53** (`tasks` + `removal` + `durability`) |
 | `npm run test:e2e` | **14/14** passos (tarefas; app real via CDP, dados isolados) |
-| `npm run test:e2e:focus` | **9/9** passos (inclui uma sessão real de 1 min com a ilha escondida; ~1,5 min) |
-| `npm run test:e2e:settings` | **10/10** passos (tamanhos, cor, balões, validação, painel) |
+| `npm run test:e2e:focus` | **11/11** passos (tempo livre, tarefa vinculada, sessão real de 1 min com a ilha escondida; ~1,5 min) |
+| `npm run test:e2e:settings` | **13/13** passos (abre como ilha, tamanhos, cor, balões, validação, painel, prazo e lembrete) |
+| `npm run pack` + `node tests/e2e/packaged.e2e.mjs` | **5/5** passos no `Mochi.exe` empacotado (ilha, `packaged`, banco, foco, preferências) |
+| `npm run dist` | gera `release/Mochi Setup 0.2.0.exe` (106 MB, NSIS por usuário, **sem assinatura**) |
 
 Verificações manuais com o app real nesta etapa: atalho global (Ctrl+Alt+M enviado por `keybd_event`
 com a ilha escondida → ilha volta, tarefas abertas, campo em foco) e "não incomodar" (janela em tela
@@ -49,17 +51,23 @@ Vite 8.3, TypeScript 7.0. Máquina de desenvolvimento com 1 monitor a 100 % de e
 | **Sons** sintetizados (tec, sininhos, vozinha do balão), baixos e curtos | planos [auto] (limites de duração/volume/frequência); audição [manual] |
 | **Personalidade e balões**: falas por hora do dia/humor, quieto durante o foco, intervalos e teto por hora | `personality` [auto]; balão [manual] (captura) |
 | **Cores do Mochi** (menta, pêssego, céu, lilás, limão, rosa) | e2e (estilo do SVG) |
+| **Abre sempre como ilha**, mesmo com o modo flutuante salvo (D26) | [auto] e2e (dev e empacotado) |
+| **Som e fala para cada animação** (carinho, curioso, susto, cócegas, emburrado, arraste, bocejo, espreguiçar, olhar em volta, sono, pulinho); fala com intervalo por animação, som sempre (os espontâneos calam no foco) | catálogo e regras [auto]; audição [manual] |
+| **Foco evoluído:** minutos livres (1–180), última duração lembrada, tarefa vinculada (e "Concluir tarefa" no fim), ciclo Pomodoro opcional (pausa longa a cada 4; automático opcional), contador do dia | `FocusTimer`/`FocusLog` [auto]; e2e (11 passos) |
+| **Tarefas com prazo e lembrete:** data/hora opcional, atrasada/hoje destacados, lembrete na hora e N min antes (balão + som + notificação se oculto) | repositório, validação, agendador [auto]; e2e (lembrete real) |
+| **Migração v2 do banco** (`due_at`, `focus_sessions`) com backup automático | [auto] |
+| **Empacotamento:** `npm run pack`/`dist` (electron-builder, NSIS por usuário, ícone do blob); app empacotado reconhece `isPackaged` | e2e empacotado [auto]; instalador **construído**, não instalado nesta máquina |
 | Contraste das cores (tarefas, configurações, balão) calculado sobre o CSS real | [auto] |
 
 ## Parcialmente implementado
 
 - **Atalhos da ilha:** **Tarefas**, **Foco** e a engrenagem funcionam. *Notas* e *Assistente* são botões
   desabilitados ("Em breve") — não há código por trás.
-- **Iniciar com o Windows:** a preferência existe e é aplicada com `app.setLoginItemSettings`, mas **só no
-  app instalado** (`app.isPackaged`). Não há instalador ainda; na versão de desenvolvimento a opção fica
-  desabilitada com explicação.
-- **Modo foco (v1):** sem persistência (fechar o app encerra a sessão), sem ciclo Pomodoro automático, sem
-  duração personalizada, sem histórico. Sons do foco existem (início, pausa, fim).
+- **Iniciar com o Windows:** a preferência é aplicada com `app.setLoginItemSettings` **só no app
+  empacotado** (`app.isPackaged`). O instalador existe, mas a opção ainda **não foi exercitada** com o app
+  instalado de verdade (o teste empacotado roda o `win-unpacked`).
+- **Modo foco:** a sessão em andamento não persiste (fechar o app a encerra); o histórico guarda só o
+  que a estatística do dia precisa (400 dias). Sem gráficos nem relatórios.
 - **Mood/afeto:** funciona, mas é só memória; reinicia a cada execução (decisão, ver `DECISIONS.md`).
 - **Sincronização:** o código está *preparado* (interface `TaskRepository`, UUIDs, UTC, `updated_at`,
   commits duráveis), mas **não existe** nada de rede, login ou conflito. Os riscos e pré-requisitos (S1–S13)
@@ -69,8 +77,8 @@ Vite 8.3, TypeScript 7.0. Máquina de desenvolvimento com 1 monitor a 100 % de e
 
 ## Não existe (não presumir)
 
-Ciclo Pomodoro automático, notas, assistente de IA, login, sincronização, versão mobile, instalador/
-empacotamento, ícone do aplicativo (só o ícone gerado da bandeja), internacionalização (textos fixos em
+Notas, assistente de IA, login, sincronização, versão mobile, assinatura de código do instalador,
+atualização automática, recorrência de tarefas (prazo é uma data só), internacionalização (textos fixos em
 pt-BR), tema escuro do painel, opção de movimento reduzido (decidido: o mascote sempre anima), edição de
 título de tarefa, ordenação manual de tarefas, outros personagens (só o blob verde, com paletas), atalho
 global personalizado livre (só os predefinidos), escolha do monitor da ilha pela interface.
@@ -94,15 +102,17 @@ global personalizado livre (só os predefinidos), escolha do monitor da ilha pel
 | 17 | Skills de terceiros em `.agents/skills` + `skills-lock.json` | informativa | **fora do versionamento** até aprovação; excluídas localmente em `.git/info/exclude` |
 | 18 | `tests/e2e` depende de temporização e de sessão gráfica | informativa | não roda em CI sem GUI; não faz parte de `npm test`; o cursor real do sistema na borda superior pode trazer a ilha durante o teste |
 | 19 | Ctrl+Alt+Espaço (antigo padrão) já é usado por outros apps (ex.: Claude) | informativa | padrão agora é Ctrl+Alt+M; a tela de configurações avisa quando o atalho não pôde ser registrado |
+| 22 | O e2e depende do foco/ponteiro do sistema (ilha recolhe se outra janela toma o foco) | informativa | os passos sensíveis usam "nunca esconder" e `keepAlive`; ainda pode oscilar com a máquina ocupada |
+| 23 | Instalador sem assinatura de código | média | o Windows SmartScreen mostra aviso na 1ª instalação; assinar exige certificado |
+| 24 | `npm run pack`/`dist` baixam binários (Electron, NSIS) na 1ª vez | informativa | precisa de internet no build; o app em si continua sem rede |
 | 20 | Um teste de durabilidade (`mutações continuam aplicando a retenção...`) falhou **uma vez** com a máquina carregada | baixa | passou em 3 execuções seguintes; usa espera curta por bloqueio entre conexões; se repetir, aumentar `busy_timeout` do teste |
 | 21 | Vigia de tela cheia é um processo PowerShell oculto (um por execução) | baixa | sem módulos nativos e sem `-EncodedCommand`/`-ExecutionPolicy` (parecem malware para antivírus); se o PowerShell estiver bloqueado, só a função "não incomodar" some |
 
 ## Próxima etapa recomendada
 
-1. **Empacotamento** (instalador, ícone do app): destrava "iniciar com o Windows" de verdade e é pré-requisito
-   para distribuir.
-2. **Evoluir o modo foco** (fase C do `ROADMAP.md`): ciclo Pomodoro, duração personalizada, vínculo com
-   tarefa, histórico.
-3. **Tarefas com data/lembrete** (o Mochi avisa com balão e som) e **Notas** (fase D).
-4. **Outros personagens** (o contrato de paleta e o `Mascot.tsx` já isolam o desenho do blob).
-5. Higiene: decidir o destino de `.agents/` e `skills-lock.json` e configurar a identidade do git.
+1. **Instalar de verdade e conferir** (por você): rodar `release/Mochi Setup 0.2.0.exe`, ligar "iniciar com o
+   Windows", reiniciar e ver se abre como ilha.
+2. **Notas rápidas** (fase D do `ROADMAP.md`): a migração v3 já tem backup automático.
+3. **Segundo personagem** (o quadradinho): o desenho (`Mascot.tsx`) e o catálogo de falas são os pontos de troca.
+4. **Assinatura de código** e atualização automática, se for distribuir para outras pessoas.
+5. Higiene: decidir o destino de `.agents/` e `skills-lock.json`; configurar a identidade do git.

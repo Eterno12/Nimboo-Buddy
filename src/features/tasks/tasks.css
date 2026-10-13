@@ -431,3 +431,110 @@
   outline: 2px solid var(--t-focus);
   outline-offset: 2px;
 }
+
+/* ---------- Prazo das tarefas ---------- */
+.tasks-due-toggle[data-set='true'] {
+  color: var(--t-accent);
+}
+
+.tasks-due-row,
+.task-due-editor {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-due-editor {
+  flex-basis: 100%;
+  padding: 2px 0 4px 40px;
+}
+
+.tasks-due-input {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 8px;
+  background: var(--t-field-bg);
+  color: var(--t-text);
+  font: inherit;
+  font-size: 12.5px;
+  color-scheme: light;
+}
+
+.tasks[data-variant='island'] .tasks-due-input {
+  color-scheme: dark;
+}
+
+.tasks-due-chip {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t-text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tasks-due-chip:hover {
+  background: var(--t-hover);
+}
+
+.tasks-due-chip:focus-visible,
+.tasks-due-input:focus-visible,
+.task-due:focus-visible {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}
+
+.task {
+  flex-wrap: wrap;
+}
+
+.task-due {
+  flex: none;
+  max-width: 120px;
+  padding: 2px 8px;
+  overflow: hidden;
+  border: 1px solid var(--t-field-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t-muted);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.task-due[data-empty='true'] {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 4px;
+  border-color: transparent;
+  opacity: 0.55;
+}
+
+.task:hover .task-due[data-empty='true'],
+.task-due[data-empty='true']:focus-visible {
+  opacity: 1;
+}
+
+.task-due[data-status='today'] {
+  border-color: var(--t-accent);
+  color: var(--t-accent);
+}
+
+.task-due[data-status='overdue'] {
+  border-color: var(--t-danger);
+  color: var(--t-danger);
+  font-weight: 600;
+}

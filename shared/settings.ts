@@ -2,6 +2,9 @@
 
 export type PresentationMode = 'floating' | 'island';
 
+/** Modo com que o app SEMPRE abre, independentemente do que ficou salvo. */
+export const STARTUP_MODE: PresentationMode = 'island';
+
 /** Tamanhos permitidos (fator sobre o tamanho base). Passos fixos: o layout fica previsível. */
 export const ISLAND_SCALES = [0.8, 0.9, 1, 1.1, 1.25, 1.4] as const;
 export const MOCHI_SCALES = [0.7, 0.85, 1, 1.2, 1.4, 1.6] as const;
@@ -49,7 +52,22 @@ export interface Settings {
   doNotDisturb: boolean;
   /** Cor do Mochi. */
   color: MochiColor;
+  /** Modo foco: duração (min) do último foco iniciado e das pausas. */
+  focusMinutes: number;
+  breakMinutes: number;
+  longBreakMinutes: number;
+  /** Ciclo Pomodoro (pausa longa a cada 4 focos). */
+  pomodoroCycle: boolean;
+  /** Com o ciclo ligado, inicia a próxima etapa sozinho depois de uns segundos. */
+  pomodoroAuto: boolean;
+  /** Lembretes de prazo das tarefas (balão, som e notificação se o Mochi estiver oculto). */
+  remindersEnabled: boolean;
+  /** Aviso antecipado em minutos (0 = só na hora marcada). */
+  reminderLeadMin: number;
 }
+
+/** Antecedências oferecidas para o lembrete de prazo (minutos). */
+export const REMINDER_LEADS_MIN = [0, 5, 10, 15, 30] as const;
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   version: 3,
@@ -67,7 +85,19 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   bubbles: true,
   doNotDisturb: true,
   color: 'mint',
+  focusMinutes: 25,
+  breakMinutes: 5,
+  longBreakMinutes: 15,
+  pomodoroCycle: false,
+  pomodoroAuto: false,
+  remindersEnabled: true,
+  reminderLeadMin: 10,
 });
+
+/** Número inteiro dentro de [min, max]; qualquer outra coisa volta ao padrão. */
+function intInRange(v: unknown, min: number, max: number, fallback: number): number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : fallback;
+}
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
@@ -116,6 +146,13 @@ export function parseSettings(raw: unknown): Settings {
     if (typeof r.color === 'string' && (MOCHI_COLORS as readonly string[]).includes(r.color)) {
       out.color = r.color as MochiColor;
     }
+    out.focusMinutes = intInRange(r.focusMinutes, 1, 180, DEFAULT_SETTINGS.focusMinutes);
+    out.breakMinutes = intInRange(r.breakMinutes, 1, 60, DEFAULT_SETTINGS.breakMinutes);
+    out.longBreakMinutes = intInRange(r.longBreakMinutes, 1, 60, DEFAULT_SETTINGS.longBreakMinutes);
+    if (typeof r.pomodoroCycle === 'boolean') out.pomodoroCycle = r.pomodoroCycle;
+    if (typeof r.pomodoroAuto === 'boolean') out.pomodoroAuto = r.pomodoroAuto;
+    if (typeof r.remindersEnabled === 'boolean') out.remindersEnabled = r.remindersEnabled;
+    if (isFiniteNumber(r.reminderLeadMin)) out.reminderLeadMin = nearestOf(REMINDER_LEADS_MIN, r.reminderLeadMin);
   }
   return out;
 }

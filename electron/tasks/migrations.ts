@@ -36,6 +36,25 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Prazo das tarefas (opcional) e registro das sessões de foco concluídas (estatística do dia).
+    version: 2,
+    name: 'due_dates_and_focus_sessions',
+    up(db) {
+      db.exec(`
+        ALTER TABLE tasks ADD COLUMN due_at TEXT;
+        CREATE INDEX idx_tasks_due ON tasks (due_at) WHERE due_at IS NOT NULL AND completed = 0;
+        CREATE TABLE focus_sessions (
+          id           TEXT    NOT NULL PRIMARY KEY,
+          kind         TEXT    NOT NULL CHECK (kind IN ('focus', 'break')),
+          minutes      INTEGER NOT NULL CHECK (minutes > 0),
+          completed_at TEXT    NOT NULL,
+          task_id      TEXT
+        ) STRICT;
+        CREATE INDEX idx_focus_completed ON focus_sessions (completed_at);
+      `);
+    },
+  },
 ];
 
 /** O banco foi criado por uma versão mais nova do app; não é seguro abri-lo. */

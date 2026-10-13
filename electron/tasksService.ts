@@ -20,6 +20,8 @@ import type { DatabaseSync } from 'node:sqlite';
 const PURGE_INTERVAL_MS = 60 * 60 * 1000;
 
 export interface TasksService {
+  /** Conexão aberta (para outros registros no mesmo arquivo, como as sessões de foco) ou null. */
+  database(): DatabaseSync | null;
   close(): void;
 }
 
@@ -27,6 +29,8 @@ interface TasksServiceOptions {
   dbPath: string;
   /** URL de origem das páginas do app (servidor de desenvolvimento) ou `file://`. */
   isAppUrl(url: string): boolean;
+  /** Chamado ao abrir e a cada mudança, com as tarefas visíveis (usado pelos lembretes de prazo). */
+  onTasksChanged?(tasks: Task[]): void;
 }
 
 const STORAGE_DOWN = () => fail<never>('storage', 'As tarefas não estão disponíveis agora.');
@@ -38,6 +42,7 @@ const CHANNELS = [
   IPC.tasksReopen,
   IPC.tasksScheduleRemove,
   IPC.tasksUndoRemove,
+  IPC.tasksSetDue,
   IPC.tasksNotice,
   IPC.tasksDismissNotice,
 ];
@@ -46,7 +51,7 @@ const CHANNELS = [
  * Liga o repositório SQLite ao IPC. O banco só existe no processo principal; o
  * renderer chama operações específicas e tipadas, e é avisado das mudanças.
  */
-export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): TasksService {
+export function startTasksService({ dbPath, isAppUrl, onTasksChanged }: TasksServiceOptions): TasksService {
   let db: DatabaseSync | null = null;
   let repo: SqliteTaskRepository | null = null;
   let scheduler: RemovalScheduler | null = null;
@@ -69,6 +74,18 @@ export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): Ta
         console.error('Falha ao avisar uma janela sobre mudanças nas tarefas:', error);
       }
     }
+    publish();
+  };
+
+  /** Entrega as tarefas visíveis a quem agenda lembretes (nunca falha a operação já confirmada). */
+  const publish = () => {
+    if (!onTasksChanged || !repo || !scheduler) return;
+    const currentRepo = repo;
+    const currentScheduler = scheduler;
+    void currentRepo
+      .list()
+      .then((lists) => onTasksChanged(currentScheduler.snapshot(lists).active))
+      .catch((error) => console.error('Falha ao publicar as tarefas:', error));
   };
 
   try {
@@ -82,6 +99,7 @@ export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): Ta
     repo = new SqliteTaskRepository(db, { onChange: (c) => broadcast(c) });
     scheduler = new RemovalScheduler(repo, { onChange: () => broadcast() });
     repo.purgeExpired(); // limpeza na inicialização
+    publish();
   } catch (error) {
     // O app segue funcionando (mascote, ilha); só as tarefas ficam indisponíveis.
     console.error('Não foi possível abrir o banco de tarefas:', error);
@@ -122,12 +140,12 @@ export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): Ta
   }
 
   /** Executa uma operação com validação do remetente (os argumentos são validados pelo repositório). */
-  const handle = <R>(channel: string, op: (ctx: Ctx, arg: unknown) => Promise<TaskResult<R>>) => {
-    ipcMain.handle(channel, async (event, arg: unknown): Promise<TaskResult<R>> => {
+  const handle = <R>(channel: string, op: (ctx: Ctx, arg: unknown, ...rest: unknown[]) => Promise<TaskResult<R>>) => {
+    ipcMain.handle(channel, async (event, arg: unknown, ...rest: unknown[]): Promise<TaskResult<R>> => {
       if (!trusted(event)) return fail('storage', 'Remetente não autorizado.');
       if (!repo || !scheduler) return STORAGE_DOWN();
       try {
-        return await op({ repo, scheduler }, arg);
+        return await op({ repo, scheduler }, arg, ...rest);
       } catch (error) {
         console.error(`Falha em ${channel}:`, error);
         return fail('storage', 'Não foi possível acessar as tarefas salvas.');
@@ -140,7 +158,17 @@ export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): Ta
     isTaskId(id) && ctx.scheduler.isPending(id) ? fail('not_found', 'A tarefa foi excluída.') : null;
 
   handle<TaskSnapshot>(IPC.tasksList, async ({ repo: r, scheduler: s }) => ok(s.snapshot(await r.list())));
-  handle<Task>(IPC.tasksCreate, ({ repo: r }, title) => r.create(title as string)); // validado em validateTitle
+  // Aceita só o título (texto) ou { title, dueAt }; tudo é validado pelo repositório.
+  handle<Task>(IPC.tasksCreate, ({ repo: r }, arg) => {
+    if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+      const { title, dueAt } = arg as { title?: unknown; dueAt?: unknown };
+      return r.create(title as string, (dueAt ?? null) as string | null);
+    }
+    return r.create(arg as string);
+  });
+  handle<Task>(IPC.tasksSetDue, async (ctx, id, dueAt) =>
+    gone<Task>(ctx, id) ?? ctx.repo.setDue(id as string, (dueAt ?? null) as string | null),
+  );
   handle<Task>(IPC.tasksComplete, async (ctx, id) => gone<Task>(ctx, id) ?? ctx.repo.complete(id as string));
   handle<Task>(IPC.tasksReopen, async (ctx, id) => gone<Task>(ctx, id) ?? ctx.repo.reopen(id as string));
   handle<PendingRemoval>(IPC.tasksScheduleRemove, ({ scheduler: s }, id) => s.schedule(id as string));
@@ -152,6 +180,7 @@ export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): Ta
   });
 
   return {
+    database: () => db,
     close() {
       clearInterval(timer);
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);

@@ -67,7 +67,7 @@ export function createMascotWindow(bounds: Rect, options: MascotWindowOptions): 
 export function createPanelWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 380,
-    height: 520,
+    height: 640,
     title: 'Mochi',
     autoHideMenuBar: true,
     show: false,

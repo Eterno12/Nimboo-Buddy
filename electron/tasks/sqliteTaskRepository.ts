@@ -6,6 +6,7 @@ import {
   fail,
   isTaskId,
   ok,
+  validateDue,
   validateTitle,
   type Task,
   type TaskChange,
@@ -30,6 +31,7 @@ interface Row {
   created_at: string;
   completed_at: string | null;
   updated_at: string;
+  due_at: string | null;
 }
 
 const toTask = (r: Row): Task => ({
@@ -39,6 +41,7 @@ const toTask = (r: Row): Task => ({
   createdAt: r.created_at,
   completedAt: r.completed_at,
   updatedAt: r.updated_at,
+  dueAt: r.due_at ?? null,
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -155,7 +158,7 @@ export class SqliteTaskRepository implements TaskRepository {
     const purged = this.purgeIfNeeded(cutoff);
     if (purged > 0) this.notify({ type: 'purged', count: purged });
     const rows = this.db
-      .prepare(`SELECT * FROM tasks WHERE ${NOT_EXPIRED_SQL} ORDER BY completed ASC, created_at ASC, id ASC`)
+      .prepare(`SELECT * FROM tasks WHERE ${NOT_EXPIRED_SQL} ORDER BY completed ASC, (due_at IS NULL) ASC, due_at ASC, created_at ASC, id ASC`)
       .all(cutoff) as unknown as Row[];
     const tasks = rows.map(toTask);
     return {
@@ -178,9 +181,11 @@ export class SqliteTaskRepository implements TaskRepository {
       return row ? ok(toTask(row)) : fail('not_found', 'A tarefa não existe mais.');
     });
   }
-  async create(title: string): Promise<TaskResult<Task>> {
+  async create(title: string, dueAt: string | null = null): Promise<TaskResult<Task>> {
     const valid = validateTitle(title);
     if (!valid.ok) return valid;
+    const due = validateDue(dueAt);
+    if (!due.ok) return due;
     const result = this.guard(() => {
       const task = this.transaction((): TaskResult<Task> => {
         this.purgeInside();
@@ -194,12 +199,13 @@ export class SqliteTaskRepository implements TaskRepository {
           created_at: at,
           completed_at: null,
           updated_at: at,
+          due_at: due.value,
         };
         this.db
           .prepare(
-            'INSERT INTO tasks (id, title, completed, created_at, completed_at, updated_at) VALUES (?, ?, 0, ?, NULL, ?)',
+            'INSERT INTO tasks (id, title, completed, created_at, completed_at, updated_at, due_at) VALUES (?, ?, 0, ?, NULL, ?, ?)',
           )
-          .run(row.id, row.title, row.created_at, row.updated_at);
+          .run(row.id, row.title, row.created_at, row.updated_at, row.due_at);
         return ok(toTask(row));
       });
       return task;
@@ -208,6 +214,30 @@ export class SqliteTaskRepository implements TaskRepository {
     return result;
   }
 
+  /** Grava o prazo. Idempotente: mesmo prazo não muda nada nem avisa. */
+  private writeDue(id: string, dueAt: string | null): TaskResult<Task> & { changed?: boolean } {
+    if (!isTaskId(id)) return fail('invalid_id', 'Identificador de tarefa inválido.');
+    const due = validateDue(dueAt);
+    if (!due.ok) return due;
+    return this.guard(() =>
+      this.transaction((): TaskResult<Task> & { changed?: boolean } => {
+        this.purgeInside();
+        const row = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as unknown as Row | undefined;
+        if (!row) return fail('not_found', 'A tarefa não existe mais.');
+        if ((row.due_at ?? null) === due.value) return { ...ok(toTask(row)), changed: false };
+        const at = this.now().toISOString();
+        this.db.prepare('UPDATE tasks SET due_at = ?, updated_at = ? WHERE id = ?').run(due.value, at, id);
+        const updated = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as unknown as Row;
+        return { ...ok(toTask(updated)), changed: true };
+      }),
+    );
+  }
+
+  async setDue(id: string, dueAt: string | null): Promise<TaskResult<Task>> {
+    const result = this.writeDue(id, dueAt);
+    if (result.ok && result.changed) this.notify({ type: 'updated', id });
+    return result.ok ? ok(result.value) : result;
+  }
   /** Marca a conclusão (`true`) ou reabre (`false`). Idempotente. */
   private setCompleted(id: string, completed: boolean): TaskResult<Task> & { changed?: boolean } {
     if (!isTaskId(id)) return fail('invalid_id', 'Identificador de tarefa inválido.');

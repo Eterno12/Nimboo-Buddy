@@ -9,6 +9,8 @@ import {
   type Task,
   type TaskResult,
 } from '../../../shared/tasks';
+import { dueStatus, validateDue } from '../../../shared/tasks';
+import { formatDue, fromLocalInputValue, presetDue, toLocalInputValue } from './dueFormat';
 import { draftStore, useDraft } from './draftStore';
 import { useTasks } from './useTasks';
 import { StorageNotice } from './StorageNotice';
@@ -49,6 +51,12 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
   const [announcement, setAnnouncement] = useState('');
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [showCompleted, setShowCompleted] = useState(false); // recolhida por padrão
+  /** Prazo da NOVA tarefa (valor do campo, horário local) e se a linha do prazo está aberta. */
+  const [dueText, setDueText] = useState('');
+  const [showDue, setShowDue] = useState(false);
+  /** Tarefa cujo prazo está sendo editado e o valor do campo. */
+  const [editingDue, setEditingDue] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const undoRef = useRef<HTMLButtonElement | null>(null);
   const focusUndoNext = useRef(false);
@@ -93,13 +101,25 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
       inputRef.current?.focus();
       return;
     }
-    const result = await tasks.create(draft.text);
+    // Prazo: campo vazio = sem prazo; preenchido e inválido bloqueia (nunca descarta em silêncio).
+    let dueAt: string | null = null;
+    if (dueText.trim() !== '') {
+      dueAt = fromLocalInputValue(dueText);
+      const checked = validateDue(dueAt);
+      if (dueAt === null || !checked.ok) {
+        setFormError('Data e hora do prazo inválidas.');
+        return;
+      }
+    }
+    const result = await tasks.create(draft.text, dueAt);
     if (!result.ok) {
       setFormError(result.error.message);
       inputRef.current?.focus();
       return;
     }
     draftStore.clear();
+    setDueText('');
+    setShowDue(false);
     setFormError(null);
     setOpError(null);
     announce(`Tarefa adicionada: ${result.value.title}`);
@@ -221,10 +241,46 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
             if (formError) setFormError(null);
           }}
         />
+        <button
+          type="button"
+          className="tasks-icon-button tasks-due-toggle"
+          aria-expanded={showDue}
+          aria-label={dueText ? `Prazo: ${formatDue(fromLocalInputValue(dueText) ?? '')}` : 'Definir prazo da nova tarefa'}
+          title="Prazo"
+          data-set={dueText !== ''}
+          onClick={() => setShowDue((v) => !v)}
+        >
+          <Icon>
+            <circle cx="12" cy="13" r="7" {...icon} />
+            <path d="M12 9.5V13l2.4 1.6M9.5 3.5h5" {...icon} />
+          </Icon>
+        </button>
         <button type="submit" className="tasks-add" disabled={over} title={over ? 'Reduza o título para adicionar' : undefined}>
           Adicionar
         </button>
       </form>
+      {showDue && (
+        <div className="tasks-due-row">
+          <input
+            type="datetime-local"
+            className="tasks-due-input"
+            aria-label="Prazo da nova tarefa"
+            value={dueText}
+            onChange={(e) => setDueText(e.target.value)}
+          />
+          <button type="button" className="tasks-due-chip" onClick={() => setDueText(presetDue('today'))}>
+            Hoje
+          </button>
+          <button type="button" className="tasks-due-chip" onClick={() => setDueText(presetDue('tomorrow'))}>
+            Amanhã
+          </button>
+          {dueText !== '' && (
+            <button type="button" className="tasks-due-chip" onClick={() => setDueText('')}>
+              Limpar
+            </button>
+          )}
+        </div>
+      )}
       <div className="tasks-meta">
         {length > 0 && (
           <span id={counterId} className="tasks-counter" data-over={over} aria-label={`${length} de ${TASK_TITLE_MAX} caracteres`}>
@@ -263,6 +319,32 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
                 onClick: () => void run(task, 'concluir', () => tasks.complete(task.id), `Tarefa concluída: ${task.title}`),
               }}
               onRemove={(row) => void remove(task, row)}
+              due={{
+                editing: editingDue === task.id,
+                value: editingDue === task.id ? editValue : '',
+                onToggle: () => {
+                  if (editingDue === task.id) {
+                    setEditingDue(null);
+                  } else {
+                    setEditingDue(task.id);
+                    setEditValue(toLocalInputValue(task.dueAt));
+                  }
+                },
+                onChange: setEditValue,
+                onSave: () => {
+                  const iso = editValue.trim() === '' ? null : fromLocalInputValue(editValue);
+                  if (editValue.trim() !== '' && iso === null) {
+                    setOpError('Data e hora do prazo inválidas.');
+                    return;
+                  }
+                  setEditingDue(null);
+                  void run(task, 'alterar o prazo de', () => tasks.setDue(task.id, iso), `Prazo atualizado: ${task.title}`);
+                },
+                onClear: () => {
+                  setEditingDue(null);
+                  void run(task, 'remover o prazo de', () => tasks.setDue(task.id, null), `Prazo removido: ${task.title}`);
+                },
+              }}
             />
           ))}
         </ul>
@@ -344,12 +426,23 @@ interface TaskRowProps {
   busy: boolean;
   primary: { label: string; kind: 'check' | 'undo'; onClick: () => void };
   onRemove: (row: HTMLElement | null) => void;
+  /** Só tarefas ativas têm prazo editável. */
+  due?: {
+    editing: boolean;
+    value: string;
+    onToggle: () => void;
+    onChange: (value: string) => void;
+    onSave: () => void;
+    onClear: () => void;
+  };
 }
 
-function TaskRow({ task, done = false, busy, primary, onRemove }: TaskRowProps) {
+function TaskRow({ task, done = false, busy, primary, onRemove, due }: TaskRowProps) {
   const ref = useRef<HTMLLIElement | null>(null);
+  const status = dueStatus(task, new Date());
+  const dueText = task.dueAt && !done ? formatDue(task.dueAt) : '';
   return (
-    <li className="task" ref={ref} data-task-id={task.id} data-done={done} data-busy={busy}>
+    <li className="task" ref={ref} data-task-id={task.id} data-done={done} data-busy={busy} data-due={status}>
       <button
         type="button"
         className="task-primary"
@@ -369,6 +462,31 @@ function TaskRow({ task, done = false, busy, primary, onRemove }: TaskRowProps) 
       </button>
       <span className="task-title">{task.title}</span>
       {done && <span className="task-date">{formatDay(task.completedAt)}</span>}
+      {due && !done && (
+        <button
+          type="button"
+          className="task-due"
+          data-status={status}
+          data-empty={dueText === ''}
+          aria-expanded={due.editing}
+          aria-label={dueText ? `Prazo: ${dueText}${status === 'overdue' ? ' (atrasada)' : ''}. Alterar` : `Definir prazo: ${task.title}`}
+          title={dueText ? 'Alterar prazo' : 'Definir prazo'}
+          onClick={due.onToggle}
+          disabled={busy}
+        >
+          {dueText ? (
+            <>
+              {status === 'overdue' && <span className="sr-only">Atrasada. </span>}
+              {dueText}
+            </>
+          ) : (
+            <Icon>
+              <circle cx="12" cy="13" r="7" {...icon} />
+              <path d="M12 9.5V13l2.4 1.6M9.5 3.5h5" {...icon} />
+            </Icon>
+          )}
+        </button>
+      )}
       <button
         type="button"
         className="tasks-icon-button task-remove"
@@ -381,6 +499,28 @@ function TaskRow({ task, done = false, busy, primary, onRemove }: TaskRowProps) 
           <path d="M6 6l12 12M18 6L6 18" {...icon} />
         </Icon>
       </button>
+      {due?.editing && (
+        <div className="task-due-editor">
+          <input
+            type="datetime-local"
+            className="tasks-due-input"
+            aria-label={`Prazo de ${task.title}`}
+            value={due.value}
+            onChange={(e) => due.onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') due.onSave();
+            }}
+          />
+          <button type="button" className="tasks-due-chip" onClick={due.onSave}>
+            Salvar
+          </button>
+          {task.dueAt && (
+            <button type="button" className="tasks-due-chip" onClick={due.onClear}>
+              Sem prazo
+            </button>
+          )}
+        </div>
+      )}
     </li>
   );
 }

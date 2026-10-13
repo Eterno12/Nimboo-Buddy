@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DEFAULT_SETTINGS,
   HIDE_DELAYS_SEC,
   ISLAND_SCALES,
   MOCHI_COLORS,
   MOCHI_SCALES,
+  REMINDER_LEADS_MIN,
   SHORTCUT_PRESETS,
   type MochiColor,
   type Settings,
@@ -43,6 +44,45 @@ interface SettingsViewProps {
   onBack: () => void;
 }
 
+/** Campo de minutos inteiros: só grava quando o valor digitado é válido (senão volta ao salvo ao sair). */
+function MinutesField({
+  label,
+  value,
+  min,
+  max,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onCommit: (value: number) => void;
+}) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => setText(String(value)), [value]);
+  const parsed = /^\d{1,3}$/.test(text) ? Number(text) : NaN;
+  const valid = Number.isInteger(parsed) && parsed >= min && parsed <= max;
+  return (
+    <label className="settings-minutes-field">
+      <span>{label}</span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={text}
+        aria-label={`${label} (minutos, de ${min} a ${max})`}
+        aria-invalid={valid ? undefined : true}
+        onChange={(e) => {
+          setText(e.target.value);
+          const n = /^\d{1,3}$/.test(e.target.value) ? Number(e.target.value) : NaN;
+          if (Number.isInteger(n) && n >= min && n <= max) onCommit(n);
+        }}
+        onBlur={() => setText(String(value))}
+      />
+    </label>
+  );
+}
+
 /** Tela de configurações (no painel). Cada mudança vale na hora e é salva pelo processo principal. */
 export function SettingsView({ onBack }: SettingsViewProps) {
   const { settings, packaged, shortcutActive, effective, update } = useSettings();
@@ -64,6 +104,13 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       bubbles: DEFAULT_SETTINGS.bubbles,
       doNotDisturb: DEFAULT_SETTINGS.doNotDisturb,
       color: DEFAULT_SETTINGS.color,
+      focusMinutes: DEFAULT_SETTINGS.focusMinutes,
+      breakMinutes: DEFAULT_SETTINGS.breakMinutes,
+      longBreakMinutes: DEFAULT_SETTINGS.longBreakMinutes,
+      pomodoroCycle: DEFAULT_SETTINGS.pomodoroCycle,
+      pomodoroAuto: DEFAULT_SETTINGS.pomodoroAuto,
+      remindersEnabled: DEFAULT_SETTINGS.remindersEnabled,
+      reminderLeadMin: DEFAULT_SETTINGS.reminderLeadMin,
     });
 
   const clamped = (requested: number, effectiveValue: number) =>
@@ -214,6 +261,76 @@ export function SettingsView({ onBack }: SettingsViewProps) {
             Ouvir
           </button>
         </div>
+      </fieldset>
+
+      <fieldset className="settings-group">
+        <legend>Modo foco</legend>
+        <div className="settings-row">
+          <span>Duração padrão</span>
+          <span className="settings-minutes">
+            <MinutesField label="Foco" value={settings.focusMinutes} min={1} max={180} onCommit={(v) => set({ focusMinutes: v })} />
+            <MinutesField label="Pausa" value={settings.breakMinutes} min={1} max={60} onCommit={(v) => set({ breakMinutes: v })} />
+            <MinutesField
+              label="Longa"
+              value={settings.longBreakMinutes}
+              min={1}
+              max={60}
+              onCommit={(v) => set({ longBreakMinutes: v })}
+            />
+          </span>
+        </div>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.pomodoroCycle}
+            onChange={(e) => set({ pomodoroCycle: e.target.checked })}
+          />
+          <span>
+            Ciclo Pomodoro
+            <small>Pausa longa a cada 4 focos concluídos.</small>
+          </span>
+        </label>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.pomodoroAuto}
+            disabled={!settings.pomodoroCycle}
+            onChange={(e) => set({ pomodoroAuto: e.target.checked })}
+          />
+          <span>
+            Iniciar a próxima etapa sozinho
+            <small>Senão o Mochi espera você confirmar.</small>
+          </span>
+        </label>
+      </fieldset>
+
+      <fieldset className="settings-group">
+        <legend>Lembretes de tarefas</legend>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.remindersEnabled}
+            onChange={(e) => set({ remindersEnabled: e.target.checked })}
+          />
+          <span>
+            Avisar quando uma tarefa com prazo chegar
+            <small>Balão e som; notificação se o Mochi estiver oculto.</small>
+          </span>
+        </label>
+        <label className="settings-row">
+          <span>Avisar também antes</span>
+          <select
+            value={settings.reminderLeadMin}
+            disabled={!settings.remindersEnabled}
+            onChange={(e) => set({ reminderLeadMin: Number(e.target.value) })}
+          >
+            {REMINDER_LEADS_MIN.map((m) => (
+              <option key={m} value={m}>
+                {m === 0 ? 'Só na hora marcada' : `${m} minutos antes`}
+              </option>
+            ))}
+          </select>
+        </label>
       </fieldset>
 
       <fieldset className="settings-group">

@@ -157,3 +157,103 @@
 .shell[data-mode='floating'] .focus-badge {
   display: none;
 }
+
+/* Campo de minutos livre, ao lado dos atalhos de 15/25/45/60. */
+.focus-custom {
+  display: flex;
+  flex: 1.3;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 10px;
+  background: var(--t-field-bg);
+  color: var(--t-muted);
+}
+
+.focus-custom input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--t-text);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: text;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.focus-custom input::-webkit-outer-spin-button,
+.focus-custom input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.focus-custom:focus-within {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}
+
+.focus-custom input[aria-invalid='true'] {
+  color: var(--t-danger);
+}
+
+.focus-task {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 10px;
+  background: var(--t-field-bg);
+  color: var(--t-text);
+  font: inherit;
+  text-overflow: ellipsis;
+}
+
+.focus-task:focus-visible {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}
+
+.focus-linked {
+  margin: 0;
+  overflow: hidden;
+  color: var(--t-muted);
+  font-size: 12.5px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-stats {
+  margin: 0;
+  color: var(--t-muted);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.focus-complete {
+  width: 100%;
+  height: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-complete:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* Na ilha o espaço vertical é curto: espaçamentos menores. */
+.tasks.focus[data-variant='island'] {
+  gap: 8px;
+}

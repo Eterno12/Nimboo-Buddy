@@ -15,8 +15,8 @@ import type { PresentationMode } from './settings';
 export const ISLAND_WINDOW_SIZE: Size = { width: 352, height: 380 };
 export const ISLAND_COMPACT_SIZE: Size = { width: 176, height: 58 };
 export const ISLAND_HOME_HEIGHT = 174;
-/** Tela do modo foco: pílula 336x204 + folga (precisa acompanhar `island.css`). */
-export const ISLAND_FOCUS_HEIGHT = 214;
+/** Tela do modo foco: pílula 336x252 + folga (precisa acompanhar `island.css`). */
+export const ISLAND_FOCUS_HEIGHT = 262;
 
 /** Tela mostrada pela ilha expandida (define até onde a forma se estende). */
 export type IslandExtent = 'home' | 'tasks' | 'focus';

@@ -4,6 +4,8 @@ import {
   type FocusKind,
   type FocusResult,
   type FocusState,
+  type FocusStats,
+  type FocusTask,
 } from '../../../shared/focus';
 
 /**
@@ -13,6 +15,7 @@ import {
  */
 export function useFocus() {
   const [state, setState] = useState<FocusState>(IDLE_FOCUS_STATE);
+  const [stats, setStats] = useState<FocusStats>({ sessions: 0, minutes: 0 });
   const changed = useRef(false);
 
   useEffect(() => {
@@ -30,13 +33,24 @@ export function useFocus() {
     };
   }, []);
 
+  // A estatística do dia é lida ao abrir e sempre que uma sessão termina.
+  useEffect(() => {
+    let alive = true;
+    void window.mochi.focus.stats().then((s) => alive && setStats(s));
+    return () => {
+      alive = false;
+    };
+  }, [state.status === 'finished' ? 'finished' : 'other', state.cycleCount]);
+
   /** O estado do retorno já chega pelo aviso de mudança; aqui só se devolve o resultado. */
   const run = useCallback(async (op: () => Promise<FocusResult<FocusState>>) => op(), []);
   const api = window.mochi.focus;
 
   return {
     state,
-    start: (kind: FocusKind, minutes: number) => run(() => api.start(kind, minutes)),
+    stats,
+    start: (kind: FocusKind, minutes: number, task?: FocusTask | null) =>
+      run(() => api.start(kind, minutes, task ?? null)),
     pause: () => run(() => api.pause()),
     resume: () => run(() => api.resume()),
     cancel: () => run(() => api.cancel()),

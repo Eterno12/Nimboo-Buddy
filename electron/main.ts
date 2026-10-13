@@ -10,6 +10,9 @@ import { startTasksService, type TasksService } from './tasksService';
 import { startFocusService, type FocusService } from './focusService';
 import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
+import { ReminderScheduler, type Reminder } from './reminders';
+import { FocusLog } from './focus/focusLog';
+import type { FocusConfig } from '../shared/focus';
 
 let mascot: BrowserWindow | null = null;
 let windowMode: WindowModeManager | null = null;
@@ -17,6 +20,8 @@ let tasks: TasksService | null = null;
 let focus: FocusService | null = null;
 let settingsStore: SettingsStore | null = null;
 let settingsService: SettingsService | null = null;
+let reminders: ReminderScheduler | null = null;
+let focusLog: FocusLog | null = null;
 let panel: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
@@ -127,6 +132,35 @@ function applyDoNotDisturb(enabled: boolean): void {
   });
 }
 
+const focusConfigOf = (s: Settings): FocusConfig => ({
+  focusMinutes: s.focusMinutes,
+  breakMinutes: s.breakMinutes,
+  longBreakMinutes: s.longBreakMinutes,
+  cycle: s.pomodoroCycle,
+  autoAdvance: s.pomodoroAuto,
+});
+
+/** Lembrete de prazo: o renderer mostra o balão e toca o som; sem mascote visível, vira notificação. */
+function deliverReminder(reminder: Reminder): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (win.isDestroyed()) continue;
+    try {
+      win.webContents.send(IPC.tasksReminder, reminder);
+    } catch (error) {
+      console.error('Falha ao entregar o lembrete a uma janela:', error);
+    }
+  }
+  const visible = !!mascot && !mascot.isDestroyed() && mascot.isVisible();
+  if (!visible && Notification.isSupported()) {
+    const title = reminder.title.length > 80 ? `${reminder.title.slice(0, 77)}...` : reminder.title;
+    new Notification({
+      title: reminder.kind === 'due' ? 'Chegou a hora' : `Em ${reminder.minutes} minutos`,
+      body: title,
+      silent: true,
+    }).show();
+  }
+}
+
 /** Efeitos de uma mudança de preferências que vão além de redesenhar as janelas. */
 function applySettingsChange(previous: Settings, next: Settings): void {
   if (previous.islandScale !== next.islandScale || previous.mochiScale !== next.mochiScale) {
@@ -135,6 +169,8 @@ function applySettingsChange(previous: Settings, next: Settings): void {
   if (previous.shortcut !== next.shortcut) applyShortcut(next.shortcut);
   if (previous.launchAtLogin !== next.launchAtLogin) applyLaunchAtLogin(next.launchAtLogin);
   if (previous.doNotDisturb !== next.doNotDisturb) applyDoNotDisturb(next.doNotDisturb);
+  focus?.configure(focusConfigOf(next));
+  reminders?.setConfig({ enabled: next.remindersEnabled, leadMinutes: next.reminderLeadMin });
 }
 
 function buildMenu(): Menu {
@@ -240,11 +276,26 @@ if (!app.requestSingleInstanceLock()) {
     registerDragHandlers();
     const settings = createSettingsStore(path.join(app.getPath('userData'), 'settings.json'));
     settingsStore = settings;
+    const startup = settings.get();
+    reminders = new ReminderScheduler({
+      config: { enabled: startup.remindersEnabled, leadMinutes: startup.reminderLeadMin },
+      onReminder: deliverReminder,
+    });
     // O banco fica em userData/data; só o processo principal o abre.
     tasks = startTasksService({
       dbPath: path.join(app.getPath('userData'), 'data', 'mochi.db'),
       isAppUrl,
+      onTasksChanged: (list) => reminders?.sync(list),
     });
+    const database = tasks.database();
+    if (database) {
+      focusLog = new FocusLog(database);
+      try {
+        focusLog.purge();
+      } catch (error) {
+        console.error('Falha ao limpar o registro de foco:', error);
+      }
+    }
     windowMode = createWindowModeManager(settings);
     mascot = windowMode.window;
 
@@ -279,6 +330,8 @@ if (!app.requestSingleInstanceLock()) {
     // avisa por notificação quando o mascote está oculto.
     focus = startFocusService({
       isAppUrl,
+      config: focusConfigOf(startup),
+      getLog: () => focusLog,
       onFinished: (kind) => {
         const visible = !!mascot && !mascot.isDestroyed() && mascot.isVisible();
         if (!visible && Notification.isSupported()) {
@@ -304,6 +357,7 @@ if (!app.requestSingleInstanceLock()) {
     settingsService?.close();
     windowMode?.dispose();
     focus?.close();
+    reminders?.dispose();
     tasks?.close();
     tray?.destroy();
   });

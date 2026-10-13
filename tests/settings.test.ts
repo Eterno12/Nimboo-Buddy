@@ -151,3 +151,26 @@ test('store: update parcial mantém o resto e persiste os novos campos', () => {
   assert.equal(reopened.mode, 'island');
   fs.rmSync(dir, { recursive: true });
 });
+
+test('foco e lembretes: padrões, inteiros dentro do limite e antecedência em passos', () => {
+  const d = parseSettings({ version: 3 });
+  assert.equal(d.focusMinutes, 25);
+  assert.equal(d.breakMinutes, 5);
+  assert.equal(d.longBreakMinutes, 15);
+  assert.equal(d.pomodoroCycle, false);
+  assert.equal(d.pomodoroAuto, false);
+  assert.equal(d.remindersEnabled, true);
+  assert.equal(d.reminderLeadMin, 10);
+  const ok = parseSettings({ version: 3, focusMinutes: 37, breakMinutes: 12, longBreakMinutes: 20, reminderLeadMin: 14 });
+  assert.equal(ok.focusMinutes, 37);
+  assert.equal(ok.breakMinutes, 12);
+  assert.equal(ok.longBreakMinutes, 20);
+  assert.equal(ok.reminderLeadMin, 15);
+  const bad = parseSettings({ version: 3, focusMinutes: 0, breakMinutes: 61, longBreakMinutes: 1.5, pomodoroCycle: 'sim' });
+  assert.equal(bad.focusMinutes, 25);
+  assert.equal(bad.breakMinutes, 5);
+  assert.equal(bad.longBreakMinutes, 15);
+  assert.equal(bad.pomodoroCycle, false);
+  assert.equal(parseSettings({ version: 3, focusMinutes: 181 }).focusMinutes, 25);
+  assert.equal(parseSettings({ version: 3, focusMinutes: 180 }).focusMinutes, 180);
+});

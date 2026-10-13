@@ -102,8 +102,22 @@ Engrenagem na ilha aberta, na barra do painel, ou *Configurações* no menu da b
 
 ### Modo foco
 
-Atalho **Foco** na ilha (ou o cartão no painel): 15, 25, 45 ou 60 minutos, e pausa de 5. Pausar, retomar
-e cancelar. A pílula recolhida mostra o tempo; ao terminar, o Mochi comemora e a ilha volta.
+Atalho **Foco** na ilha (ou o cartão no painel): 15, 25, 45 ou 60 minutos **ou o tempo que você quiser**
+(1 a 180), com pausa configurável. Dá para **vincular uma tarefa** à sessão (e concluí-la no fim). O **ciclo
+Pomodoro** (pausa longa a cada 4 focos, com avanço automático opcional) é ligado nas configurações.
+Pausar, retomar e cancelar; a pílula recolhida mostra o tempo; "Hoje: n sessões · m min". Ao terminar, o
+Mochi comemora e a ilha volta.
+
+### Prazos e lembretes
+
+Ao criar uma tarefa, o relógio ao lado do campo define data e hora (ou use Hoje/Amanhã); em cada tarefa o
+selo de prazo permite alterar. Atrasadas e as de hoje ficam destacadas. O Mochi avisa na hora e alguns
+minutos antes (configurável) com balão e som; se estiver oculto, vira notificação.
+
+### Instalador
+
+`npm run dist` gera `release/Mochi Setup <versão>.exe` (instalação por usuário, sem administrador, sem
+assinatura de código). `npm run pack` gera só a pasta `release/win-unpacked`. O app sempre **abre como ilha**.
 ## Dados e preferências
 
 | O quê | Onde |

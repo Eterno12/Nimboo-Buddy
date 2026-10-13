@@ -199,3 +199,48 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Contexto:** Ctrl+Alt+Espaço estava em uso (o registro falhava e o teste revelou o conflito).
 - **Decisão:** padrão Ctrl+Alt+M (de "Mochi"), quatro predefinidos, e a tela de configurações mostra quando
   o registro não foi possível. O sucesso é conferido por `globalShortcut.isRegistered`, não pelo retorno.
+
+## D26 — O app sempre abre como ilha
+- **Decisão:** `STARTUP_MODE = 'island'`. Ao iniciar, o modo preferido salvo é descartado (e regravado como
+  `island`); escolher "modo flutuante" pelo menu vale **até fechar o app**. A posição flutuante continua
+  lembrada para quando for escolhido de novo.
+- **Por quê:** a ilha é a identidade do produto; abrir como boneco solto, depois de uma troca de modo na
+  véspera, surpreendia.
+
+## D27 — Foco: tempo livre, tarefa vinculada, Pomodoro opcional e registro do dia
+- **Tempo livre:** inteiros de 1–180 min (foco) e 1–60 (pausas), validados no main e na interface; o último
+  foco usado vira o padrão (`focusMinutes`).
+- **Ciclo (opcional, desligado por padrão):** 4 focos concluídos → pausa longa (15 min, editável), que
+  fecha o ciclo. Cancelar um foco não conta. Por padrão o app **espera confirmação** no fim de cada etapa;
+  "iniciar a próxima etapa sozinho" espera 5 s com a mensagem à vista e é cancelado por qualquer ação.
+- **Tarefa vinculada:** o título é copiado para a sessão (a tarefa pode ser concluída/excluída); no fim do
+  foco há "Concluir tarefa".
+- **Registro:** `focus_sessions` (migração v2) guarda só sessões **concluídas**; alimenta "Hoje: n sessões ·
+  m min" (dia local). Retenção de 400 dias.
+
+## D28 — Prazos e lembretes de tarefas
+- **Dados:** `tasks.due_at` (ISO UTC canônico, 2000–2100). Ordenação: com prazo primeiro, por data.
+- **Lembretes** (`ReminderScheduler`, main): um aviso `N` min antes (0/5/10/15/30; padrão 10) e outro na hora.
+  Cada (tarefa, prazo, tipo) avisa **uma vez por execução**; vencidas há mais de 1 min ao abrir o app não
+  são anunciadas (aparecem como "atrasada"). Mudar o prazo reagenda. Entrega: balão com o título (mesmo
+  durante o foco) + som próprio + notificação nativa silenciosa se o mascote está oculto.
+- **Fora de escopo:** recorrência, prazos só de data, fusos diferentes do computador.
+
+## D29 — Um som e uma fala para cada animação
+- **Decisão:** cada animação do Mochi tem uma assinatura sonora curta e um conjunto de falas. O **som toca
+  sempre** (os espontâneos — curioso, bocejo, espreguiçar, olhar em volta, sono, pulinho — calam durante o
+  foco); a **fala** respeita um intervalo por animação (20–90 s), reações a ações da pessoa passam por cima do
+  intervalo geral mas não contam no teto por hora, e durante o foco só tarefa concluída, lembretes e fim de
+  sessão falam.
+- **Detalhe:** o "happy" imediatamente depois do cumprimento ao chegar em cena não vira uma 2ª fala.
+
+## D30 — Empacotamento com electron-builder (NSIS por usuário)
+- **Decisão:** `npm run pack` (pasta `release/win-unpacked`) e `npm run dist` (instalador). Alvo NSIS x64,
+  instalação por usuário (sem administrador), diretório escolhível, atalhos na área de trabalho e no menu
+  Iniciar, dados do usuário **mantidos** ao desinstalar. Ícone gerado do próprio blob
+  (`scripts/make-icon.cjs` → `build/icon.png`).
+- **Dados:** o `productName` fica só na configuração do builder (não em `package.json`), então a pasta de
+  dados continua `%APPDATA%\mochi-desktop` — a mesma do desenvolvimento.
+- **Arquivos:** só `dist/` e `dist-electron/` entram no `app.asar` (~0,4 MB); React vira devDependency
+  porque o Vite já o embute.
+- **Limitações:** sem assinatura de código (SmartScreen avisa); sem atualização automática.

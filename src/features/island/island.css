@@ -113,9 +113,9 @@
   clip-path: inset(0 0 0 0 round 0 0 28px 28px);
 }
 
-/* Tela de foco: pílula 336x204 (370 - 204 = 166). */
+/* Tela de foco: pílula 336x252 (370 - 252 = 118). */
 .shell[data-open='true'][data-view='focus'] .island {
-  clip-path: inset(0 0 166px 0 round 0 0 28px 28px);
+  clip-path: inset(0 0 118px 0 round 0 0 28px 28px);
 }
 
 /* ---------- Conteúdo da ilha expandida ---------- */
@@ -184,9 +184,9 @@
   animation: island-fade 160ms ease-out;
 }
 
-/* Tela de foco: 204 - 52 - 12 = 140px abaixo do mascote. */
+/* Tela de foco: 252 - 52 - 12 = 188px abaixo do mascote. */
 .island-focus {
-  height: 140px;
+  height: 188px;
   animation: island-fade 160ms ease-out;
 }
 

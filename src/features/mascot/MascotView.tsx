@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } fr
 import { Mascot } from './Mascot';
 import { useMascot } from './useMascot';
 import { MASCOT_STATES } from './mascotStates';
+import { AMBIENT_SOUNDS } from '../audio/sounds';
+import { ANIMATION_LINE, ANIMATION_SOUND } from '../personality/animationReactions';
 import { usePresence } from '../island/usePresence';
 import { useIsland } from '../island/useIsland';
 import { IslandContent, type IslandView } from '../island/IslandContent';
@@ -10,7 +12,7 @@ import { useFocus } from '../focus/useFocus';
 import { FocusBadge } from '../focus/FocusView';
 import { useSettings } from '../settings/useSettings';
 import { useSpeech } from '../personality/useSpeech';
-import type { SpeechEvent } from '../personality/personality';
+import { reminderText, type SpeechEvent } from '../personality/personality';
 import { SpeechBubble } from '../personality/SpeechBubble';
 import { configureSound, playSound } from '../audio/soundEngine';
 import '../island/island.css';
@@ -46,14 +48,18 @@ export function MascotView() {
   /** Uma sessão de foco terminou com a ilha escondida: ao voltar, abre na tela de foco. */
   const openFocusOnShown = useRef(false);
   const showFocusRef = useRef<() => void>(() => {});
+  /** Instante do último cumprimento (para o "happy" dele não virar uma segunda fala). */
+  const greetedAt = useRef(0);
   /** O atalho global pediu a ilha com ela escondida: ao voltar, abre direto nas tarefas. */
   const summonOnShown = useRef(false);
   const summonRef = useRef<() => void>(() => {});
   /** `say` só existe depois de `useSpeech` (que depende do estado da ilha): usa ref. */
   const sayRef = useRef<(event: SpeechEvent) => void>(() => {});
+  const sayTextRef = useRef<(text: string) => boolean>(() => false);
   const { presentation, presenceRef, exitUp } = usePresence({
     onShown: (state) => {
       greet(); // chegou em cena: cumprimenta
+      greetedAt.current = Date.now();
       sayRef.current('hello');
       if (state.mode === 'island') {
         islandRef.current?.resume(ISLAND_FIRST_EXPOSURE_MS);
@@ -114,6 +120,7 @@ export function MascotView() {
     suppressed: inIsland && island.open,
   });
   sayRef.current = speech.say;
+  sayTextRef.current = speech.sayText;
 
   // Uma tarefa foi concluída (em qualquer janela): o Mochi comemora, fala e faz "plim".
   // Reabrir ou excluir não disparam este evento.
@@ -127,6 +134,16 @@ export function MascotView() {
     [celebrate],
   );
   useEffect(() => window.mochi.tasks.onCreated(() => playSound('tick')), []);
+
+  // Lembrete de prazo: sininhos e um balão com o nome da tarefa (mesmo durante o foco: foi pedido).
+  useEffect(
+    () =>
+      window.mochi.tasks.onReminder((reminder) => {
+        playSound('reminder');
+        sayTextRef.current(reminderText(reminder));
+      }),
+    [],
+  );
 
   // Uma sessão de foco terminou: o Mochi comemora e a ilha mostra o resultado. Se ela
   // estava escondida, o main a traz de volta e a tela de foco abre quando ela chegar.
@@ -186,17 +203,32 @@ export function MascotView() {
   );
 
   // Reações do Mochi ao próprio estado: dormir, acordar, cócegas, emburrar.
+  // Cada animação tem a sua assinatura sonora e a sua fala. O som toca sempre (os espontâneos ficam em
+  // silêncio durante o foco); a fala passa pela personalidade, que impõe um intervalo entre falas.
   const previousState = useRef(mascot.state);
+  const focusActiveRef = useRef(focusActive);
+  focusActiveRef.current = focusActive;
   useEffect(() => {
     const before = previousState.current;
     const now = mascot.state;
     previousState.current = now;
-    if (before === now) return;
-    if (now === 'sleepy') sayRef.current('sleepy');
-    else if (before === 'sleepy' && now === 'stretch') sayRef.current('woke');
-    else if (now === 'annoyed') sayRef.current('annoyed');
-    else if (now === 'giggle') sayRef.current('giggle');
-  }, [mascot.state]);
+    if (before === now && mascot.replay === lastReplay.current) return;
+    lastReplay.current = mascot.replay;
+    const sound = ANIMATION_SOUND[now];
+    if (sound && !(focusActiveRef.current && AMBIENT_SOUNDS.includes(sound))) playSound(sound);
+    // Logo depois do cumprimento ao chegar em cena, o "happy" não vira outra fala.
+    const justGreeted = now === 'happy' && Date.now() - greetedAt.current < 1200;
+    const line = before === 'sleepy' && now === 'stretch' ? 'woke' : ANIMATION_LINE[now];
+    if (line && !justGreeted) sayRef.current(line);
+  }, [mascot.state, mascot.replay]);
+  const lastReplay = useRef(mascot.replay);
+
+  // O pulinho (espontâneo ou ao soltar) faz um "pop" pequeno.
+  const wasHopping = useRef(false);
+  useEffect(() => {
+    if (mascot.hop && !wasHopping.current && !focusActiveRef.current) playSound('pop');
+    wasHopping.current = mascot.hop;
+  }, [mascot.hop]);
 
   // De vez em quando, uma frase solta (a personalidade decide se cabe: foco, intervalos, teto/hora).
   useEffect(() => {

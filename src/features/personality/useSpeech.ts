@@ -55,6 +55,19 @@ export function useSpeech({ enabled, mood, focusActive, suppressed }: SpeechOpti
     timer.current = window.setTimeout(() => setBubble(null), bubbleDurationMs(text));
   }, []);
 
+  /**
+   * Fala um texto dado (ex.: lembrete de uma tarefa). Não passa pela personalidade nem pelo silêncio
+   * do foco: é um aviso pedido pela pessoa. Respeita só "balões ligados" e a ilha fechada.
+   */
+  const sayText = useCallback((text: string) => {
+    const now = live.current;
+    if (!now.enabled || now.suppressed) return false;
+    window.clearTimeout(timer.current);
+    setBubble({ id: ++counter.current, text });
+    timer.current = window.setTimeout(() => setBubble(null), Math.max(5000, bubbleDurationMs(text)));
+    return true;
+  }, []);
+
   // Desligar os balões, ou abrir a ilha, tira o balão da tela na hora.
   useEffect(() => {
     if (!enabled || suppressed) hide();
@@ -73,5 +86,5 @@ export function useSpeech({ enabled, mood, focusActive, suppressed }: SpeechOpti
     [],
   );
 
-  return { bubble, say };
+  return { bubble, say, sayText };
 }

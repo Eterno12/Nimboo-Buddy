@@ -106,3 +106,8 @@ as funcionalidades da v1 estabilizarem.
 - **Tarefas com data e lembrete** (balão + som discretos), depois **Notas** (fase D, com backup já pronto).
 - **Foco evoluído**: ciclo Pomodoro, duração livre, vínculo com tarefa, contagem diária.
 - **Escolha do monitor da ilha** pela interface; atalho global personalizado livre.
+
+## Estado desta rodada (2026-10-13)
+- ✅ Abrir sempre como ilha; som e fala por animação; foco com tempo livre/Pomodoro/tarefa/contador;
+  tarefas com prazo e lembrete; migração v2; empacotamento (instalador NSIS).
+- ⏳ Próximo: notas (migração v3), segundo personagem, assinatura de código, atualização automática.

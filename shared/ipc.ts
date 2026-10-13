@@ -38,8 +38,10 @@ export const IPC = {
   tasksReopen: 'tasks:reopen',
   tasksScheduleRemove: 'tasks:schedule-remove',
   tasksUndoRemove: 'tasks:undo-remove',
-  /** renderer -> main (invoke): aviso sobre o armazenamento (ou 
-ull) e sua dispensa. */
+  tasksSetDue: 'tasks:set-due',
+  /** main -> renderer: lembrete de prazo (soon = faltam alguns minutos; due = chegou a hora). */
+  tasksReminder: 'tasks:reminder',
+  /** renderer -> main (invoke): aviso sobre o armazenamento (ou null) e sua dispensa. */
   tasksNotice: 'tasks:notice',
   tasksDismissNotice: 'tasks:dismiss-notice',
   /** main -> renderer: alguma tarefa mudou (recarregue a lista). */
@@ -81,6 +83,7 @@ ull) e sua dispensa. */
   focusPause: 'focus:pause',
   focusResume: 'focus:resume',
   focusCancel: 'focus:cancel',
+  focusStats: 'focus:stats',
   /** main -> renderer: o estado do temporizador mudou. */
   focusChanged: 'focus:changed',
   /** main -> renderer: uma sessão terminou sozinha. */

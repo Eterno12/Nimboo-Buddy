@@ -134,8 +134,49 @@ try {
     await clickSel('.island-shortcuts li:nth-child(2) button');
     await page.waitFor(`document.querySelector('.shell').dataset.view === 'focus'`, 'tela de foco');
     await page.waitFor(`!!document.querySelector('.focus-chip')`, 'seletor de duração');
-    assert.equal(await page.ev(`document.querySelector('.focus-chip[aria-checked=true]').textContent`), '25 min');
+    assert.equal(await page.ev(`document.querySelector('.focus-chip[aria-checked=true]').textContent`), '25');
     assert.equal((await state()).status, 'idle');
+  });
+
+  /** Altera um campo controlado pelo React (setter nativo + evento), como o teclado faria. */
+  const setField = (sel, value) =>
+    page.ev(`(() => {
+      const el = document.querySelector(${JSON.stringify(sel)});
+      const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, ${JSON.stringify(value)});
+      el.dispatchEvent(new Event(el instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
+    })()`);
+
+  await step('tempo livre: digitar 37 min, vincular uma tarefa e iniciar', async () => {
+    await keepAlive();
+    const created = await page.ev(`window.mochi.tasks.create('Escrever o relatório')`);
+    assert.equal(created.ok, true);
+    await page.waitFor(`!!document.querySelector('.focus-task')`, 'seletor de tarefa');
+    await setField('.focus-custom input', '37');
+    await page.waitFor(`document.querySelectorAll('.focus-chip[aria-checked=true]').length === 0`, 'nenhum atalho marcado');
+    assert.match(await text('.focus-actions .tasks-add'), /Foco de 37 min/);
+    await setField('.focus-task', created.value.id);
+    await clickSel('.focus-actions .tasks-add');
+    await page.waitFor(`!!document.querySelector('.focus-clock')`, 'relógio');
+    const s = await state();
+    assert.equal(s.durationMs, 37 * 60_000);
+    assert.equal(s.task?.title, 'Escrever o relatório');
+    assert.equal(await text('.focus-linked'), 'Escrever o relatório');
+    const settings = await page.ev(`window.mochi.settings.get().then((x) => x.settings.focusMinutes)`);
+    assert.equal(settings, 37, 'lembra o último tempo usado');
+  });
+
+  await step('valor fora do limite é recusado na interface (nada inicia)', async () => {
+    await page.ev(`window.mochi.focus.cancel()`);
+    await page.waitFor(`!!document.querySelector('.focus-custom input')`, 'campo');
+    for (const bad of ['0', '181', '']) {
+      await setField('.focus-custom input', bad);
+      await clickSel('.focus-actions .tasks-add');
+      await page.waitFor(`!!document.querySelector('.tasks-error')`, 'mensagem de erro');
+      assert.match(await text('.tasks-error'), /de 1 a 180/);
+      assert.equal((await state()).status, 'idle');
+    }
+    await setField('.focus-custom input', '25');
   });
 
   await step('entradas inválidas são recusadas pelo main (sem sessão criada)', async () => {
@@ -150,7 +191,7 @@ try {
     await keepAlive();
     await clickSel('.focus-actions .tasks-add');
     await page.waitFor(`!!document.querySelector('.focus-clock')`, 'relógio');
-    assert.match(await text('.focus-clock'), /^2[45]:\d\d$/);
+    assert.match(await text('.focus-clock'), /^(24|25):\d\d$/);
     assert.equal((await state()).status, 'running');
     assert.equal(await text('.focus-actions .tasks-add'), 'Pausar');
     const first = await text('.focus-clock');
@@ -210,6 +251,10 @@ try {
     }
     assert.match(await text('.focus-done'), /concluída/);
     assert.equal((await state()).status, 'finished');
+    // A sessão concluída entra na estatística do dia (a cancelada, não).
+    const stats = await page.ev(`window.mochi.focus.stats()`);
+    assert.equal(stats.sessions, 1);
+    assert.equal(stats.minutes, 1);
   });
 
   await step('depois do foco, "Pausa de 5 min" inicia a pausa; dispensar volta ao repouso', async () => {

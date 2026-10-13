@@ -15,6 +15,13 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'bubbles',
   'doNotDisturb',
   'color',
+  'focusMinutes',
+  'breakMinutes',
+  'longBreakMinutes',
+  'pomodoroCycle',
+  'pomodoroAuto',
+  'remindersEnabled',
+  'reminderLeadMin',
 ];
 
 export interface SettingsService {

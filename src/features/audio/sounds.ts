@@ -29,7 +29,20 @@ export type SoundName =
   | 'focusStart'
   | 'focusDone'
   | 'breakDone'
-  | 'preview';
+  | 'preview'
+  | 'reminder'
+  // uma assinatura sonora curta para cada animação do Mochi
+  | 'happy'
+  | 'curious'
+  | 'surprised'
+  | 'giggle'
+  | 'annoyed'
+  | 'grabbed'
+  | 'yawn'
+  | 'stretch'
+  | 'lookaround'
+  | 'sleepy'
+  | 'pop';
 
 /** Limites que todo som precisa respeitar (verificados em `tests/sounds.test.ts`). */
 export const SOUND_LIMITS = { maxDuration: 1.6, maxGain: 0.6, minFreq: 150, maxFreq: 2400 } as const;
@@ -69,7 +82,46 @@ export const SOUNDS: Record<SoundName, readonly Note[]> = {
   // volta do descanso: E5 → A5, uma pergunta suave
   breakDone: [bell(0, 659.25, 0.3, 0.34), bell(0.15, 880, 0.5, 0.32)],
   preview: [bell(0, 587.33, 0.2, 0.36), bell(0.12, 880, 0.3, 0.32)],
+  // lembrete de prazo: três notas curtas e claras (G5 C6 E6), mais "presentes" que os demais, ainda suaves
+  reminder: [bell(0, 783.99, 0.18, 0.4), bell(0.14, 1046.5, 0.18, 0.4), bell(0.28, 1318.51, 0.4, 0.38)],
+  // ----- animações -----
+  happy: [bell(0, 783.99, 0.1, 0.3), bell(0.07, 1046.5, 0.16, 0.28)],
+  curious: [{ at: 0, freq: 520, dur: 0.16, gain: 0.3, wave: 'sine', glideTo: 780 }],
+  surprised: [
+    { at: 0, freq: 900, dur: 0.07, gain: 0.4, wave: 'triangle', glideTo: 1400 },
+    { at: 0.08, freq: 1200, dur: 0.1, gain: 0.3, wave: 'sine' },
+  ],
+  giggle: [
+    { at: 0, freq: 880, dur: 0.05, gain: 0.3, wave: 'sine' },
+    { at: 0.08, freq: 990, dur: 0.05, gain: 0.3, wave: 'sine' },
+    { at: 0.16, freq: 880, dur: 0.05, gain: 0.3, wave: 'sine' },
+  ],
+  annoyed: [
+    { at: 0, freq: 260, dur: 0.12, gain: 0.4, wave: 'triangle', glideTo: 200 },
+    { at: 0.17, freq: 260, dur: 0.12, gain: 0.4, wave: 'triangle', glideTo: 190 },
+  ],
+  grabbed: [
+    { at: 0, freq: 600, dur: 0.25, gain: 0.3, wave: 'sine', glideTo: 450 },
+    { at: 0.12, freq: 520, dur: 0.2, gain: 0.26, wave: 'sine', glideTo: 640 },
+  ],
+  yawn: [{ at: 0, freq: 520, dur: 0.7, gain: 0.28, wave: 'sine', glideTo: 220 }],
+  stretch: [{ at: 0, freq: 300, dur: 0.45, gain: 0.26, wave: 'sine', glideTo: 620 }],
+  lookaround: [
+    { at: 0, freq: 660, dur: 0.06, gain: 0.26, wave: 'sine' },
+    { at: 0.22, freq: 590, dur: 0.06, gain: 0.24, wave: 'sine' },
+  ],
+  sleepy: [
+    { at: 0, freq: 330, dur: 0.5, gain: 0.22, wave: 'sine', glideTo: 200 },
+    { at: 0.35, freq: 260, dur: 0.6, gain: 0.18, wave: 'sine', glideTo: 170 },
+  ],
+  pop: [{ at: 0, freq: 480, dur: 0.05, gain: 0.35, wave: 'triangle', glideTo: 700 }],
 };
+
+/**
+ * Sons de animação que são espontâneos (o Mochi fazendo coisas sozinho). Ficam em silêncio durante o
+ * foco; os que respondem a algo que a pessoa fez (carinho, susto, arraste) continuam.
+ */
+export const AMBIENT_SOUNDS: readonly SoundName[] = ['curious', 'yawn', 'stretch', 'lookaround', 'sleepy', 'pop'];
 
 /** Fim do som (último início + duração), em segundos. */
 export function planDuration(notes: readonly Note[]): number {

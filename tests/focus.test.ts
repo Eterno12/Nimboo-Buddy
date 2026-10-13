@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FocusTimer } from '../electron/focus/focusTimer.ts';
 import {
+  DEFAULT_FOCUS_CONFIG,
+  nextStep,
+  validateFocusTask,
   BREAK_MAX_MINUTES,
   FOCUS_MAX_MINUTES,
   IDLE_FOCUS_STATE,
@@ -216,11 +219,133 @@ test('formatClock: mm:ss, h:mm:ss e arredonda para cima', () => {
 });
 
 test('progress e remainingNow seguem o estado', () => {
-  const running: FocusState = { status: 'running', kind: 'focus', durationMs: 10 * MIN, endsAt: 1_000 + 10 * MIN, remainingMs: 10 * MIN };
+  const running: FocusState = { status: 'running', kind: 'focus', durationMs: 10 * MIN, endsAt: 1_000 + 10 * MIN, remainingMs: 10 * MIN, task: null, cycleCount: 0, cycleEnabled: false, next: null };
   assert.equal(remainingNow(running, 1_000 + 4 * MIN), 6 * MIN);
   assert.equal(progress(running, 1_000 + 5 * MIN), 0.5);
   assert.equal(progress({ ...running, status: 'paused', endsAt: null, remainingMs: 3 * MIN }, 99_999_999), 0.7);
   assert.equal(progress({ ...running, status: 'finished', endsAt: null, remainingMs: 0 }, 0), 1);
   assert.equal(progress(IDLE_FOCUS_STATE, 0), 0);
   assert.equal(remainingNow(running, 1_000 + 99 * MIN), 0, 'nunca negativo');
+});
+
+
+const TASK = { id: '11111111-1111-4111-8111-111111111111', title: 'Escrever o relatório' };
+
+function cycleSetup(cycle = true) {
+  let t = 5_000_000;
+  const timers = new Map<number, { at: number; fn: () => void }>();
+  let nextId = 1;
+  const finished: { kind: FocusKind; minutes: number; task: unknown }[] = [];
+  const timer = new FocusTimer({
+    now: () => t,
+    setTimer: (fn, ms) => {
+      const id = nextId++;
+      timers.set(id, { at: t + ms, fn });
+      return id;
+    },
+    clearTimer: (h) => void timers.delete(h as number),
+    config: { ...DEFAULT_FOCUS_CONFIG, cycle, focusMinutes: 25, breakMinutes: 5, longBreakMinutes: 15 },
+    onFinished: (kind, s) => finished.push({ kind, minutes: s.minutes, task: s.task }),
+  });
+  const run = (kind: 'focus' | 'break', minutes: number, task?: unknown) => {
+    assert.ok(timer.start(kind, minutes, task).ok);
+    t += minutes * MIN;
+    for (const [id, tm] of [...timers]) {
+      if (tm.at <= t) {
+        timers.delete(id);
+        tm.fn();
+      }
+    }
+  };
+  return { timer, finished, run };
+}
+
+test('tempo livre: qualquer minuto inteiro entre 1 e 180 (foco) e 1 e 60 (pausa) é aceito', () => {
+  for (const m of [1, 7, 37, 50, 90, 180]) assert.ok(validateSession('focus', m).ok, `foco ${m}`);
+  for (const m of [1, 12, 60]) assert.ok(validateSession('break', m).ok, `pausa ${m}`);
+  for (const m of [0, 181, 2.5, -1, NaN]) assert.ok(!validateSession('focus', m).ok, `foco ${m}`);
+  const s = setup();
+  assert.ok(s.timer.start('focus', 37).ok);
+  assert.equal(s.timer.getState().durationMs, 37 * MIN);
+});
+
+test('tarefa vinculada: guardada na sessão, só para foco; id inválido é recusado', () => {
+  const s = setup();
+  assert.ok(s.timer.start('focus', 25, TASK).ok);
+  assert.deepEqual(s.timer.getState().task, TASK);
+  s.timer.cancel();
+  assert.equal(s.timer.getState().task, null);
+  assert.ok(s.timer.start('break', 5, TASK).ok);
+  assert.equal(s.timer.getState().task, null, 'pausa não leva tarefa');
+  s.timer.cancel();
+  const bad = s.timer.start('focus', 25, { id: 'x', title: 'y' });
+  assert.ok(!bad.ok && bad.error.code === 'invalid_task');
+  assert.equal(s.timer.getState().status, 'idle');
+  assert.deepEqual(validateFocusTask(undefined), { ok: true, value: null });
+  const long = validateFocusTask({ id: TASK.id, title: ' ' + 'a'.repeat(500) });
+  assert.ok(long.ok && long.value!.title.length === 200);
+});
+
+test('sessão concluída informa minutos e tarefa (para o registro do dia)', () => {
+  const c = cycleSetup(false);
+  c.run('focus', 30, TASK);
+  assert.deepEqual(c.finished, [{ kind: 'focus', minutes: 30, task: TASK }]);
+});
+
+test('ciclo desligado: depois do foco sugere a pausa curta; depois da pausa, o foco padrão', () => {
+  const c = cycleSetup(false);
+  c.run('focus', 25);
+  const st = c.timer.getState();
+  assert.equal(st.cycleCount, 0, 'sem ciclo não conta');
+  assert.deepEqual(st.next, { kind: 'break', minutes: 5, long: false });
+  c.timer.cancel();
+  c.run('break', 5);
+  assert.deepEqual(c.timer.getState().next, { kind: 'focus', minutes: 25, long: false });
+});
+
+test('ciclo Pomodoro: 3 focos → pausas curtas; o 4º → pausa longa; ela zera o ciclo', () => {
+  const c = cycleSetup(true);
+  for (let i = 1; i <= 3; i++) {
+    c.run('focus', 25);
+    assert.equal(c.timer.getState().cycleCount, i);
+    assert.deepEqual(c.timer.getState().next, { kind: 'break', minutes: 5, long: false });
+    c.timer.cancel();
+    c.run('break', 5);
+    c.timer.cancel();
+  }
+  c.run('focus', 25);
+  assert.equal(c.timer.getState().cycleCount, 4);
+  assert.deepEqual(c.timer.getState().next, { kind: 'break', minutes: 15, long: true });
+  c.timer.cancel();
+  assert.equal(c.timer.getState().cycleCount, 4, 'dispensar não perde a contagem');
+  c.run('break', 15);
+  assert.equal(c.timer.getState().cycleCount, 0, 'a pausa longa fecha o ciclo');
+  assert.deepEqual(c.timer.getState().next, { kind: 'focus', minutes: 25, long: false });
+});
+
+test('cancelar um foco no meio não conta no ciclo', () => {
+  const c = cycleSetup(true);
+  assert.ok(c.timer.start('focus', 25).ok);
+  c.timer.cancel();
+  assert.equal(c.timer.getState().cycleCount, 0);
+});
+
+test('configure: ligar/desligar o ciclo e mudar durações vale para a próxima sessão', () => {
+  const c = cycleSetup(false);
+  c.timer.configure({ ...DEFAULT_FOCUS_CONFIG, cycle: true, focusMinutes: 40, breakMinutes: 8, longBreakMinutes: 20 });
+  assert.equal(c.timer.getState().cycleEnabled, true);
+  assert.equal(c.timer.getState().durationMs, 40 * MIN, 'repouso mostra a duração padrão nova');
+  c.run('focus', 40);
+  assert.deepEqual(c.timer.getState().next, { kind: 'break', minutes: 8, long: false });
+  c.timer.configure({ ...DEFAULT_FOCUS_CONFIG, cycle: false });
+  assert.equal(c.timer.getState().cycleCount, 0);
+  assert.equal(c.timer.getState().cycleEnabled, false);
+});
+
+test('nextStep: função pura', () => {
+  const cfg = { ...DEFAULT_FOCUS_CONFIG, cycle: true };
+  assert.deepEqual(nextStep('focus', 2, cfg), { kind: 'break', minutes: 5, long: false });
+  assert.deepEqual(nextStep('focus', 4, cfg), { kind: 'break', minutes: 15, long: true });
+  assert.deepEqual(nextStep('focus', 4, { ...cfg, cycle: false }), { kind: 'break', minutes: 5, long: false });
+  assert.deepEqual(nextStep('break', 0, cfg), { kind: 'focus', minutes: 25, long: false });
 });

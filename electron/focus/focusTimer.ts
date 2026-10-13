@@ -1,23 +1,39 @@
 import {
+  DEFAULT_FOCUS_CONFIG,
   IDLE_FOCUS_STATE,
+  POMODORO_EVERY,
   focusFail,
   focusOk,
+  nextStep,
   remainingNow,
+  validateFocusTask,
   validateSession,
+  type FocusConfig,
   type FocusKind,
   type FocusResult,
   type FocusState,
+  type FocusTask,
 } from '../../shared/focus.ts';
+
+/** Dados de uma sessão que terminou sozinha (para o registro do dia). */
+export interface FinishedSession {
+  kind: FocusKind;
+  minutes: number;
+  task: FocusTask | null;
+  /** Instante do fim (ms desde a época). */
+  at: number;
+}
 
 export interface FocusTimerOptions {
   /** Relógio (ms desde a época). Injetável nos testes. */
   now?: () => number;
   setTimer?: (fn: () => void, ms: number) => unknown;
   clearTimer?: (handle: unknown) => void;
+  config?: FocusConfig;
   /** Chamado a cada mudança de estado (nunca a cada segundo). */
   onChange?: (state: FocusState) => void;
   /** Chamado uma vez quando uma sessão termina sozinha. */
-  onFinished?: (kind: FocusKind) => void;
+  onFinished?: (kind: FocusKind, session: FinishedSession) => void;
 }
 
 /** Margem para considerar que o prazo chegou (o timer do SO pode disparar ~1 ms antes). */
@@ -29,16 +45,20 @@ const EPSILON_MS = 5;
  * - Usa o relógio do sistema (`endsAt`): se o computador dormir, a sessão termina
  *   no horário real, e ao acordar o timer é reavaliado em vez de confiar no atraso.
  * - Pausar guarda o tempo restante; retomar recalcula o novo `endsAt`.
+ * - Ciclo Pomodoro opcional: conta os focos concluídos; a pausa depois do 4º é longa e fecha o ciclo.
  * - Não persiste nada: encerrar o app encerra a sessão (decisão v1, ver `DECISIONS.md`).
  */
 export class FocusTimer {
-  private state: FocusState = { ...IDLE_FOCUS_STATE };
+  private config: FocusConfig;
+  private state: FocusState;
   private handle: unknown = undefined;
+  /** A pausa em andamento é a longa do ciclo (ao terminar, o ciclo recomeça). */
+  private longBreak = false;
   private readonly now: () => number;
   private readonly setTimer: (fn: () => void, ms: number) => unknown;
   private readonly clearTimer: (handle: unknown) => void;
   private readonly onChange: (state: FocusState) => void;
-  private readonly onFinished: (kind: FocusKind) => void;
+  private readonly onFinished: (kind: FocusKind, session: FinishedSession) => void;
 
   constructor(options: FocusTimerOptions = {}) {
     this.now = options.now ?? (() => Date.now());
@@ -46,26 +66,57 @@ export class FocusTimer {
     this.clearTimer = options.clearTimer ?? ((h) => clearTimeout(h as ReturnType<typeof setTimeout>));
     this.onChange = options.onChange ?? (() => {});
     this.onFinished = options.onFinished ?? (() => {});
+    this.config = { ...(options.config ?? DEFAULT_FOCUS_CONFIG) };
+    this.state = this.idleState(0);
   }
 
   getState(): FocusState {
     return { ...this.state };
   }
 
-  /** Inicia uma sessão. Só a partir de `idle` ou `finished`; nunca sobrescreve uma em andamento. */
-  start(kind: unknown, minutes: unknown): FocusResult<FocusState> {
+  getConfig(): FocusConfig {
+    return { ...this.config };
+  }
+
+  /** Atualiza a configuração (preferências mudaram). Uma sessão em andamento não é afetada. */
+  configure(config: FocusConfig): void {
+    const cycleChanged = config.cycle !== this.config.cycle;
+    this.config = { ...config };
+    if (!this.config.cycle) this.state.cycleCount = 0;
+    if (this.state.status === 'idle') {
+      this.state = this.idleState(this.state.cycleCount);
+      this.onChange(this.getState());
+      return;
+    }
+    const next = this.state.status === 'finished' ? nextStep(this.state.kind, this.state.cycleCount, this.config) : null;
+    this.state = { ...this.state, cycleEnabled: this.config.cycle, next };
+    if (cycleChanged || this.state.status === 'finished') this.onChange(this.getState());
+  }
+
+  /**
+   * Inicia uma sessão. Só a partir de `idle` ou `finished`; nunca sobrescreve uma em andamento.
+   * `task` (opcional) só vale para foco.
+   */
+  start(kind: unknown, minutes: unknown, task?: unknown): FocusResult<FocusState> {
     const valid = validateSession(kind, minutes);
     if (!valid.ok) return valid;
+    const linked = validateFocusTask(task);
+    if (!linked.ok) return linked;
     if (this.state.status === 'running' || this.state.status === 'paused') {
       return focusFail('busy', 'Já existe uma sessão em andamento.');
     }
     const durationMs = valid.value.minutes * 60_000;
+    this.longBreak = valid.value.kind === 'break' && this.config.cycle && this.state.cycleCount >= POMODORO_EVERY;
     this.set({
       status: 'running',
       kind: valid.value.kind,
       durationMs,
       endsAt: this.now() + durationMs,
       remainingMs: durationMs,
+      task: valid.value.kind === 'focus' ? linked.value : null,
+      cycleCount: this.state.cycleCount,
+      cycleEnabled: this.config.cycle,
+      next: null,
     });
     this.schedule(durationMs);
     return focusOk(this.getState());
@@ -90,13 +141,25 @@ export class FocusTimer {
   /** Cancela (ou dispensa o "concluído") e volta ao repouso, sem disparar `onFinished`. */
   cancel(): FocusResult<FocusState> {
     this.cancelTimer();
-    if (this.state.status !== 'idle') this.set({ ...IDLE_FOCUS_STATE });
+    this.longBreak = false;
+    if (this.state.status !== 'idle') this.set(this.idleState(this.state.cycleCount));
     return focusOk(this.getState());
   }
 
   /** Encerra sem emitir nada (usado ao fechar o app). */
   dispose(): void {
     this.cancelTimer();
+  }
+
+  private idleState(cycleCount: number): FocusState {
+    const ms = this.config.focusMinutes * 60_000;
+    return {
+      ...IDLE_FOCUS_STATE,
+      durationMs: ms,
+      remainingMs: ms,
+      cycleCount,
+      cycleEnabled: this.config.cycle,
+    };
   }
 
   private set(next: FocusState): void {
@@ -123,8 +186,30 @@ export class FocusTimer {
       this.schedule(left);
       return;
     }
-    const kind = this.state.kind;
-    this.set({ ...this.state, status: 'finished', endsAt: null, remainingMs: 0 });
-    this.onFinished(kind);
+    const { kind, task, durationMs } = this.state;
+    let cycleCount = this.state.cycleCount;
+    if (this.config.cycle) {
+      if (kind === 'focus') cycleCount += 1;
+      else if (this.longBreak) cycleCount = 0;
+    }
+    this.longBreak = false;
+    // `next` considera o ciclo já atualizado, mas uma pausa longa recém-concluída zera a contagem
+    // (o foco seguinte começa um ciclo novo).
+    const next = nextStep(kind, cycleCount, this.config);
+    this.set({
+      ...this.state,
+      status: 'finished',
+      endsAt: null,
+      remainingMs: 0,
+      cycleCount,
+      cycleEnabled: this.config.cycle,
+      next,
+    });
+    this.onFinished(kind, {
+      kind,
+      minutes: Math.round(durationMs / 60_000),
+      task,
+      at: this.now(),
+    });
   }
 }

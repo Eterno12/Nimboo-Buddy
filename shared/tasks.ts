@@ -21,6 +21,8 @@ export interface Task {
   createdAt: string;
   completedAt: string | null;
   updatedAt: string;
+  /** Prazo opcional: ISO 8601 em UTC. O Mochi avisa na hora (e um pouco antes, se ligado). */
+  dueAt: string | null;
 }
 
 export interface TaskLists {
@@ -47,6 +49,7 @@ export type TaskErrorCode =
   | 'title_too_long'
   | 'invalid_title'
   | 'invalid_id'
+  | 'invalid_due'
   | 'not_found'
   | 'limit_reached'
   | 'storage';
@@ -74,7 +77,9 @@ export interface TaskRepository {
   list(): Promise<TaskLists>;
   /** Busca uma tarefa (aplicando a retenção: uma concluída expirada não existe mais). */
   get(id: string): Promise<TaskResult<Task>>;
-  create(title: string): Promise<TaskResult<Task>>;
+  create(title: string, dueAt?: string | null): Promise<TaskResult<Task>>;
+  /** Define (ou remove, com `null`) o prazo. */
+  setDue(id: string, dueAt: string | null): Promise<TaskResult<Task>>;
   complete(id: string): Promise<TaskResult<Task>>;
   reopen(id: string): Promise<TaskResult<Task>>;
   remove(id: string): Promise<TaskResult<null>>;
@@ -85,6 +90,7 @@ export type TaskChange =
   | { type: 'created'; id: string }
   | { type: 'completed'; id: string }
   | { type: 'reopened'; id: string }
+  | { type: 'updated'; id: string }
   | { type: 'removed'; id: string }
   | { type: 'purged'; count: number };
 
@@ -108,10 +114,52 @@ export function validateTitle(input: unknown): TaskResult<string> {
   return ok(title);
 }
 
+/** Anos aceitos num prazo (barra datas absurdas vindas de um campo mal preenchido). */
+const DUE_MIN_YEAR = 2000;
+const DUE_MAX_YEAR = 2100;
+
+/**
+ * Valida o prazo: `null`/ausente = sem prazo; senão um instante ISO 8601 (UTC, com milissegundos ou
+ * não). Devolve sempre a forma canônica (`toISOString`), então comparações de texto ordenam por data.
+ */
+export function validateDue(input: unknown): TaskResult<string | null> {
+  if (input === null || input === undefined) return ok(null);
+  if (typeof input !== 'string' || input.length > 40) return fail('invalid_due', 'Data e hora inválidas.');
+  const ms = Date.parse(input);
+  if (!Number.isFinite(ms)) return fail('invalid_due', 'Data e hora inválidas.');
+  const date = new Date(ms);
+  const year = date.getUTCFullYear();
+  if (year < DUE_MIN_YEAR || year > DUE_MAX_YEAR) return fail('invalid_due', 'Escolha uma data entre 2000 e 2100.');
+  return ok(date.toISOString());
+}
+
+/** Situação do prazo em relação a `now`, para destacar a tarefa na lista. */
+export type DueStatus = 'none' | 'overdue' | 'today' | 'later';
+
+export function dueStatus(task: Pick<Task, 'dueAt' | 'completed'>, now: Date): DueStatus {
+  if (!task.dueAt || task.completed) return 'none';
+  const due = new Date(task.dueAt);
+  if (due.getTime() < now.getTime()) return 'overdue';
+  const sameDay =
+    due.getFullYear() === now.getFullYear() && due.getMonth() === now.getMonth() && due.getDate() === now.getDate();
+  return sameDay ? 'today' : 'later';
+}
+
+/** Lembrete de prazo entregue às janelas (`soon` = faltam `minutes` min; `due` = chegou a hora). */
+export interface TaskReminder {
+  taskId: string;
+  title: string;
+  kind: 'soon' | 'due';
+  dueAt: string;
+  minutes: number;
+}
+
 /** API de tarefas exposta ao renderer (`window.mochi.tasks`). */
 export interface TasksApi {
   list(): Promise<TaskResult<TaskSnapshot>>;
-  create(title: string): Promise<TaskResult<Task>>;
+  create(title: string, dueAt?: string | null): Promise<TaskResult<Task>>;
+  /** Define (ou remove, com `null`) o prazo de uma tarefa. */
+  setDue(id: string, dueAt: string | null): Promise<TaskResult<Task>>;
   complete(id: string): Promise<TaskResult<Task>>;
   reopen(id: string): Promise<TaskResult<Task>>;
   /**
@@ -121,8 +169,7 @@ export interface TasksApi {
   scheduleRemove(id: string): Promise<TaskResult<PendingRemoval>>;
   /** Cancela uma exclusão agendada (falha se o prazo acabou ou a tarefa expirou). */
   undoRemove(id: string): Promise<TaskResult<Task>>;
-  /** Aviso sobre o armazenamento (arquivo recuperado, versão mais nova, falha ao abrir) ou 
-ull. */
+  /** Aviso sobre o armazenamento (arquivo recuperado, versão mais nova, falha ao abrir) ou null. */
   notice(): Promise<string | null>;
   dismissNotice(): Promise<void>;
   /** Alguma tarefa mudou (em qualquer janela): recarregue a lista. */
@@ -131,4 +178,6 @@ ull. */
   onCompleted(listener: () => void): () => void;
   /** Uma tarefa foi criada agora. */
   onCreated(listener: () => void): () => void;
+  /** Chegou um lembrete de prazo. */
+  onReminder(listener: (reminder: TaskReminder) => void): () => void;
 }

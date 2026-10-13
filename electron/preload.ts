@@ -44,7 +44,8 @@ const api: MochiApi = {
   islandClosed: () => ipcRenderer.send(IPC.islandClosed),
   tasks: {
     list: () => ipcRenderer.invoke(IPC.tasksList),
-    create: (title) => ipcRenderer.invoke(IPC.tasksCreate, title),
+    create: (title, dueAt) => ipcRenderer.invoke(IPC.tasksCreate, { title, dueAt: dueAt ?? null }),
+    setDue: (id, dueAt) => ipcRenderer.invoke(IPC.tasksSetDue, id, dueAt),
     complete: (id) => ipcRenderer.invoke(IPC.tasksComplete, id),
     reopen: (id) => ipcRenderer.invoke(IPC.tasksReopen, id),
     scheduleRemove: (id) => ipcRenderer.invoke(IPC.tasksScheduleRemove, id),
@@ -59,10 +60,24 @@ const api: MochiApi = {
     onChange: (listener) => listen<[]>(IPC.tasksChanged, () => listener()),
     onCompleted: (listener) => listen<[]>(IPC.tasksCompleted, () => listener()),
     onCreated: (listener) => listen<[]>(IPC.tasksCreated, () => listener()),
+    onReminder: (listener) =>
+      listen<[unknown]>(IPC.tasksReminder, (raw) => {
+        // Sanitiza o que vem do main antes de entregar à página.
+        const r = (raw ?? {}) as Record<string, unknown>;
+        if (typeof r.title !== 'string' || (r.kind !== 'soon' && r.kind !== 'due')) return;
+        listener({
+          taskId: String(r.taskId ?? ''),
+          title: r.title,
+          kind: r.kind,
+          dueAt: String(r.dueAt ?? ''),
+          minutes: Number.isFinite(r.minutes) ? Number(r.minutes) : 0,
+        });
+      }),
   },
   focus: {
     getState: () => ipcRenderer.invoke(IPC.focusGet),
-    start: (kind, minutes) => ipcRenderer.invoke(IPC.focusStart, kind, minutes),
+    start: (kind, minutes, task) => ipcRenderer.invoke(IPC.focusStart, kind, minutes, task ?? null),
+    stats: () => ipcRenderer.invoke(IPC.focusStats),
     pause: () => ipcRenderer.invoke(IPC.focusPause),
     resume: () => ipcRenderer.invoke(IPC.focusResume),
     cancel: () => ipcRenderer.invoke(IPC.focusCancel),

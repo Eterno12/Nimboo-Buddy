@@ -12,15 +12,17 @@ function tempDb() {
   return { dir, file: path.join(dir, 'data', 'mochi.db'), cleanup: () => fs.rmSync(dir, { recursive: true, force: true }) };
 }
 
+/** Versões "futuras", acima das migrações reais, para testar a cópia antes de migrar. */
+const NEXT = MIGRATIONS.length + 1;
 const V2: Migration = {
-  version: 2,
+  version: NEXT,
   name: 'add_note_column',
   up(db) {
     db.exec('ALTER TABLE tasks ADD COLUMN note TEXT');
   },
 };
 const V3: Migration = {
-  version: 3,
+  version: NEXT + 1,
   name: 'add_tag_column',
   up(db) {
     db.exec('ALTER TABLE tasks ADD COLUMN tag TEXT');
@@ -71,16 +73,16 @@ test('migração de banco existente: cópia ANTES de migrar, com os dados, e o o
     seed(t.file);
     const r = openDatabaseDetailed(t.file, { migrations: [...MIGRATIONS, V2] });
     assert.ok(r.backupPath, 'deve informar o caminho da cópia');
-    assert.match(path.basename(r.backupPath!), /^mochi\.db\.bak-v1-/);
+    assert.match(path.basename(r.backupPath!), new RegExp('^mochi\\.db\\.bak-v' + MIGRATIONS.length + '-'));
     // O original foi migrado…
     const cols = r.db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[];
     assert.ok(cols.some((c) => c.name === 'note'));
-    assert.equal((r.db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 2);
+    assert.equal((r.db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, NEXT);
     r.db.close();
     // …e a cópia é o banco antigo, íntegro e legível, ainda na v1.
     const copy = new DatabaseSync(r.backupPath!, { readOnly: true });
     try {
-      assert.equal((copy.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 1);
+      assert.equal((copy.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, MIGRATIONS.length);
       const rows = copy.prepare('SELECT title FROM tasks').all() as { title: string }[];
       assert.deepEqual(rows.map((x) => x.title), ['tarefa importante']);
       const copyCols = copy.prepare('PRAGMA table_info(tasks)').all() as { name: string }[];
@@ -102,12 +104,12 @@ test('só as cópias mais recentes são mantidas', () => {
     fs.writeFileSync(`${t.file}.bak-v1-2020-01-01T00-00-00-000Z`, 'x');
     fs.writeFileSync(`${t.file}.bak-v1-2020-01-02T00-00-00-000Z`, 'x');
     fs.writeFileSync(`${t.file}.bak-v1-2020-01-03T00-00-00-000Z`, 'x');
-    openDatabase(t.file, { migrations: all.slice(0, 2) }).close();
+    openDatabase(t.file, { migrations: all.slice(0, NEXT) }).close();
     openDatabase(t.file, { migrations: all }).close();
     const left = backups(t.file);
     assert.equal(left.length, BACKUPS_TO_KEEP);
     assert.ok(!left.some((n) => n.includes('2020-01-01')), 'a mais antiga foi descartada');
-    assert.ok(left.some((n) => n.startsWith('mochi.db.bak-v2-')), 'a mais recente foi mantida');
+    assert.ok(left.some((n) => n.startsWith('mochi.db.bak-v' + NEXT + '-')), 'a mais recente foi mantida');
   } finally {
     t.cleanup();
   }
@@ -118,7 +120,7 @@ test('migração que falha deixa o banco intacto e a cópia existe', () => {
   try {
     seed(t.file);
     const broken: Migration = {
-      version: 2,
+      version: NEXT,
       name: 'quebra_no_meio',
       up(db) {
         db.exec('ALTER TABLE tasks ADD COLUMN note TEXT');

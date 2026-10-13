@@ -11,7 +11,15 @@ export type SpeechEvent =
   | 'woke'
   | 'annoyed'
   | 'giggle'
-  | 'idle';
+  | 'idle'
+  // reações às animações (cada uma tem a sua fala e o seu som)
+  | 'happy'
+  | 'curious'
+  | 'surprised'
+  | 'grabbed'
+  | 'stretch'
+  | 'yawn'
+  | 'lookaround';
 
 export type DayPart = 'morning' | 'afternoon' | 'evening' | 'night';
 
@@ -72,6 +80,18 @@ export const LINES: Record<SpeechEvent, readonly Line[]> = {
   woke: [L('Hm? Ah, oi!'), L('Opa, acordei!'), L('Voltei!')],
   annoyed: [L('Ei, calma! Cócegas!'), L('Para, para! Hihi... não.'), L('Tá bom, já entendi!')],
   giggle: [L('Hihi!'), L('Hehe, cosquinhas!'), L('Aiii, que gostoso!')],
+  happy: [L('Hihi, adorei!'), L('Mais um pouquinho~'), L('Que gostoso, obrigado!'), L('Você me deixa feliz.')],
+  curious: [
+    L('Hm? O que é isso?'),
+    L('Tô de olho em você...'),
+    L('Oi? Chegou perto, hein.'),
+    L('Curioso por aqui...'),
+  ],
+  surprised: [L('Ai! Que susto!'), L('Opa! Veio rápido!'), L('Eita!'), L('Aaah! Calma!')],
+  grabbed: [L('Uuu, tô voando!'), L('Me solta... ou não.'), L('Cuidado comigo!'), L('Wooow!')],
+  stretch: [L('Aaahh, que gostoso.'), L('Hora de alongar!'), L('Estalou tudo aqui.')],
+  yawn: [L('Aaaah... que sono.'), L('Uaaah! Desculpa.'), L('Tô com soninho...')],
+  lookaround: [L('Alguém por aí?'), L('Hum, tudo calmo.'), L('Procurando você...')],
   idle: [
     L('Se precisar, é só chamar.'),
     L('Lembra de beber água!'),
@@ -95,20 +115,48 @@ const EVENT_COOLDOWN_MS: Record<SpeechEvent, number> = {
   sleepy: 5 * 60_000,
   woke: 3 * 60_000,
   annoyed: 20_000,
-  giggle: 45_000,
+  giggle: 20_000,
   idle: 4 * 60_000,
+  // "espaço de tempo" entre falas de uma mesma animação (o som toca sempre; a fala respeita isto)
+  happy: 25_000,
+  curious: 60_000,
+  surprised: 20_000,
+  grabbed: 25_000,
+  stretch: 60_000,
+  yawn: 60_000,
+  lookaround: 90_000,
 };
 
 /** Falas "de fundo": somem enquanto o foco está correndo (o Mochi fica quietinho). */
-const SUPPRESSED_DURING_FOCUS: readonly SpeechEvent[] = ['hello', 'sleepy', 'woke', 'giggle', 'idle', 'annoyed'];
+const SUPPRESSED_DURING_FOCUS: readonly SpeechEvent[] = [
+  'hello',
+  'sleepy',
+  'woke',
+  'giggle',
+  'idle',
+  'annoyed',
+  'happy',
+  'curious',
+  'surprised',
+  'grabbed',
+  'stretch',
+  'yawn',
+  'lookaround',
+];
 
 /** Falas que passam por cima do intervalo mínimo geral (respondem a algo que a pessoa fez/terminou). */
 const URGENT: readonly SpeechEvent[] = ['taskCompleted', 'focusFinished', 'breakFinished', 'focusStart'];
 
+/**
+ * Reações a algo que a pessoa fez ao Mochi (carinho, susto, arraste, cócegas): também passam por cima do
+ * intervalo geral, mas cada uma tem o seu próprio intervalo e não contam no teto por hora.
+ */
+const REACTIVE: readonly SpeechEvent[] = ['happy', 'giggle', 'annoyed', 'surprised', 'grabbed'];
+
 /** Intervalo mínimo entre quaisquer duas falas (ms). */
 export const MIN_GAP_MS = 9_000;
 /** Teto de falas "de fundo" (hello/idle/sleepy/woke/giggle) por hora. */
-export const AMBIENT_PER_HOUR = 8;
+export const AMBIENT_PER_HOUR = 10;
 
 export interface SpeechContext {
   now: Date;
@@ -136,10 +184,11 @@ export function createPersonality(random: () => number = Math.random): Personali
     pick(event, ctx) {
       const t = ctx.now.getTime();
       if (ctx.focusActive && SUPPRESSED_DURING_FOCUS.includes(event)) return null;
-      if (!URGENT.includes(event) && t - lastAny < MIN_GAP_MS) return null;
+      const bypassGap = URGENT.includes(event) || REACTIVE.includes(event);
+      if (!bypassGap && t - lastAny < MIN_GAP_MS) return null;
       if (t - (lastByEvent.get(event) ?? -Infinity) < EVENT_COOLDOWN_MS[event]) return null;
 
-      const isAmbient = !URGENT.includes(event);
+      const isAmbient = !URGENT.includes(event) && !REACTIVE.includes(event);
       if (isAmbient) {
         while (ambient.length > 0 && t - ambient[0] > 3_600_000) ambient.shift();
         if (ambient.length >= AMBIENT_PER_HOUR) return null;
@@ -162,6 +211,18 @@ export function createPersonality(random: () => number = Math.random): Personali
       return choice;
     },
   };
+}
+
+/**
+ * Texto do balão de um lembrete de prazo. O título é cortado para o balão não virar um parágrafo
+ * (o texto completo continua na lista de tarefas e na notificação).
+ */
+export function reminderText(reminder: { kind: 'soon' | 'due'; minutes: number; title: string }): string {
+  const head = reminder.kind === 'due' ? 'Chegou a hora:' : `Em ${reminder.minutes} min:`;
+  const max = 56 - head.length - 1;
+  const title = [...reminder.title.trim()];
+  const shown = title.length > max ? `${title.slice(0, max - 1).join('').trimEnd()}…` : title.join('');
+  return `${head} ${shown}`;
 }
 
 /** Duração de exibição do balão (ms): mínimo confortável + tempo de leitura. */

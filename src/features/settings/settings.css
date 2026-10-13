@@ -201,3 +201,37 @@
   outline: 2px solid var(--s-focus);
   outline-offset: 2px;
 }
+
+.settings-minutes {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-minutes-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  color: var(--s-muted);
+  font-size: 12px;
+}
+
+.settings-minutes-field input {
+  box-sizing: border-box;
+  width: 58px;
+  padding: 5px 6px;
+  border: 1px solid var(--s-border);
+  border-radius: 8px;
+  background: var(--s-field-bg);
+  color: var(--s-text);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  user-select: text;
+}
+
+.settings-minutes-field input[aria-invalid='true'] {
+  border-color: var(--s-danger);
+  color: var(--s-danger);
+}

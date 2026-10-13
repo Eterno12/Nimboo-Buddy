@@ -254,3 +254,20 @@ receber `tasks:changed`.
 - **Personalidade/balões:** `src/features/personality/` (`personality.ts` escolhedor puro, `useSpeech`,
   `SpeechBubble`). Falas: boas-vindas por hora, tarefa concluída, foco, sono/acordar, cócegas, ociosa.
 - **Cor:** paletas por `data-palette` + variáveis `--m-*` em `mascot.css`; `Mascot.tsx` usa `var()`.
+
+## 11. Foco evoluído, prazos/lembretes e empacotamento
+
+- **Foco:** `shared/focus.ts` (tipos, `nextStep`, validação) → `FocusTimer` (ciclo, tarefa, `configure`) →
+  `focusService.ts` (IPC, registro em `FocusLog`, avanço automático) → `FocusView`/`useFocus` (campo de
+  minutos, tarefa vinculada, contador do dia). A configuração vem das preferências (`focusConfigOf` em
+  `main.ts`) e o `FocusLog` usa a mesma conexão SQLite das tarefas (`tasks.database()`).
+- **Prazos:** `Task.dueAt`; `validateDue`/`dueStatus` em `shared/tasks.ts`; IPC `tasks:set-due`; interface em
+  `TasksView` (campo `datetime-local`, atalhos Hoje/Amanhã, selo na linha) e `dueFormat.ts` (horário local ↔ ISO).
+- **Lembretes:** `tasksService` publica as tarefas visíveis a cada mudança (`onTasksChanged`) →
+  `ReminderScheduler.sync` → `deliverReminder` (evento `tasks:reminder` + notificação se oculto) → balão
+  (`reminderText`) e som `reminder` na janela do mascote.
+- **Migrações:** v1 tarefas; v2 `due_at` + `focus_sessions` (com backup automático antes de migrar).
+- **Reações por animação:** `src/features/personality/animationReactions.ts` (animação → som/fala) e o efeito
+  de `MascotView`; regras de intervalo em `personality.ts`.
+- **Empacotamento:** configuração `build` em `package.json`; `npm run pack`/`dist`; `scripts/make-icon.cjs`
+  gera o ícone; `tests/e2e/packaged.e2e.mjs` roda o `win-unpacked`.

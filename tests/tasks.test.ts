@@ -47,7 +47,7 @@ test('banco: cria arquivo, aplica migrações e configura WAL', () => {
     const cols = t.db.prepare('PRAGMA table_info(tasks)').all() as { name: string; notnull: number }[];
     assert.deepEqual(
       cols.map((c) => c.name),
-      ['id', 'title', 'completed', 'created_at', 'completed_at', 'updated_at'],
+      ['id', 'title', 'completed', 'created_at', 'completed_at', 'updated_at', 'due_at'],
     );
     assert.equal((t.db.prepare('PRAGMA journal_mode').get() as { journal_mode: string }).journal_mode, 'wal');
     assert.equal((t.db.prepare('PRAGMA integrity_check').get() as { integrity_check: string }).integrity_check, 'ok');
@@ -476,14 +476,14 @@ test('transação: falha no meio desfaz tudo (rollback)', () => {
 
 // 10 --------------------------------------------------------------------------
 const V2: Migration = {
-  version: 2,
+  version: MIGRATIONS.length + 1,
   name: 'add_note_column',
   up(db) {
     db.exec(`ALTER TABLE tasks ADD COLUMN note TEXT NOT NULL DEFAULT ''`);
   },
 };
 
-test('migração: evoluir o esquema (v1 → v2) preserva os dados existentes', async () => {
+test('migração: evoluir o esquema (versão atual → próxima) preserva os dados existentes', async () => {
   const t = setup({ start: '2026-07-01T00:00:00.000Z' });
   const a = await t.repo.create('ativa');
   const b = await t.repo.create('feita');
@@ -493,7 +493,7 @@ test('migração: evoluir o esquema (v1 → v2) preserva os dados existentes', a
   t.db.close();
 
   const db2 = openDatabase(t.file, { migrations: [...MIGRATIONS, V2] });
-  assert.equal(currentVersion(db2), 2);
+  assert.equal(currentVersion(db2), MIGRATIONS.length + 1);
   const rows = db2.prepare('SELECT id, title, completed, completed_at, note FROM tasks ORDER BY title').all() as {
     id: string;
     title: string;
@@ -519,7 +519,7 @@ test('migração: falha numa migração desfaz tudo e mantém a versão anterior
   await t.repo.create('segura');
   t.db.close();
   const broken: Migration = {
-    version: 2,
+    version: MIGRATIONS.length + 1,
     name: 'quebrada',
     up(db) {
       db.exec('ALTER TABLE tasks ADD COLUMN extra TEXT');
@@ -528,7 +528,7 @@ test('migração: falha numa migração desfaz tudo e mantém a versão anterior
   };
   assert.throws(() => openDatabase(t.file, { migrations: [...MIGRATIONS, broken] }), /falha proposital/);
   const db = openDatabase(t.file);
-  assert.equal(currentVersion(db), 1);
+  assert.equal(currentVersion(db), MIGRATIONS.length);
   const cols = (db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[]).map((c) => c.name);
   assert.ok(!cols.includes('extra'), 'a coluna parcial foi desfeita');
   assert.equal((db.prepare('SELECT COUNT(*) AS n FROM tasks').get() as { n: number }).n, 1);

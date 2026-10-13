@@ -22,11 +22,13 @@ npm run dev          # Vite + Electron com recarga (teclas 1..= forçam estados 
 npm start            # compila e abre o app
 npm run build        # tsc --noEmit + vite build + esbuild do main/preload (dist/, dist-electron/)
 npm run typecheck    # só tipos
-npm test             # 178 testes unitários (node:test), ~3 s, sem GUI
+npm test             # 214 testes unitários (node:test), ~4 s, sem GUI
 npm run test:tasks   # só tarefas (armazenamento, exclusão com desfazer, durabilidade/limpeza)
 npm run test:e2e     # interface de tarefas no app REAL via CDP; compila antes; precisa de sessão gráfica
 npm run test:e2e:focus # modo foco no app REAL (~1,5 min: inclui uma sessão de 1 min até o fim)
-npm run test:e2e:settings # configurações (tamanhos, cor, balões, painel) no app REAL
+npm run test:e2e:settings # configurações (tamanhos, cor, balões, painel, prazo/lembrete) no app REAL
+npm run pack         # app empacotado em release/win-unpacked (depois: node tests/e2e/packaged.e2e.mjs)
+npm run dist         # instalador release/Mochi Setup <versão>.exe (NSIS por usuário, sem assinatura)
 ```
 
 Antes de dar uma tarefa por concluída: `npm run build` limpo e `npm test` verde; se mexeu na

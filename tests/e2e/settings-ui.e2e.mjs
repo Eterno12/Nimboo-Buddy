@@ -17,7 +17,8 @@ const PORT = 9560 + Math.floor(Math.random() * 40);
 const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'mochi-e2e-settings-'));
 fs.writeFileSync(
   path.join(userData, 'settings.json'),
-  JSON.stringify({ version: 3, mode: 'island', floating: null, displayId: null }),
+  // Começa salvo como "flutuante": o app precisa abrir como ilha mesmo assim.
+  JSON.stringify({ version: 3, mode: 'floating', floating: { x: 300, y: 300 }, displayId: null }),
 );
 
 const results = [];
@@ -103,8 +104,10 @@ try {
   await page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'island'`, 'ilha visível');
   await page.waitFor(`document.querySelector('.presence')?.getAnimations().length === 0`, 'entrada concluída');
 
-  // O ponteiro sobre a pílula impede que a ilha se esconda durante os primeiros passos.
+  // O ponteiro sobre a pílula impede que a ilha se esconda durante os primeiros passos, e "nunca
+  // esconder" (preferência) deixa os passos independentes de tempo; o passo do canto religa.
   await page.move(176, 30);
+  await page.ev(`window.mochi.settings.update({ hideDelaySec: 0 })`);
 
   const snapshot = () => page.ev(`window.mochi.settings.get()`);
   const update = (patch) => page.ev(`window.mochi.settings.update(${JSON.stringify(patch)})`);
@@ -119,6 +122,11 @@ try {
     assert.equal(s.settings.launchAtLogin, false, 'iniciar com o Windows nunca vem ligado');
     assert.equal(s.packaged, false);
     assert.equal(await page.ev('window.outerWidth'), 352);
+  });
+
+  await step('abre sempre como ilha, mesmo com o modo flutuante salvo', async () => {
+    assert.equal(await page.ev(`document.querySelector('.shell').dataset.mode`), 'island');
+    assert.equal((await snapshot()).settings.mode, 'island');
   });
 
   await step('balão: o Mochi cumprimenta ao chegar e o balão some sozinho', async () => {
@@ -204,6 +212,7 @@ try {
   await step('Mochi no canto usa o tamanho do Mochi solto (240 × 1,4 = 336)', async () => {
     await page.ev(`document.querySelector('.island-gear')?.blur?.()`);
     // A ilha se esconde sozinha depois de recolher: tira o ponteiro de cima e fecha a ilha (Esc).
+    await update({ hideDelaySec: 3 });
     await page.move(-30, -30);
     await page.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`);
     await page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'floating'`, 'Mochi no canto', 40000);
@@ -219,6 +228,33 @@ try {
       'voltou a 100%',
     );
     await page.waitFor(`window.outerWidth === 240`, 'janela do Mochi em 240');
+  });
+
+  await step('prazo: datas inválidas são recusadas e um prazo válido é gravado em UTC', async () => {
+    const bad = await page.ev(`window.mochi.tasks.create('x', 'ontem à noite')`);
+    assert.equal(bad.ok, false);
+    assert.equal(bad.error.code, 'invalid_due');
+    const old = await page.ev(`window.mochi.tasks.create('x', '1990-01-01T00:00:00Z')`);
+    assert.equal(old.ok, false);
+    const due = new Date(Date.now() + 3 * 3600_000).toISOString();
+    const ok = await page.ev(`window.mochi.tasks.create('Tarefa com prazo', ${JSON.stringify(due)})`);
+    assert.equal(ok.ok, true);
+    assert.equal(ok.value.dueAt, due);
+    const cleared = await page.ev(`window.mochi.tasks.setDue(${JSON.stringify(ok.value.id)}, null)`);
+    assert.equal(cleared.ok, true);
+    assert.equal(cleared.value.dueAt, null);
+  });
+
+  await step('lembrete: na hora marcada o Mochi mostra o balão com o nome da tarefa', async () => {
+    await update({ remindersEnabled: true, reminderLeadMin: 0, bubbles: true });
+    const due = new Date(Date.now() + 65_000).toISOString();
+    const r = await page.ev(`window.mochi.tasks.create('Revisar a proposta', ${JSON.stringify(due)})`);
+    assert.equal(r.ok, true);
+    await page.waitFor(
+      `(document.querySelector('.speech')?.textContent ?? '').includes('Chegou a hora: Revisar a proposta')`,
+      'balão do lembrete',
+      100000,
+    );
   });
 } catch (error) {
   console.log(`  FAIL (infra) ${error.message}`);

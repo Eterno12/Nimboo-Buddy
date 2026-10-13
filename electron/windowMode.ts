@@ -22,7 +22,7 @@ import {
   type IslandExtent,
   type PresentationState,
 } from '../shared/presentation';
-import type { PresentationMode } from '../shared/settings';
+import { STARTUP_MODE, type PresentationMode } from '../shared/settings';
 import {
   createEdgeHintWindow,
   createMascotWindow,
@@ -84,7 +84,10 @@ export interface WindowModeManager {
  *    também usa este layout, num canto inferior, enquanto a ilha está escondida.
  */
 export function createWindowModeManager(settings: SettingsStore): WindowModeManager {
-  let mode: PresentationMode = settings.get().mode;
+  // O app SEMPRE abre como ilha. Se o modo flutuante estava salvo (escolhido na sessão anterior),
+  // ele só vale até fechar: a posição flutuante continua lembrada para quando for escolhido de novo.
+  let mode: PresentationMode = STARTUP_MODE;
+  if (settings.get().mode !== STARTUP_MODE) settings.update({ mode: STARTUP_MODE });
   let away = false;
   let islandOpen = false;
   let islandExtent: IslandExtent = 'home';

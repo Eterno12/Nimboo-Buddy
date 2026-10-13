@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  DEFAULT_BREAK_MINUTES,
-  DEFAULT_FOCUS_MINUTES,
+  FOCUS_MAX_MINUTES,
+  FOCUS_MIN_MINUTES,
   FOCUS_PRESET_MINUTES,
+  POMODORO_EVERY,
   formatClock,
   progress,
   remainingNow,
   type FocusState,
 } from '../../../shared/focus';
+import { useTasks } from '../tasks/useTasks';
+import { useSettings } from '../settings/useSettings';
 import { useNow, type FocusController } from './useFocus';
 import '../tasks/tasks.css';
 import './focus.css';
@@ -46,19 +49,39 @@ interface FocusViewProps {
 
 const KIND_LABEL = { focus: 'Foco', break: 'Pausa' } as const;
 
-/** Modo foco: escolher a duração, acompanhar, pausar, cancelar e ver o fim da sessão. */
+/** Lê o campo de minutos: inteiro dentro do limite, ou `null`. */
+function parseMinutes(text: string): number | null {
+  if (!/^\d{1,3}$/.test(text.trim())) return null;
+  const n = Number(text);
+  return n >= FOCUS_MIN_MINUTES && n <= FOCUS_MAX_MINUTES ? n : null;
+}
+
+/** Modo foco: tempo livre, tarefa vinculada, ciclo Pomodoro e o resultado de cada sessão. */
 export function FocusView({ variant, focus, onBack }: FocusViewProps) {
-  const { state } = focus;
-  const [minutes, setMinutes] = useState<number>(DEFAULT_FOCUS_MINUTES);
+  const { state, stats } = focus;
+  const { settings, update } = useSettings();
+  const { active: tasks, complete } = useTasks();
+  const [minutesText, setMinutesText] = useState<string>(String(settings.focusMinutes));
+  const [taskId, setTaskId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [taskDone, setTaskDone] = useState(false);
   const primary = useRef<HTMLButtonElement | null>(null);
   const previous = useRef(state.status);
+  const seededMinutes = useRef(false);
+
+  // O último tempo usado (preferência) aparece no campo assim que as preferências chegam.
+  useEffect(() => {
+    if (seededMinutes.current) return;
+    seededMinutes.current = true;
+    setMinutesText(String(settings.focusMinutes));
+  }, [settings.focusMinutes]);
 
   // Anuncia as mudanças para leitores de tela e leva o foco ao botão principal da nova tela.
   useEffect(() => {
     if (previous.current === state.status) return;
     previous.current = state.status;
+    setTaskDone(false);
     const label = KIND_LABEL[state.kind].toLowerCase();
     setAnnouncement(
       state.status === 'running'
@@ -79,9 +102,29 @@ export function FocusView({ variant, focus, onBack }: FocusViewProps) {
     if (!result.ok) setError(result.error.message);
   };
 
+  const minutes = parseMinutes(minutesText);
+  const selectedTask = tasks.find((t) => t.id === taskId) ?? null;
+
+  const startFocus = () => {
+    if (minutes === null) {
+      setError(`Digite de ${FOCUS_MIN_MINUTES} a ${FOCUS_MAX_MINUTES} minutos.`);
+      return;
+    }
+    void update({ focusMinutes: minutes }); // lembra o último tempo usado
+    void act(() => focus.start('focus', minutes, selectedTask && { id: selectedTask.id, title: selectedTask.title }));
+  };
+
   const now = useNow(state.status === 'running');
   const pct = Math.round(progress(state, now) * 100);
-  const active = state.status === 'running' || state.status === 'paused';
+  const running = state.status === 'running' || state.status === 'paused';
+  const next = state.next;
+  const cycleBadge = state.cycleEnabled
+    ? state.status !== 'idle' && state.kind === 'focus' && running
+      ? `Foco ${Math.min(state.cycleCount + 1, POMODORO_EVERY)}/${POMODORO_EVERY}`
+      : `${state.cycleCount}/${POMODORO_EVERY}`
+    : running
+      ? KIND_LABEL[state.kind]
+      : null;
 
   return (
     <section className="tasks focus" data-variant={variant} data-island-control aria-label="Modo foco">
@@ -98,7 +141,11 @@ export function FocusView({ variant, focus, onBack }: FocusViewProps) {
           </button>
         )}
         <h2>Modo foco</h2>
-        {active && <span className="tasks-count">{KIND_LABEL[state.kind]}</span>}
+        {cycleBadge && (
+          <span className="tasks-count" title={state.cycleEnabled ? 'Ciclo Pomodoro: focos concluídos' : undefined}>
+            {cycleBadge}
+          </span>
+        )}
       </header>
 
       {state.status === 'idle' && (
@@ -111,33 +158,70 @@ export function FocusView({ variant, focus, onBack }: FocusViewProps) {
                 role="radio"
                 aria-checked={minutes === m}
                 className="focus-chip"
-                onClick={() => setMinutes(m)}
+                onClick={() => {
+                  setMinutesText(String(m));
+                  setError(null);
+                }}
               >
-                {m} min
+                {m}
               </button>
             ))}
+            <label className="focus-custom">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={FOCUS_MIN_MINUTES}
+                max={FOCUS_MAX_MINUTES}
+                value={minutesText}
+                aria-label="Minutos de foco (de 1 a 180)"
+                aria-invalid={minutes === null ? true : undefined}
+                onChange={(e) => {
+                  setMinutesText(e.target.value);
+                  setError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') startFocus();
+                }}
+              />
+              <span aria-hidden="true">min</span>
+            </label>
           </div>
-          <div className="focus-actions">
-            <button
-              ref={primary}
-              type="button"
-              className="tasks-add"
-              onClick={() => void act(() => focus.start('focus', minutes))}
+          {tasks.length > 0 && (
+            <select
+              className="focus-task"
+              value={taskId}
+              aria-label="Tarefa deste foco (opcional)"
+              onChange={(e) => setTaskId(e.target.value)}
             >
-              Iniciar foco
+              <option value="">Sem tarefa vinculada</option>
+              {tasks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="focus-actions">
+            <button ref={primary} type="button" className="tasks-add" onClick={startFocus}>
+              {minutes !== null ? `Foco de ${minutes} min` : 'Iniciar foco'}
             </button>
             <button
               type="button"
               className="focus-secondary"
-              onClick={() => void act(() => focus.start('break', DEFAULT_BREAK_MINUTES))}
+              onClick={() => void act(() => focus.start('break', settings.breakMinutes))}
             >
-              Pausa de {DEFAULT_BREAK_MINUTES} min
+              Pausa de {settings.breakMinutes} min
             </button>
           </div>
+          {stats.sessions > 0 && (
+            <p className="focus-stats">
+              Hoje: {stats.sessions} {stats.sessions === 1 ? 'sessão' : 'sessões'} · {stats.minutes} min
+            </p>
+          )}
         </>
       )}
 
-      {active && (
+      {running && (
         <>
           <div className="focus-readout">
             <span className="focus-clock" role="timer" aria-label="Tempo restante" data-status={state.status}>
@@ -145,6 +229,7 @@ export function FocusView({ variant, focus, onBack }: FocusViewProps) {
             </span>
             {state.status === 'paused' && <span className="focus-paused">Pausado</span>}
           </div>
+          {state.task && <p className="focus-linked">{state.task.title}</p>}
           <div className="focus-bar" aria-hidden="true">
             <div className="focus-bar-fill" style={{ transform: `scaleX(${pct / 100})` }} />
           </div>
@@ -167,30 +252,47 @@ export function FocusView({ variant, focus, onBack }: FocusViewProps) {
       {state.status === 'finished' && (
         <>
           <p className="focus-done">
-            {state.kind === 'focus' ? 'Sessão de foco concluída. Hora de uma pausa!' : 'Pausa concluída. Pronto para focar?'}
+            {state.kind === 'focus'
+              ? next?.long
+                ? 'Quatro focos! Hora da pausa longa.'
+                : 'Sessão de foco concluída. Hora de uma pausa!'
+              : 'Pausa concluída. Pronto para focar?'}
           </p>
+          {state.kind === 'focus' && state.task && (
+            <button
+              type="button"
+              className="focus-secondary focus-complete"
+              disabled={taskDone}
+              onClick={async () => {
+                setError(null);
+                const result = await complete(state.task!.id);
+                if (result.ok) setTaskDone(true);
+                else setError(result.error.message);
+              }}
+            >
+              {taskDone ? 'Tarefa concluída ✓' : `Concluir "${state.task.title}"`}
+            </button>
+          )}
           <div className="focus-actions">
             <button
               ref={primary}
               type="button"
               className="tasks-add"
-              onClick={async () => {
-                setError(null);
-                const cleared = await focus.cancel();
-                if (!cleared.ok) return setError(cleared.error.message);
-                const next =
-                  state.kind === 'focus'
-                    ? await focus.start('break', DEFAULT_BREAK_MINUTES)
-                    : await focus.start('focus', minutes);
-                if (!next.ok) setError(next.error.message);
-              }}
+              onClick={() => next && void act(() => focus.start(next.kind, next.minutes))}
             >
-              {state.kind === 'focus' ? `Pausa de ${DEFAULT_BREAK_MINUTES} min` : `Foco de ${minutes} min`}
+              {next
+                ? next.kind === 'break'
+                  ? `${next.long ? 'Pausa longa' : 'Pausa'} de ${next.minutes} min`
+                  : `Foco de ${next.minutes} min`
+                : 'Continuar'}
             </button>
             <button type="button" className="focus-secondary" onClick={() => void act(() => focus.cancel())}>
               Dispensar
             </button>
           </div>
+          {state.cycleEnabled && settings.pomodoroAuto && (
+            <p className="focus-stats">Seguindo para a próxima etapa em instantes…</p>
+          )}
         </>
       )}
 
