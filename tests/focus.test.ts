@@ -1,0 +1,226 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { FocusTimer } from '../electron/focus/focusTimer.ts';
+import {
+  BREAK_MAX_MINUTES,
+  FOCUS_MAX_MINUTES,
+  IDLE_FOCUS_STATE,
+  formatClock,
+  progress,
+  remainingNow,
+  validateSession,
+  type FocusKind,
+  type FocusState,
+} from '../shared/focus.ts';
+
+const MIN = 60_000;
+
+/** Relógio e timers controlados; `onChange`/`onFinished` registrados. */
+function setup(startAt = 1_000_000) {
+  let t = startAt;
+  const timers = new Map<number, { at: number; fn: () => void }>();
+  let nextId = 1;
+  const states: FocusState[] = [];
+  const finished: FocusKind[] = [];
+  const timer = new FocusTimer({
+    now: () => t,
+    setTimer: (fn, ms) => {
+      const id = nextId++;
+      timers.set(id, { at: t + ms, fn });
+      return id;
+    },
+    clearTimer: (h) => void timers.delete(h as number),
+    onChange: (s) => states.push(s),
+    onFinished: (k) => finished.push(k),
+  });
+  return {
+    timer,
+    states,
+    finished,
+    timers,
+    now: () => t,
+    /** Avança o relógio; dispara os timers vencidos, em ordem. */
+    advance(ms: number) {
+      t += ms;
+      for (const [id, tm] of [...timers].sort((a, b) => a[1].at - b[1].at)) {
+        if (tm.at <= t) {
+          timers.delete(id);
+          tm.fn();
+        }
+      }
+    },
+    /** Muda só o relógio (simula salto/suspensão), sem disparar nada. */
+    jump(ms: number) {
+      t += ms;
+    },
+    /** Dispara o primeiro timer agora, mesmo "cedo" (o SO às vezes adianta). */
+    fireEarly() {
+      const [id, tm] = [...timers][0];
+      timers.delete(id);
+      tm.fn();
+    },
+  };
+}
+
+test('início: sessão de 25 min corre, com endsAt pelo relógio e sem avisar a cada segundo', () => {
+  const s = setup();
+  const r = s.timer.start('focus', 25);
+  assert.ok(r.ok);
+  const st = s.timer.getState();
+  assert.equal(st.status, 'running');
+  assert.equal(st.kind, 'focus');
+  assert.equal(st.durationMs, 25 * MIN);
+  assert.equal(st.endsAt, s.now() + 25 * MIN);
+  s.advance(10 * MIN);
+  assert.equal(s.states.length, 1, 'só a transição de início foi emitida');
+  assert.equal(remainingNow(s.timer.getState(), s.now()), 15 * MIN);
+});
+
+test('fim: conclui uma única vez, emite finished e chama onFinished com o tipo', () => {
+  const s = setup();
+  s.timer.start('focus', 1);
+  s.advance(MIN - 1);
+  assert.equal(s.timer.getState().status, 'running');
+  s.advance(1);
+  const st = s.timer.getState();
+  assert.equal(st.status, 'finished');
+  assert.equal(st.remainingMs, 0);
+  assert.equal(st.endsAt, null);
+  assert.deepEqual(s.finished, ['focus']);
+  s.advance(10 * MIN); // nada mais acontece
+  assert.deepEqual(s.finished, ['focus']);
+});
+
+test('pausa e retomada: o tempo restante é preservado e o relógio parado não consome', () => {
+  const s = setup();
+  s.timer.start('focus', 25);
+  s.advance(5 * MIN);
+  const paused = s.timer.pause();
+  assert.ok(paused.ok);
+  assert.equal(s.timer.getState().status, 'paused');
+  assert.equal(s.timer.getState().remainingMs, 20 * MIN);
+  assert.equal(s.timers.size, 0, 'sem timer enquanto pausado');
+
+  s.advance(60 * MIN); // uma hora parada: nada acontece
+  assert.equal(s.timer.getState().status, 'paused');
+  assert.deepEqual(s.finished, []);
+
+  const resumed = s.timer.resume();
+  assert.ok(resumed.ok);
+  assert.equal(s.timer.getState().endsAt, s.now() + 20 * MIN);
+  s.advance(20 * MIN);
+  assert.equal(s.timer.getState().status, 'finished');
+  assert.deepEqual(s.finished, ['focus']);
+});
+
+test('cancelar volta ao repouso sem disparar o fim', () => {
+  const s = setup();
+  s.timer.start('focus', 10);
+  s.advance(3 * MIN);
+  assert.ok(s.timer.cancel().ok);
+  assert.deepEqual(s.timer.getState(), IDLE_FOCUS_STATE);
+  assert.equal(s.timers.size, 0);
+  s.advance(60 * MIN);
+  assert.deepEqual(s.finished, []);
+});
+
+test('cancelar em repouso é inofensivo e não emite estado', () => {
+  const s = setup();
+  assert.ok(s.timer.cancel().ok);
+  assert.equal(s.states.length, 0);
+});
+
+test('regras: não sobrescreve sessão em andamento nem pausada; recusa pausar/retomar fora de hora', () => {
+  const s = setup();
+  s.timer.start('focus', 25);
+  const again = s.timer.start('focus', 5);
+  assert.ok(!again.ok && again.error.code === 'busy');
+  assert.equal(s.timer.getState().durationMs, 25 * MIN, 'a sessão original segue intacta');
+  const noResume = s.timer.resume();
+  assert.ok(!noResume.ok && noResume.error.code === 'not_paused');
+  s.timer.pause();
+  const noPause = s.timer.pause();
+  assert.ok(!noPause.ok && noPause.error.code === 'not_running');
+  const busyPaused = s.timer.start('break', 5);
+  assert.ok(!busyPaused.ok && busyPaused.error.code === 'busy');
+
+  const idle = setup();
+  assert.equal(!idle.timer.pause().ok, true);
+});
+
+test('depois de concluir dá para iniciar a pausa (e depois outro foco)', () => {
+  const s = setup();
+  s.timer.start('focus', 1);
+  s.advance(MIN);
+  assert.ok(s.timer.start('break', 5).ok);
+  assert.equal(s.timer.getState().kind, 'break');
+  s.advance(5 * MIN);
+  assert.deepEqual(s.finished, ['focus', 'break']);
+  assert.ok(s.timer.start('focus', 25).ok);
+});
+
+test('timer que dispara cedo é reavaliado pelo relógio (não conclui antes da hora)', () => {
+  const s = setup();
+  s.timer.start('focus', 10);
+  s.jump(4 * MIN);
+  s.fireEarly(); // o SO "adiantou" o timer
+  assert.equal(s.timer.getState().status, 'running');
+  assert.equal(s.timers.size, 1, 'reagendou o restante');
+  s.advance(6 * MIN);
+  assert.equal(s.timer.getState().status, 'finished');
+});
+
+test('suspensão do computador: ao acordar depois do prazo, conclui na hora', () => {
+  const s = setup();
+  s.timer.start('focus', 25);
+  s.jump(40 * MIN); // dormiu; o relógio do sistema passou do prazo
+  s.fireEarly(); // o timer dispara ao acordar
+  assert.equal(s.timer.getState().status, 'finished');
+  assert.deepEqual(s.finished, ['focus']);
+});
+
+test('validação: tipo, inteiro e limites (foco 1–180, pausa 1–60)', () => {
+  const s = setup();
+  for (const bad of [0, -5, 1.5, NaN, Infinity, FOCUS_MAX_MINUTES + 1, '25', null, undefined]) {
+    const r = s.timer.start('focus', bad);
+    assert.ok(!r.ok && r.error.code === 'invalid_duration', String(bad));
+  }
+  assert.ok(!s.timer.start('break', BREAK_MAX_MINUTES + 1).ok);
+  assert.ok(!s.timer.start('outro', 5).ok);
+  assert.equal(s.timers.size, 0);
+  assert.equal(s.states.length, 0);
+  assert.ok(validateSession('focus', FOCUS_MAX_MINUTES).ok);
+  assert.ok(validateSession('focus', 1).ok);
+  assert.ok(validateSession('break', BREAK_MAX_MINUTES).ok);
+});
+
+test('dispose: cancela o timer sem emitir nem concluir', () => {
+  const s = setup();
+  s.timer.start('focus', 5);
+  const before = s.states.length;
+  s.timer.dispose();
+  s.advance(10 * MIN);
+  assert.equal(s.states.length, before);
+  assert.deepEqual(s.finished, []);
+});
+
+test('formatClock: mm:ss, h:mm:ss e arredonda para cima', () => {
+  assert.equal(formatClock(25 * MIN), '25:00');
+  assert.equal(formatClock(24 * MIN + 59_001), '25:00');
+  assert.equal(formatClock(61_000), '01:01');
+  assert.equal(formatClock(1), '00:01');
+  assert.equal(formatClock(0), '00:00');
+  assert.equal(formatClock(-500), '00:00');
+  assert.equal(formatClock(60 * MIN), '1:00:00');
+  assert.equal(formatClock(180 * MIN), '3:00:00');
+});
+
+test('progress e remainingNow seguem o estado', () => {
+  const running: FocusState = { status: 'running', kind: 'focus', durationMs: 10 * MIN, endsAt: 1_000 + 10 * MIN, remainingMs: 10 * MIN };
+  assert.equal(remainingNow(running, 1_000 + 4 * MIN), 6 * MIN);
+  assert.equal(progress(running, 1_000 + 5 * MIN), 0.5);
+  assert.equal(progress({ ...running, status: 'paused', endsAt: null, remainingMs: 3 * MIN }, 99_999_999), 0.7);
+  assert.equal(progress({ ...running, status: 'finished', endsAt: null, remainingMs: 0 }, 0), 1);
+  assert.equal(progress(IDLE_FOCUS_STATE, 0), 0);
+  assert.equal(remainingNow(running, 1_000 + 99 * MIN), 0, 'nunca negativo');
+});

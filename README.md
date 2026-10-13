@@ -24,6 +24,7 @@ npm run typecheck    # apenas verificação de tipos
 npm test             # testes unitários (runner nativo do Node, sem dependências)
 npm run test:tasks   # só armazenamento e regras das tarefas
 npm run test:e2e     # interface de tarefas no app real (precisa de sessão gráfica)
+npm run test:e2e:focus # modo foco no app real (~1,5 min)
 ```
 
 > Se o npm bloquear scripts de instalação, rode `node node_modules/electron/install.js` uma vez para

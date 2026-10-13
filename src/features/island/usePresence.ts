@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Entrance, PresentationState } from '../../../shared/presentation';
-import { entranceFrom, playEntrance, playExit } from './presence';
+import { entranceStart, playEntrance, playExit } from './presence';
 
 interface Presentation extends PresentationState {
   /** Incrementa a cada apresentação recebida (mesmo que o conteúdo se repita). */
@@ -40,7 +40,9 @@ export function usePresence({ onShown }: PresenceOptions) {
     const el = presenceRef.current;
     if (!el || !presentation) return;
     el.getAnimations().forEach((a) => a.cancel());
-    el.style.transform = entranceFrom(presentation.entrance) ?? '';
+    const start = entranceStart(presentation.entrance);
+    el.style.transform = start?.transform ?? '';
+    el.style.opacity = start?.opacity ?? '';
     if (presentation.entrance?.kind === 'slide') side.current = presentation.entrance.from;
   }, [presentation]);
 
@@ -61,6 +63,7 @@ export function usePresence({ onShown }: PresenceOptions) {
             .then(() => {
               animation?.cancel();
               el.style.transform = '';
+              el.style.opacity = '';
               done();
             })
             .catch(() => {});

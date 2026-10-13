@@ -22,13 +22,14 @@ npm run dev          # Vite + Electron com recarga (teclas 1..= forçam estados 
 npm start            # compila e abre o app
 npm run build        # tsc --noEmit + vite build + esbuild do main/preload (dist/, dist-electron/)
 npm run typecheck    # só tipos
-npm test             # 96 testes unitários (node:test), ~2 s, sem GUI
-npm run test:tasks   # só tarefas (armazenamento + exclusão com desfazer)
+npm test             # 125 testes unitários (node:test), ~2 s, sem GUI
+npm run test:tasks   # só tarefas (armazenamento, exclusão com desfazer, durabilidade/limpeza)
 npm run test:e2e     # interface de tarefas no app REAL via CDP; compila antes; precisa de sessão gráfica
+npm run test:e2e:focus # modo foco no app REAL (~1,5 min: inclui uma sessão de 1 min até o fim)
 ```
 
 Antes de dar uma tarefa por concluída: `npm run build` limpo e `npm test` verde; se mexeu na
-interface de tarefas ou na ilha, também `npm run test:e2e`.
+interface de tarefas ou na ilha, também `npm run test:e2e`; se mexeu no modo foco, `npm run test:e2e:focus`.
 
 ## Arquitetura em 8 linhas
 
@@ -68,6 +69,9 @@ interface de tarefas ou na ilha, também `npm run test:e2e`.
   (texto ≥ 4,5:1; bordas/ícones ≥ 3:1). Mudou cor → `npm test`.
 - **Medidas da ilha** vivem em `shared/presentation.ts` e **precisam** bater com `island.css`.
 - **Esquema SQLite:** só acrescentar migrações (`electron/tasks/migrations.ts`); nunca editar uma já publicada.
+- **SQLite:** abra conexões só por `openDatabase` (define e confere `synchronous=FULL`, WAL, `busy_timeout`,
+  `foreign_keys`: os PRAGMAs valem por conexão). Leituras não abrem transação de escrita; escritas só em
+  `transaction()`.
 - **Encoding:** gravar JSON/configs em UTF-8 **sem BOM** (um BOM quebra o Vite). Cuidado com `Set-Content
   -Encoding UTF8` do Windows PowerShell 5.1.
 - **Terminal novo no Windows:** o Node pode não estar no PATH (`C:\Program Files\nodejs`); `npm.ps1` pode

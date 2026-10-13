@@ -1,15 +1,17 @@
 import path from 'node:path';
-import { app, BrowserWindow, ipcMain, Menu, screen, session, type Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Notification, screen, session, type Tray } from 'electron';
 import { IPC } from '../shared/ipc';
 import { createPanelWindow } from './windows';
 import { createTray } from './tray';
 import { createSettingsStore } from './settingsStore';
 import { createWindowModeManager, type WindowModeManager } from './windowMode';
 import { startTasksService, type TasksService } from './tasksService';
+import { startFocusService, type FocusService } from './focusService';
 
 let mascot: BrowserWindow | null = null;
 let windowMode: WindowModeManager | null = null;
 let tasks: TasksService | null = null;
+let focus: FocusService | null = null;
 let panel: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
@@ -146,6 +148,24 @@ if (!app.requestSingleInstanceLock()) {
     });
     windowMode = createWindowModeManager(settings);
     mascot = windowMode.window;
+    // O temporizador vive no main; ao terminar, a ilha volta (se estava escondida) ou
+    // avisa por notificação quando o mascote está oculto.
+    focus = startFocusService({
+      isAppUrl: (url) =>
+        process.env.VITE_DEV_SERVER_URL ? url.startsWith(process.env.VITE_DEV_SERVER_URL) : url.startsWith('file://'),
+      onFinished: (kind) => {
+        const visible = !!mascot && !mascot.isDestroyed() && mascot.isVisible();
+        if (!visible && Notification.isSupported()) {
+          new Notification({
+            title: 'Mochi',
+            body: kind === 'focus' ? 'Sessão de foco concluída. Hora de uma pausa!' : 'Pausa concluída. Pronto para focar?',
+            silent: true,
+          }).show();
+        } else if (windowMode?.isAway()) {
+          void windowMode.showIsland();
+        }
+      },
+    });
     tray = createTray(buildMenu, toggleMascot);
     startCursorBroadcast();
   });
@@ -154,6 +174,7 @@ if (!app.requestSingleInstanceLock()) {
     quitting = true;
     if (cursorTimer) clearInterval(cursorTimer);
     windowMode?.dispose();
+    focus?.close();
     tasks?.close();
     tray?.destroy();
   });

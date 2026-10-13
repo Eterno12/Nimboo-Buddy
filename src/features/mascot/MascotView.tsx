@@ -6,6 +6,8 @@ import { usePresence } from '../island/usePresence';
 import { useIsland } from '../island/useIsland';
 import { IslandContent, type IslandView } from '../island/IslandContent';
 import { useDraft } from '../tasks/draftStore';
+import { useFocus } from '../focus/useFocus';
+import { FocusBadge } from '../focus/FocusView';
 import '../island/island.css';
 
 const DRAG_THRESHOLD_PX = 4;
@@ -36,10 +38,19 @@ export function MascotView() {
 
   // `island` é referenciado pelo callback de presença antes de ser criado: usa ref.
   const islandRef = useRef<ReturnType<typeof useIsland> | null>(null);
+  /** Uma sessão de foco terminou com a ilha escondida: ao voltar, abre na tela de foco. */
+  const openFocusOnShown = useRef(false);
+  const showFocusRef = useRef<() => void>(() => {});
   const { presentation, presenceRef, exitUp } = usePresence({
     onShown: (state) => {
       greet(); // chegou em cena: cumprimenta
-      if (state.mode === 'island') islandRef.current?.resume(ISLAND_FIRST_EXPOSURE_MS);
+      if (state.mode === 'island') {
+        islandRef.current?.resume(ISLAND_FIRST_EXPOSURE_MS);
+        if (openFocusOnShown.current) {
+          openFocusOnShown.current = false;
+          showFocusRef.current();
+        }
+      }
     },
   });
   const mode = presentation?.mode ?? null;
@@ -61,10 +72,38 @@ export function MascotView() {
     await window.mochi.islandExtent('tasks');
     setView('tasks');
   };
+  const openFocus = async () => {
+    await window.mochi.islandExtent('focus');
+    setView('focus');
+  };
+
+  // Modo foco (temporizador): o estado vem do main; aqui só se exibe.
+  const focus = useFocus();
 
   // Uma tarefa foi concluída (em qualquer janela): o Mochi comemora.
   // Reabrir ou excluir não disparam este evento.
   useEffect(() => window.mochi.tasks.onCompleted(() => celebrate()), [celebrate]);
+
+  // Uma sessão de foco terminou: o Mochi comemora e a ilha mostra o resultado. Se ela
+  // estava escondida, o main a traz de volta e a tela de foco abre quando ela chegar.
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  showFocusRef.current = () => {
+    island.expand(); // a mensagem de abrir a forma segue antes da de trocar a tela (IPC em ordem)
+    void openFocus();
+  };
+  useEffect(
+    () =>
+      window.mochi.focus.onFinished(() => {
+        celebrate();
+        if (modeRef.current === 'island') {
+          showFocusRef.current();
+        } else {
+          openFocusOnShown.current = true;
+        }
+      }),
+    [celebrate],
+  );
 
   // Atalhos para inspecionar cada estado; existem apenas em `npm run dev`.
   useEffect(() => {
@@ -193,9 +232,12 @@ export function MascotView() {
             <IslandContent
               open={inIsland && island.open}
               view={view}
+              focus={focus}
               onOpenTasks={() => void openTasks()}
+              onOpenFocus={() => void openFocus()}
               onBack={() => setView('home')}
             />
+            {inIsland && <FocusBadge state={focus.state} />}
           </div>
         </div>
         <div className="shell-stage">

@@ -121,6 +121,8 @@ try {
   console.log('Tarefas — interface (app real, dados isolados)');
   page = await connect(await findTarget('mascot'));
   await page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'island'`, 'ilha visível');
+  // A ilha cresce a partir da linha do topo (clip-path): só interage depois da entrada terminar.
+  await page.waitFor(`document.querySelector('.presence')?.getAnimations().length === 0`, 'entrada concluída');
 
   const center = (sel) =>
     page.ev(`(()=>{const r=document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()`);
@@ -136,10 +138,15 @@ try {
     if ((await page.ev(`document.querySelector('.shell').dataset.open`)) !== 'true') {
       await page.click(176, 28); // pílula compacta
       await page.waitFor(`document.querySelector('.shell').dataset.open === 'true'`, 'ilha aberta');
-      // O recorte (clip-path) também recorta a área clicável: espera a abertura (320 ms) terminar.
-      await sleep(450);
+      // O recorte (clip-path) também recorta a área clicável: espera o atalho ficar acessível ao clique.
     }
-    const [x, y] = await center('.island-shortcut');
+    let x = 0;
+    let y = 0;
+    for (const t0 = Date.now(); ; await sleep(80)) {
+      [x, y] = await center('.island-shortcut');
+      if (await page.ev(`!!document.elementFromPoint(${x}, ${y})?.closest('.island-shortcut')`)) break;
+      if (Date.now() - t0 > 4000) throw new Error('atalho não ficou acessível ao clique');
+    }
     await page.click(x, y);
     await page.waitFor(`!!document.querySelector('.tasks-input')`, 'tela de tarefas');
   };

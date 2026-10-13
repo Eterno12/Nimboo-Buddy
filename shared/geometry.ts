@@ -98,6 +98,16 @@ export function bottomCornerBounds(display: DisplayInfo, size: number, corner: '
   };
 }
 
+/**
+ * Linha-dica da borda superior: centralizada no TOPO FÍSICO do monitor (`bounds`, não a
+ * área útil), que é onde o cursor precisa chegar para trazer a ilha de volta.
+ */
+export function edgeHintBounds(display: DisplayInfo, size: Size): Rect {
+  const b = display.bounds;
+  const width = Math.min(size.width, b.width);
+  return { x: Math.round(b.x + (b.width - width) / 2), y: b.y, width, height: size.height };
+}
+
 /** Monitor da ilha: o preferido, se ainda existir; senão o primário. */
 export function resolveIslandDisplay(
   preferredId: number | null | undefined,

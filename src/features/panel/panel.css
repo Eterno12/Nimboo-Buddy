@@ -1,7 +1,16 @@
 .panel {
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   height: 100%;
   padding: 16px 18px;
   background: #fdf8f3;
   color: #3b3040;
+}
+
+/* A lista de tarefas ocupa o espaço que sobra abaixo do modo foco. */
+.panel > .tasks:last-child {
+  flex: 1;
+  min-height: 0;
 }

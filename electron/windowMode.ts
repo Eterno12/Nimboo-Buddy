@@ -2,6 +2,7 @@ import { ipcMain, screen, type BrowserWindow, type Display } from 'electron';
 import { IPC } from '../shared/ipc';
 import {
   bottomCornerBounds,
+  edgeHintBounds,
   floatingBounds,
   islandBounds,
   pickDisplayForRect,
@@ -10,6 +11,8 @@ import {
   type Rect,
 } from '../shared/geometry';
 import {
+  EDGE_HINT_SIZE,
+  EDGE_REVEAL_HALF_WIDTH,
   ISLAND_WINDOW_SIZE,
   islandShape,
   type Entrance,
@@ -17,7 +20,13 @@ import {
   type PresentationState,
 } from '../shared/presentation';
 import type { PresentationMode } from '../shared/settings';
-import { createMascotWindow, MASCOT_SIZE } from './windows';
+import {
+  createEdgeHintWindow,
+  createMascotWindow,
+  EDGE_HINT_FADE_JS,
+  EDGE_HINT_RESET_JS,
+  MASCOT_SIZE,
+} from './windows';
 import type { SettingsStore } from './settingsStore';
 
 const toInfo = (d: Display): DisplayInfo => ({ id: d.id, bounds: d.bounds, workArea: d.workArea });
@@ -30,7 +39,9 @@ const APPLY_ACK_TIMEOUT_MS = 300;
 const LEAVE_TIMEOUT_MS = 500;
 /** Revelar a ilha: cursor na borda superior, perto do centro, por este tempo. */
 const REVEAL_DWELL_MS = 250;
-const REVEAL_HALF_WIDTH = 140;
+const REVEAL_HALF_WIDTH = EDGE_REVEAL_HALF_WIDTH;
+/** Duração do esmaecer da linha-dica quando a ilha surge a partir dela. */
+const EDGE_HINT_FADE_MS = 200;
 /** Depois que o Mochi surge no canto, ignora a borda por um instante. */
 const AWAY_COOLDOWN_MS = 1500;
 
@@ -75,6 +86,10 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   let awayAt = 0;
   let edgeSince: number | null = null;
   let lastCorner: 'left' | 'right' = 'left';
+  let edgeHint: BrowserWindow | null = null;
+  let edgeHintTimer: ReturnType<typeof setTimeout> | undefined;
+  /** A ilha começou a se esconder (animação de saída em curso). */
+  let hiding = false;
 
   const islandDisplay = (): DisplayInfo =>
     resolveIslandDisplay(settings.get().displayId, allDisplays(), primaryId());
@@ -91,6 +106,59 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   const initial = mode === 'island' ? islandRect() : baseline;
   const window = createMascotWindow(initial, { focusable: mode === 'floating' });
   if (mode === 'island') window.setShape([islandShape(false)]);
+
+  /** Esconde a linha-dica (a ilha voltou, o modo mudou, o mascote foi ocultado ou o app encerra). */
+  const hideEdgeHint = () => {
+    clearTimeout(edgeHintTimer);
+    hiding = false;
+    if (edgeHint && !edgeHint.isDestroyed()) edgeHint.hide();
+  };
+  /**
+   * A ilha está surgindo a partir da linha: ela esmaece enquanto a ilha cresce e some em seguida.
+   * (A janela da linha e a da ilha são distintas; a troca é feita sem corte.)
+   */
+  const fadeOutEdgeHint = () => {
+    clearTimeout(edgeHintTimer);
+    hiding = false;
+    const hint = edgeHint;
+    if (!hint || hint.isDestroyed() || !hint.isVisible()) return;
+    void hint.webContents.executeJavaScript(EDGE_HINT_FADE_JS).catch(() => {});
+    edgeHintTimer = setTimeout(() => {
+      if (!hint.isDestroyed()) hint.hide();
+    }, EDGE_HINT_FADE_MS);
+  };
+  /**
+   * Mostra a linha-dica no topo do monitor da ilha: no instante em que a ilha começa a se esconder
+   * (`hiding`) e enquanto o Mochi estiver no canto (`away`) e visível.
+   */
+  const showEdgeHint = (delay = 0) => {
+    clearTimeout(edgeHintTimer);
+    edgeHintTimer = setTimeout(() => {
+      if (!(away || hiding) || window.isDestroyed() || !window.isVisible()) return;
+      const bounds = edgeHintBounds(islandDisplay(), EDGE_HINT_SIZE);
+      if (edgeHint && !edgeHint.isDestroyed()) {
+        if (edgeHint.isVisible()) return; // já está à vista (ex.: seguiu da saída da ilha para o canto)
+        edgeHint.setBounds(bounds);
+        void edgeHint.webContents.executeJavaScript(EDGE_HINT_RESET_JS).catch(() => {});
+        edgeHint.showInactive();
+        return;
+      }
+      const created = createEdgeHintWindow(bounds);
+      edgeHint = created;
+      created.once('ready-to-show', () => {
+        if ((away || hiding) && !created.isDestroyed()) created.showInactive();
+      });
+    }, delay);
+  };
+  // Mascote ocultado pelo usuário → sem linha; reexibido no canto → linha de volta.
+  window.on('hide', hideEdgeHint);
+  window.on('show', () => {
+    if (away) showEdgeHint(0);
+  });
+  window.on('closed', () => {
+    hideEdgeHint();
+    if (edgeHint && !edgeHint.isDestroyed()) edgeHint.destroy();
+  });
 
   /** Layouts: cada um troca tamanho, forma e foco de uma vez. */
   const layoutIsland = () => {
@@ -132,6 +200,9 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     if (target.x !== current.x || target.y !== current.y) {
       window.setBounds({ x: target.x, y: target.y, width: current.width, height: current.height });
     }
+    if (edgeHint && !edgeHint.isDestroyed() && edgeHint.isVisible()) {
+      edgeHint.setBounds(edgeHintBounds(islandDisplay(), EDGE_HINT_SIZE));
+    }
   };
   screen.on('display-removed', onDisplayChange);
   screen.on('display-metrics-changed', onDisplayChange);
@@ -164,7 +235,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   /** Ajusta a forma da ilha aberta à tela atual (maior antes de crescer, menor depois de encolher). */
   ipcMain.handle(IPC.islandExtent, (event, extent: unknown) => {
     if (!fromWindow(event)) throw new Error('Remetente não autorizado');
-    if (extent !== 'home' && extent !== 'tasks') return;
+    if (extent !== 'home' && extent !== 'tasks' && extent !== 'focus') return;
     if (presentationMode() !== 'island' || busy || !islandOpen) return;
     islandExtent = extent;
     window.setShape([islandShape(true, islandExtent)]);
@@ -178,6 +249,14 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     window.setShape([islandShape(false)]);
   };
   ipcMain.on(IPC.islandClosed, onIslandClosed);
+
+  /** A ilha começou a recolher para o topo: a linha aparece agora, no mesmo instante. */
+  const onIslandHiding = (event: Electron.IpcMainEvent) => {
+    if (!fromWindow(event) || presentationMode() !== 'island' || busy) return;
+    hiding = true;
+    showEdgeHint(0);
+  };
+  ipcMain.on(IPC.islandHiding, onIslandHiding);
 
   const onIslandHidden = (event: Electron.IpcMainEvent) => {
     if (fromWindow(event)) void goAway();
@@ -224,12 +303,14 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
       mode: 'floating',
       entrance: { kind: 'slide', from: corner },
     });
+    hiding = false;
+    showEdgeHint(0); // com o Mochi no canto, a linha mostra por onde a ilha volta (já está à vista)
   }
 
   /** Traz a ilha de volta: o Mochi sai de cena e a ilha desce do topo. */
   async function showIsland(): Promise<void> {
     if (!away || busy || window.isDestroyed()) return;
-    busy = true;
+    busy = true; // a linha segue à vista: a ilha vai surgir dela (esmaece ao começar a entrada)
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, LEAVE_TIMEOUT_MS);
       leaveAck = () => {
@@ -241,11 +322,15 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     leaveAck = null;
     busy = false;
     away = false;
+    // A entrada (a ilha crescendo a partir da linha) começa quando o layout é confirmado,
+    // que é o momento em que `transition` resolve: aí a linha esmaece.
     await transition(layoutIsland, { mode: 'island', entrance: { kind: 'drop' } });
+    fadeOutEdgeHint();
   }
 
   async function setMode(next: PresentationMode): Promise<void> {
     if (busy || window.isDestroyed() || next === mode) return;
+    hideEdgeHint();
     if (next === 'island') {
       persistPosition(); // lembra onde o mascote estava para voltar depois
       const display = pickDisplayForRect(window.getBounds(), allDisplays(), primaryId());
@@ -312,7 +397,10 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
       ipcMain.removeListener(IPC.presentationApplied, onApplied);
       ipcMain.removeListener(IPC.islandClosed, onIslandClosed);
       ipcMain.removeListener(IPC.islandHidden, onIslandHidden);
+      ipcMain.removeListener(IPC.islandHiding, onIslandHiding);
       ipcMain.removeListener(IPC.leaveDone, onLeaveDone);
+      hideEdgeHint();
+      if (edgeHint && !edgeHint.isDestroyed()) edgeHint.destroy();
       persistPosition();
       settings.flush();
     },

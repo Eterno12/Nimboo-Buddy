@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC, type CursorPoint, type MochiApi } from '../shared/ipc';
 import type { Entrance, PresentationState } from '../shared/presentation';
+import type { FocusKind, FocusState } from '../shared/focus';
 
 /** Sanitiza o que vem do main antes de entregar à página. */
 function asPresentation(value: unknown): PresentationState {
@@ -51,6 +52,16 @@ const api: MochiApi = {
     onChange: (listener) => listen<[]>(IPC.tasksChanged, () => listener()),
     onCompleted: (listener) => listen<[]>(IPC.tasksCompleted, () => listener()),
   },
+  focus: {
+    getState: () => ipcRenderer.invoke(IPC.focusGet),
+    start: (kind, minutes) => ipcRenderer.invoke(IPC.focusStart, kind, minutes),
+    pause: () => ipcRenderer.invoke(IPC.focusPause),
+    resume: () => ipcRenderer.invoke(IPC.focusResume),
+    cancel: () => ipcRenderer.invoke(IPC.focusCancel),
+    onChange: (listener) => listen<[FocusState]>(IPC.focusChanged, (state) => listener(state)),
+    onFinished: (listener) => listen<[FocusKind]>(IPC.focusFinished, (kind) => listener(kind)),
+  },
+  islandHiding: () => ipcRenderer.send(IPC.islandHiding),
   islandHidden: () => ipcRenderer.send(IPC.islandHidden),
   onLeave: (listener) => listen<[]>(IPC.leave, () => listener()),
   leaveDone: () => ipcRenderer.send(IPC.leaveDone),

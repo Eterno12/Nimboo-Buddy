@@ -39,13 +39,16 @@ de 380×520, `#panel`, criada sob demanda; fechar só oculta).
 | `electron/settingsStore.ts` | `settings.json`: leitura tolerante, escrita atômica com debounce |
 | `electron/tasksService.ts` | Liga repositório + agendador ao IPC; difunde mudanças; limpeza horária |
 | `electron/tasks/` | `database.ts` (abrir/recuperar), `migrations.ts`, `sqliteTaskRepository.ts`, `removalScheduler.ts` |
-| `shared/` | Contratos usados por main, preload e renderer: `ipc.ts`, `tasks.ts`, `settings.ts`, `presentation.ts`, `geometry.ts` |
+| `electron/focusService.ts` | Liga o temporizador ao IPC (remetente validado); difunde `focus:changed`/`focus:finished` |
+| `electron/focus/focusTimer.ts` | `FocusTimer`: máquina de estados pura do modo foco (relógio e timers injetáveis) |
+| `shared/` | Contratos usados por main, preload e renderer: `ipc.ts`, `tasks.ts`, `focus.ts`, `settings.ts`, `presentation.ts`, `geometry.ts` |
+| `src/features/focus/` | `FocusView.tsx` (tela, relógio, selo), `useFocus.ts` (estado + relógio da UI), `focus.css` |
 | `src/features/mascot/` | `Mascot.tsx` (SVG), `mascot.css`, `mascotController.ts` (estados), `useMascot.ts`, `MascotView.tsx` |
 | `src/features/island/` | `usePresence.ts`/`presence.ts` (entrada/saída), `islandController.ts`, `useIsland.ts`, `IslandContent.tsx`, `island.css` |
 | `src/features/tasks/` | `TasksView.tsx`, `useTasks.ts`, `draftStore.ts`, `tasks.css` |
-| `src/features/panel/` | `PanelView.tsx` (hoje só hospeda `TasksView`) |
+| `src/features/panel/` | `PanelView.tsx` (hospeda `FocusView` e `TasksView`) |
 | `scripts/` | `dev.mjs` (Vite + Electron), `build-electron.mjs` (esbuild → `dist-electron/*.cjs`) |
-| `tests/` | Testes unitários (`*.test.ts`), `helpers/`, `e2e/tasks-ui.e2e.mjs` |
+| `tests/` | Testes unitários (`*.test.ts`), `helpers/`, `e2e/tasks-ui.e2e.mjs`, `e2e/focus-ui.e2e.mjs` |
 
 ## 3. Janela do mascote e suas apresentações
 
@@ -55,7 +58,7 @@ por isso trocar de apresentação não o reinicia.
 
 | Apresentação | Janela | Quando |
 |---|---|---|
-| **ilha** | 352×380 fixa, topo-centro da área útil do monitor; forma = pílula 176×58 (recolhida), 352×174 (aberta, home) ou 352×380 (aberta, tarefas); não focável quando recolhida | modo preferido `island` e ilha à vista |
+| **ilha** | 352×380 fixa, topo-centro da área útil do monitor; forma = pílula 176×58 (recolhida), 352×174 (aberta, home), 352×214 (aberta, foco) ou 352×380 (aberta, tarefas); não focável quando recolhida | modo preferido `island` e ilha à vista |
 | **flutuante** | 240×240, arrastável, posição lembrada | modo preferido `floating`, ou "Mochi no canto" (*away*) |
 
 `settings.mode` (`island` padrão | `floating`) é a **preferência**. Em `island` há um estado de execução
@@ -74,6 +77,14 @@ por isso trocar de apresentação não o reinicia.
 - **Esconder → canto:** ilha recolhida, sem hover/atividade por 3 s (6 s na chegada) → `exitUp` anima →
   `islandHidden` → `goAway()` troca para 240×240 num canto inferior (alterna esquerdo/direito) com entrada
   `slide`.
+- **Linha-dica da borda (edge hint):** enquanto o Mochi está no canto (*away*) e visível, uma **segunda
+  janela** pequena (`createEdgeHintWindow`: 280×8 no topo físico do monitor, transparente, `setShape` para
+  limitar a altura, `setIgnoreMouseEvents`, não focável, sem preload, CSP restrita) mostra uma linha
+  branca pulsante, rente ao topo, que afina e perde opacidade nas pontas, com a largura exata da zona de revelação (`EDGE_REVEAL_HALF_WIDTH`).
+  Aparece no início da saída da ilha (`island:hiding`); a ilha se recolhe até virar a linha
+  (achata via `transform`/`opacity`, `presence.ts`) e, ao voltar, cresce a partir dela, enquanto a linha esmaece
+  (`fadeOutEdgeHint`). Também some em `setMode()`, ao ocultar o mascote e ao sair; segue
+  `onDisplayChange`.
 - **Voltar à ilha:** `onCursor()` (amostra do main) detecta cursor na borda superior do monitor, perto do
   centro, por ~250 ms (após 1,5 s de carência) → `showIsland()` envia `leave`, espera `leaveDone` → ilha
   entra com `drop`. O menu "Mostrar ilha" faz o mesmo.
@@ -117,6 +128,9 @@ sem expor `ipcRenderer` nem o objeto `event`.
 | `tasks:schedule-remove` / `tasks:undo-remove` | R→M | invoke | excluir com desfazer |
 | `tasks:changed` | M→R | evento | recarregue a lista |
 | `tasks:completed` | M→R | evento | só ao concluir (dispara `celebrate`) |
+| `focus:get/start/pause/resume/cancel` | R→M | invoke | modo foco; `start(kind, minutes)` validado no main; respostas `FocusResult` |
+| `focus:changed` | M→R | evento | estado novo (início/pausa/retomada/fim/cancelamento) — **não** a cada segundo |
+| `focus:finished` | M→R | evento | sessão terminou sozinha (comemorar; trazer a ilha) |
 
 Validação: handlers do mascote exigem `sender === window.webContents`; os de tarefas (`tasksService`)
 exigem janela do app + quadro principal + URL do app (`file://` ou servidor de desenvolvimento) e validam
@@ -127,13 +141,17 @@ argumentos (`validateTitle`, `isTaskId`). Respostas de tarefas são `TaskResult`
 Camadas (de baixo para cima):
 
 1. `electron/tasks/database.ts` — abre `userData/data/mochi.db`; `busy_timeout=3000`, `WAL`,
-   `synchronous=NORMAL`, `foreign_keys=ON`; aplica migrações; arquivo corrompido → renomeado
-   `mochi.db.corrupt-<data>` e banco novo; versão mais nova que o app → `SchemaTooNewError` (não toca).
+   `synchronous=FULL` e `foreign_keys=ON` (ambos **conferidos** por leitura do PRAGMA a cada abertura,
+   pois valem por conexão); aplica migrações; arquivo corrompido → renomeado `mochi.db.corrupt-<data>` e
+   banco novo; versão mais nova que o app → `SchemaTooNewError` (não toca). Ver `DECISIONS.md` D16.
 2. `migrations.ts` — lista ordenada; cada migração roda em transação junto com `PRAGMA user_version`.
    **v1:** `tasks(id TEXT PK, title, completed 0|1, created_at, completed_at, updated_at)` `STRICT`, `CHECK`
    (concluída ⇔ tem `completed_at`), índice `(completed, completed_at)`.
 3. `sqliteTaskRepository.ts` — implementa `TaskRepository` (`shared/tasks.ts`): escritas em
-   `BEGIN IMMEDIATE`; retenção (30 dias de `completed_at`) aplicada em `list`, `get` e a cada mutação;
+   `BEGIN IMMEDIATE`; retenção (30 dias de `completed_at`): as **mutações** limpam dentro da própria
+   transação; `list`/`get`/`purgeExpired` fazem **leitura primeiro** (`hasExpired`) e só abrem
+   transação de escrita se houver expiradas (o `DELETE` reavalia a regra sob o lock), e as consultas já
+   excluem as expiradas (`NOT_EXPIRED_SQL`), então uma leitura nunca falha por causa da limpeza;
    `notify()` chama `onChange` **depois** do commit e nunca propaga falha do ouvinte.
 4. `removalScheduler.ts` — exclusão com desfazer: agendar não apaga; o `DELETE` ocorre após 5 s
    (`UNDO_WINDOW_MS`); `undo` cancela o timer **antes** de consultar o banco; `dispose()` (ao sair)
@@ -146,6 +164,20 @@ Camadas (de baixo para cima):
 
 **Fonte de verdade:** o SQLite. O renderer nunca decide estado definitivo; qualquer janela recarrega ao
 receber `tasks:changed`.
+
+### Modo foco (temporizador)
+
+- **Main:** `FocusTimer` guarda `{status: idle|running|paused|finished, kind: focus|break, durationMs,
+  endsAt, remainingMs}`. Em `running` o fim é um **instante** (`endsAt`, relógio do sistema): se o computador
+  dormir, a sessão termina no horário real; o timer do SO é reavaliado contra o relógio antes de concluir.
+  Pausa guarda o restante; retomar recalcula `endsAt`. Uma sessão por vez (`busy`). Nada persiste.
+- **Renderer:** `useFocus` guarda uma cópia do estado; cada janela calcula o restante localmente
+  (`useNow` a 250 ms, só enquanto `running` e montado) — o main nunca envia tique por segundo.
+- **Fim:** `focus:finished` → `celebrate()`; se a ilha estava escondida, `main.ts` chama `showIsland()` e o
+  renderer abre a tela de foco quando ela chega (`openFocusOnShown`); se o mascote está oculto, o main
+  mostra uma notificação nativa silenciosa.
+- **Superfícies:** ilha (tela `focus`, selo `mm:ss` na pílula recolhida, atalho com o tempo) e painel
+  (cartão acima das tarefas).
 
 ## 6. Relação mascote × ilha × painel × tarefas
 
@@ -181,8 +213,9 @@ receber `tasks:changed`.
   remetente → teste. Não ampliar a superfície sem necessidade.
 - **Mudou tamanho/forma da ilha:** `shared/presentation.ts` **e** `island.css` (clip-paths, alturas) juntos;
   conferir `islandShape()` e o e2e.
-- **Nova tabela/coluna:** nova migração + teste "evoluir sem perder dados"; avaliar impacto na futura
-  sincronização (ver `ROADMAP.md`).
+- **Nova tabela/coluna:** nova migração + teste "evoluir sem perder dados"; avaliar o impacto na
+  futura sincronização (`ROADMAP.md`, seção de pré-requisitos) e fazer backup do arquivo antes de migrar.
+- **Leituras não escrevem:** consultas novas devem ser só leitura; escrita só em `transaction()`.
 - **Nova seção na ilha** (timer, notas): o conteúdo vive em `IslandContent`; o extent da forma é por tela
   (`IslandExtent`); a janela fica com tamanho fixo, então telas maiores exigem rever `ISLAND_WINDOW_SIZE`.
 - **Comportamento do mascote:** manter lógica em `mascotController` (puro) e apresentação em CSS por

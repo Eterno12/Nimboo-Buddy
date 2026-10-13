@@ -1,5 +1,13 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { TasksView } from '../tasks/TasksView';
+import { FocusClock, FocusView } from '../focus/FocusView';
+import type { FocusController } from '../focus/useFocus';
+import type { FocusState } from '../../../shared/focus';
+
+/** Texto do atalho de foco: tempo restante (ou "ok") enquanto há uma sessão. */
+function FocusBadgeText({ state }: { state: FocusState }) {
+  return state.status === 'finished' ? <>✓</> : <FocusClock state={state} />;
+}
 
 interface Shortcut {
   id: 'tasks' | 'timer' | 'notes' | 'assistant';
@@ -44,12 +52,14 @@ const SHORTCUTS: Shortcut[] = [
   },
 ];
 
-export type IslandView = 'home' | 'tasks';
+export type IslandView = 'home' | 'tasks' | 'focus';
 
 interface IslandContentProps {
   open: boolean;
   view: IslandView;
+  focus: FocusController;
   onOpenTasks: () => void;
+  onOpenFocus: () => void;
   onBack: () => void;
 }
 
@@ -58,15 +68,21 @@ interface IslandContentProps {
  * ainda sem função ficam desabilitados com semântica real (`disabled`), e nada
  * aparece para o teclado enquanto a ilha está recolhida (`inert`).
  */
-export function IslandContent({ open, view, onOpenTasks, onBack }: IslandContentProps) {
+export function IslandContent({ open, view, focus, onOpenTasks, onOpenFocus, onBack }: IslandContentProps) {
   const tasksShortcut = useRef<HTMLButtonElement | null>(null);
+  const timerShortcut = useRef<HTMLButtonElement | null>(null);
   const previousView = useRef<IslandView>(view);
 
-  // Ao sair da tela de tarefas (voltar), o foco volta ao atalho que a abriu.
+  // Ao voltar de uma tela (tarefas, foco), o foco volta ao atalho que a abriu.
   useEffect(() => {
-    if (previousView.current === 'tasks' && view === 'home' && open) tasksShortcut.current?.focus();
+    if (view === 'home' && open) {
+      if (previousView.current === 'tasks') tasksShortcut.current?.focus();
+      else if (previousView.current === 'focus') timerShortcut.current?.focus();
+    }
     previousView.current = view;
   }, [view, open]);
+
+  const sessionActive = focus.state.status !== 'idle';
 
   return (
     <div className="island-content" inert={!open} aria-hidden={!open}>
@@ -74,24 +90,42 @@ export function IslandContent({ open, view, onOpenTasks, onBack }: IslandContent
         <div className="island-tasks">
           <TasksView variant="island" onBack={onBack} />
         </div>
+      ) : view === 'focus' ? (
+        <div className="island-focus">
+          <FocusView variant="island" focus={focus} onBack={onBack} />
+        </div>
       ) : (
         <ul className="island-shortcuts" aria-label="Atalhos">
           {SHORTCUTS.map((s) => {
-            const enabled = s.id === 'tasks';
+            const enabled = s.id === 'tasks' || s.id === 'timer';
             return (
               <li key={s.id}>
                 <button
                   type="button"
-                  ref={s.id === 'tasks' ? tasksShortcut : undefined}
+                  ref={s.id === 'tasks' ? tasksShortcut : s.id === 'timer' ? timerShortcut : undefined}
                   className="island-shortcut"
                   disabled={!enabled}
                   title={enabled ? undefined : 'Em breve'}
-                  onClick={enabled ? onOpenTasks : undefined}
+                  onClick={s.id === 'tasks' ? onOpenTasks : s.id === 'timer' ? onOpenFocus : undefined}
                 >
                   <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
                     {s.icon}
                   </svg>
-                  <span>{s.label}</span>
+                  <span>
+                    {s.id === 'timer' ? (
+                      <>
+                        Foco
+                        {sessionActive && (
+                          <>
+                            {' '}
+                            <FocusBadgeText state={focus.state} />
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      s.label
+                    )}
+                  </span>
                 </button>
               </li>
             );

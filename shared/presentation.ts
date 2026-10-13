@@ -15,9 +15,11 @@ import type { PresentationMode } from './settings';
 export const ISLAND_WINDOW_SIZE: Size = { width: 352, height: 380 };
 export const ISLAND_COMPACT_SIZE: Size = { width: 176, height: 58 };
 export const ISLAND_HOME_HEIGHT = 174;
+/** Tela do modo foco: pílula 336x204 + folga (precisa acompanhar `island.css`). */
+export const ISLAND_FOCUS_HEIGHT = 214;
 
 /** Tela mostrada pela ilha expandida (define até onde a forma se estende). */
-export type IslandExtent = 'home' | 'tasks';
+export type IslandExtent = 'home' | 'tasks' | 'focus';
 
 /** Forma (em coordenadas da janela) da ilha recolhida ou expandida em cada tela. */
 export function islandShape(open: boolean, extent: IslandExtent = 'home'): Rect {
@@ -32,7 +34,12 @@ export function islandShape(open: boolean, extent: IslandExtent = 'home'): Rect 
     x: 0,
     y: 0,
     width: ISLAND_WINDOW_SIZE.width,
-    height: extent === 'tasks' ? ISLAND_WINDOW_SIZE.height : ISLAND_HOME_HEIGHT,
+    height:
+      extent === 'tasks'
+        ? ISLAND_WINDOW_SIZE.height
+        : extent === 'focus'
+          ? ISLAND_FOCUS_HEIGHT
+          : ISLAND_HOME_HEIGHT,
   };
 }
 
@@ -47,3 +54,11 @@ export interface PresentationState {
   mode: PresentationMode;
   entrance: Entrance;
 }
+
+/**
+ * Zona de revelação da ilha: cursor no topo físico do monitor, até esta distância (DIP) do
+ * centro. A linha-dica tem a largura exata da zona, para mostrar onde ela está.
+ */
+export const EDGE_REVEAL_HALF_WIDTH = 140;
+/** Janela da linha-dica: largura da zona; altura = linha de 2px + brilho. */
+export const EDGE_HINT_SIZE: Size = { width: EDGE_REVEAL_HALF_WIDTH * 2, height: 8 };

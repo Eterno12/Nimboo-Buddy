@@ -23,6 +23,7 @@ export function useIsland(mode: PresentationMode | null, { exit }: UseIslandOpti
       closeWindow: () => window.mochi.islandClosed(),
       onVisualChange: setOpen,
       hide: () => {
+        window.mochi.islandHiding(); // a linha-dica surge junto com o início da saída
         void exitRef.current().then(() => window.mochi.islandHidden());
       },
     });
@@ -59,6 +60,7 @@ export function useIsland(mode: PresentationMode | null, { exit }: UseIslandOpti
   const actions = useMemo(
     () => ({
       toggle: () => ref.current?.toggle(),
+      expand: () => ref.current?.expand(),
       activity: () => ref.current?.activity(),
       setHover: (h: boolean) => ref.current?.setHover(h),
       setHold: (h: boolean) => ref.current?.setHold(h),

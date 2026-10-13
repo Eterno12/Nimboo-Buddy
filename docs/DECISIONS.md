@@ -48,14 +48,13 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 ## D7 — Modelo de tarefas e interface de repositório assíncrona
 - **Por quê:** preparar sincronização futura sem implementá-la: UUID gerado no cliente, datas ISO UTC,
   `updated_at`, `TaskRepository` assíncrono e `TaskResult` sem exceções pelo IPC.
-- **Sem campos de sincronização** ainda (pedido explícito). **Limitações conhecidas:** exclusão sem
-  *tombstone*, `updated_at` do relógio local, `create` gera o id no repositório (ver
-  `PROJECT_STATUS.md` #4–#8).
+- **Sem campos de sincronização** ainda (pedido explícito). **Limitações conhecidas** e pré-requisitos:
+  ver `ROADMAP.md`, seção *Pré-requisitos e riscos da sincronização remota* (S1–S13).
 
 ## D8 — Retenção: concluídas somem 30 dias após `completed_at`
 - **Por quê:** requisito do usuário. Aplicada na abertura, em `list`/`get`/mutações e de hora em hora.
   Ativas nunca são removidas; reabrir limpa `completed_at`.
-- **Limitação:** é um `DELETE` local; com sync deve virar regra derivada, não exclusão propagada.
+- **Limitação:** é um `DELETE` local; com sync deve virar regra derivada, não exclusão propagada (`ROADMAP.md` S2, S11).
 
 ## D9 — Excluir com "Desfazer": prazo no processo principal, cancelado ao sair
 - **Por quê:** todas as janelas precisam ver a mesma tarefa escondida; nada pode ser apagado antes do
@@ -95,3 +94,51 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Versionamento:** ficam **fora do git** por precaução (100 arquivos, 7 MB, só uma licença presente;
   redistribuição não confirmada). Estão em `.git/info/exclude` (local); o `.gitignore` compartilhado
   não decide isso. Para versionar ou descartar, registre a decisão aqui.
+
+## D16 — Durabilidade `synchronous = FULL` e limpeza de expiradas "leitura primeiro"
+- **Contexto medido** (SQLite 3.53 do Node 24 / Electron 44, WAL): o padrão da conexão **já é** `FULL` (2);
+  o projeto o rebaixava para `NORMAL` (1). O PRAGMA vale **por conexão**, não fica no arquivo. Em WAL,
+  `NORMAL` não faz fsync a cada commit: numa queda de energia podem sumir as últimas transações (o
+  banco continua íntegro). Custo medido de `FULL`: ~1,1 ms por commit (vs ~0,04 ms) — irrelevante para
+  ações de usuário numa lista de tarefas.
+- **Decisão:** `PRAGMA synchronous = FULL` definido em toda abertura (`openDatabase`) e **conferido por
+  leitura do PRAGMA** (erro se não aplicar). `EXTRA` não traz ganho em WAL e foi descartado.
+- **Limpeza:** `list()`, `get()` e `purgeExpired()` primeiro fazem uma leitura (`hasExpired`); só abrem
+  `BEGIN IMMEDIATE` se houver expiradas. Medido: uma leitura passa em ~0,4 ms com outra conexão
+  escrevendo, enquanto `BEGIN IMMEDIATE` falha com "database is locked" após o `busy_timeout`.
+- **Sem corrida:** o `DELETE` reavalia `completed = 1 AND completed_at < ?` sob o lock, então uma tarefa
+  reaberta/excluída entre a verificação e a limpeza nunca é apagada por engano (testado injetando a
+  alteração entre os dois passos). As leituras também **excluem as expiradas na própria consulta**
+  (`NOT_EXPIRED_SQL`): se a limpeza for adiada por bloqueio, nada expirado aparece e a leitura não falha.
+- **Limitações:** a limpeza física pode atrasar até a próxima leitura/mutação/hora; o fsync a cada commit
+  depende do disco (SSD/HDD e antivírus podem variar o custo); `node:sqlite` continua em evolução (D6).
+
+## D17 — Linha-dica da borda em janela própria (não dentro da janela do mascote)
+- **Contexto:** com o Mochi no canto, nada indicava onde levar o cursor para trazer a ilha de volta. A
+  janela do mascote está no canto inferior; a dica precisa ficar no topo do monitor.
+- **Decisão:** uma segunda `BrowserWindow` mínima (280×8 DIP, só HTML/CSS inline, sem preload nem IPC),
+  clique atravessa, não focável, topo da pilha. Aparece só em *away* com o mascote visível e some em
+  qualquer transição. Largura = zona de revelação real (`EDGE_REVEAL_HALF_WIDTH`), para a dica não mentir.
+- **Alternativas descartadas:** estender a janela do mascote até o topo (cobriria a tela inteira de
+  região clicável/de composição); desenhar na ilha (ela está escondida).
+- **Forma e "mescla" (revisão 2):** a linha é uma "lente" rente ao topo: borda superior reta, a de baixo
+  curva até zero nas pontas, com opacidade caindo para ~0 nas extremidades (afina e some). Aparece no
+  instante em que a ilha começa a se esconder (`island:hiding`). A ilha **achata até virar a linha**
+  (`scale(1.75, .035)` + `opacity`, origem no topo central) e, ao voltar, **cresce a partir dela** (linha
+  "acende", cresce em ease-out e assenta com 3,5 % de overshoot na altura); a linha esmaece em ~200 ms
+  quando a entrada começa. Só `transform`/`opacity` (compositor). Uma tentativa anterior com `clip-path`
+  na janela inteira foi descartada: o recorte percorria 380 px de altura, mas a pílula só tem 48, então o
+  movimento visível ficava concentrado no fim ("pulava").- **Limitações:** o Windows impõe altura mínima (~39 px) a janelas — `setShape` limita a região visível e
+  clicável à faixa de 8 px; apps em tela cheia exclusiva podem ficar acima da linha.
+
+## D18 — Modo foco: relógio no main, por instante de término, sem persistência na v1
+- **Decisão:** o temporizador vive no processo principal (a ilha recolhida/oculta não pode ser a dona do
+  relógio). O estado guarda `endsAt` (relógio do sistema) em vez de contar quedas de `setInterval`; o
+  timer do SO é só um despertador reavaliado contra o relógio. Renderers calculam o restante localmente.
+- **Escopo v1:** foco (1–180 min; presets 15/25/45/60) e pausa (1–60 min; padrão 5), uma sessão por vez,
+  pausar/retomar/cancelar. Não há ciclo automático: o fim oferece o próximo passo (pausa ↔ foco).
+- **Sem persistência:** fechar o app encerra a sessão. Persistir exigiria decidir o que fazer com o tempo
+  decorrido enquanto o app estava fechado; fica para quando houver histórico/estatísticas.
+- **Fim de sessão:** `celebrate`, ilha volta se estava escondida (sem roubar foco) e notificação nativa
+  silenciosa só se o mascote estiver oculto — o aviso padrão é o próprio Mochi, discreto.
+- **Não suprimido:** o mascote continua animando durante o foco (D12); ficar "quieto" é uma opção futura.

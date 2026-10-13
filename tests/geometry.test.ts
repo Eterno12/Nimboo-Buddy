@@ -7,6 +7,7 @@ import {
   pickDisplayForRect,
   resolveIslandDisplay,
   bottomCornerBounds,
+  edgeHintBounds,
   type DisplayInfo,
 } from '../shared/geometry.ts';
 
@@ -111,4 +112,15 @@ test('bottomCornerBounds: cantos inferiores rentes à área útil (barra embaixo
 
 test('bottomCornerBounds: segundo monitor com origem deslocada', () => {
   assert.deepEqual(bottomCornerBounds(second, 240, 'right'), { x: 1920 + 1280 - 240, y: 1024 - 240, width: 240, height: 240 });
+});
+test('edgeHintBounds: centralizada no topo FÍSICO do monitor, não na área útil', () => {
+  const topBar: DisplayInfo = { ...primary, workArea: { x: 0, y: 48, width: 1920, height: 1032 } };
+  assert.deepEqual(edgeHintBounds(primary, { width: 280, height: 8 }), { x: 820, y: 0, width: 280, height: 8 });
+  assert.equal(edgeHintBounds(topBar, { width: 280, height: 8 }).y, 0, 'ignora a barra de tarefas no topo');
+});
+
+test('edgeHintBounds: segundo monitor com origem deslocada e largura limitada ao monitor', () => {
+  const r = edgeHintBounds(second, { width: 280, height: 8 });
+  assert.equal(r.x, 1920 + (1280 - 280) / 2);
+  assert.equal(edgeHintBounds(second, { width: 5000, height: 8 }).width, 1280);
 });

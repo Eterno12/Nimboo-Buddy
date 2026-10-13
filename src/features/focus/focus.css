@@ -1,0 +1,159 @@
+/*
+ * Modo foco. Reaproveita os tokens `--t-*` de tasks.css (já cobertos por
+ * tests/contrast.test.ts) e os botões `.tasks-add` / `.tasks-icon-button`.
+ */
+.tasks.focus {
+  height: auto;
+  gap: 10px;
+}
+
+/* No painel o foco é um cartão acima da lista de tarefas. */
+.tasks.focus[data-variant='panel'] {
+  flex: none;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--t-hover);
+}
+
+.focus-presets {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.focus-chip {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 4px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 10px;
+  background: var(--t-field-bg);
+  color: var(--t-text);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.focus-chip:hover {
+  background: var(--t-hover);
+}
+
+.focus-chip[aria-checked='true'] {
+  border-color: var(--t-accent);
+  background: var(--t-accent);
+  color: var(--t-accent-text);
+}
+
+.focus-chip:focus-visible,
+.focus-secondary:focus-visible,
+.focus .tasks-add:focus-visible,
+.focus .tasks-icon-button:focus-visible {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}
+
+.focus-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.focus-actions > button {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+}
+
+.focus-secondary {
+  padding: 0 12px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--t-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.focus-secondary:hover {
+  background: var(--t-hover);
+}
+
+.focus-readout {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  flex: none;
+}
+
+.focus-clock {
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-clock[data-status='paused'] {
+  color: var(--t-muted);
+}
+
+.focus-paused {
+  color: var(--t-muted);
+  font-size: 12.5px;
+}
+
+.focus-bar {
+  height: 6px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--t-hover);
+}
+
+.focus-bar-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--t-accent);
+  transform-origin: 0 50%;
+  transition: transform 300ms linear;
+}
+
+.focus-done {
+  margin: 4px 0 2px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Selo na pílula recolhida da ilha (à direita do mascote). */
+.focus-badge {
+  position: absolute;
+  top: 18px;
+  left: calc(50% + 36px);
+  font: 600 11px/1 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: #f3eef7;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 120ms ease-out;
+}
+
+.focus-badge[data-status='paused'] {
+  color: #b9afc4;
+}
+
+.focus-badge[data-status='finished'] {
+  color: #8fd9a8;
+}
+
+/* Com a ilha aberta o relógio aparece na própria tela de foco. */
+.shell[data-open='true'] .focus-badge {
+  opacity: 0;
+}
+
+.shell[data-mode='floating'] .focus-badge {
+  display: none;
+}

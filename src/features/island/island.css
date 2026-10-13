@@ -31,6 +31,8 @@
 .presence {
   position: absolute;
   inset: 0;
+  /* A ilha entra e sai achatando até a linha do topo (presence.ts): origem no topo central. */
+  transform-origin: 50% 0;
 }
 
 .island-shadow {
@@ -105,6 +107,11 @@
   clip-path: inset(0 0 0 0 round 0 0 28px 28px);
 }
 
+/* Tela de foco: pílula 336x204 (370 - 204 = 166). */
+.shell[data-open='true'][data-view='focus'] .island {
+  clip-path: inset(0 0 166px 0 round 0 0 28px 28px);
+}
+
 /* ---------- Conteúdo da ilha expandida ---------- */
 
 .island-content {
@@ -168,6 +175,12 @@
 /* Tela de tarefas: ocupa o espaço abaixo do mascote (370 - 52 - 12 = 306px). */
 .island-tasks {
   height: 306px;
+  animation: island-fade 160ms ease-out;
+}
+
+/* Tela de foco: 204 - 52 - 12 = 140px abaixo do mascote. */
+.island-focus {
+  height: 140px;
   animation: island-fade 160ms ease-out;
 }
 

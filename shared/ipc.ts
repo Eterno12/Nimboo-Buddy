@@ -1,5 +1,6 @@
 import type { IslandExtent, PresentationState } from './presentation';
 import type { TasksApi } from './tasks';
+import type { FocusApi } from './focus';
 
 /** Contrato único entre main, preload e renderer. */
 export const IPC = {
@@ -34,12 +35,24 @@ export const IPC = {
   islandClosed: 'island:closed',
   /** main -> renderer: pedido de alternar a ilha vindo do menu (alternativa ao clique). */
   islandToggle: 'island:toggle',
+  /** renderer -> main: a ilha começou a se esconder (a linha-dica aparece neste instante). */
+  islandHiding: 'island:hiding',
   /** renderer -> main: a ilha terminou de subir e se esconder; o Mochi pode surgir no canto. */
   islandHidden: 'island:hidden',
   /** main -> renderer: o Mochi deve sair de cena (a ilha vai voltar). */
   leave: 'presence:leave',
   /** renderer -> main: a animação de saída terminou. */
   leaveDone: 'presence:leave-done',
+  /** renderer -> main (invoke): modo foco (temporizador). O relógio vive no main. */
+  focusGet: 'focus:get',
+  focusStart: 'focus:start',
+  focusPause: 'focus:pause',
+  focusResume: 'focus:resume',
+  focusCancel: 'focus:cancel',
+  /** main -> renderer: o estado do temporizador mudou. */
+  focusChanged: 'focus:changed',
+  /** main -> renderer: uma sessão terminou sozinha. */
+  focusFinished: 'focus:finished',
 } as const;
 
 /** Posição do cursor em pixels (DIP) relativa ao canto superior esquerdo da janela. */
@@ -73,6 +86,10 @@ export interface MochiApi {
   islandClosed(): void;
   /** Tarefas (armazenamento local; só operações específicas, nunca SQL). */
   tasks: TasksApi;
+  /** Modo foco (temporizador; o relógio vive no processo principal). */
+  focus: FocusApi;
+  /** Informa que a ilha começou a se esconder. */
+  islandHiding(): void;
   /** Informa que a ilha terminou de se esconder (o Mochi surge no canto). */
   islandHidden(): void;
   /** O main pede que o Mochi saia de cena. Retorna a função de cancelamento. */

@@ -43,6 +43,9 @@ const toTask = (r: Row): Task => ({
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Predicado (com um ? = instante-limite) que exclui as concluídas já expiradas. */
+const NOT_EXPIRED_SQL = '(completed = 0 OR completed_at >= ?)';
+
 /**
  * Tarefas em SQLite local. É a fonte de verdade: nada é guardado em memória.
  * Todas as escritas acontecem em transações (`BEGIN IMMEDIATE`), de modo que
@@ -89,20 +92,55 @@ export class SqliteTaskRepository implements TaskRepository {
     }
   }
 
-  /** Apaga concluídas com mais de N dias. Retorna quantas foram removidas. */
-  private purgeInside(): number {
-    const cutoff = new Date(this.now().getTime() - this.retentionMs).toISOString();
+  /** Instante-limite: concluídas com `completed_at` anterior a ele já expiraram. */
+  private cutoff(): string {
+    return new Date(this.now().getTime() - this.retentionMs).toISOString();
+  }
+
+  /**
+   * Apaga as concluídas expiradas. Só chamar DENTRO de uma transação de escrita.
+   * O predicado é reavaliado sob o lock: uma tarefa que mudou (reaberta, excluída)
+   * depois de um `hasExpired` nunca é apagada por engano.
+   */
+  private purgeInside(cutoff: string = this.cutoff()): number {
     const result = this.db.prepare('DELETE FROM tasks WHERE completed = 1 AND completed_at < ?').run(cutoff);
     return Number(result.changes);
   }
 
-  /** Limpeza explícita (chamada na inicialização e periodicamente). */
+  /** Existe algo expirado? Leitura simples: não pega o lock de escrita. */
+  private hasExpired(cutoff: string): boolean {
+    const row = this.db.prepare('SELECT 1 AS x FROM tasks WHERE completed = 1 AND completed_at < ? LIMIT 1').get(cutoff);
+    return row !== undefined;
+  }
+
+  /**
+   * Limpeza oportunista usada pelas LEITURAS (`list`, `get`).
+   *  - Caminho comum (nada expirado): só leitura, nenhuma transação de escrita.
+   *  - Há expiradas: uma única transação `BEGIN IMMEDIATE` + `DELETE`.
+   *  - Se não conseguir a escrita (outra conexão a segura), a limpeza é adiada: uma
+   *    leitura nunca falha por causa de manutenção, e as próprias consultas já
+   *    excluem as expiradas (`NOT_EXPIRED_SQL`), então nada expirado aparece.
+   * Não há corrida perigosa: o intervalo entre `hasExpired` e o `DELETE` só pode
+   * fazer a limpeza apagar menos (ou nada), nunca mais, pois o `DELETE` reavalia a regra.
+   */
+  private purgeIfNeeded(cutoff: string): number {
+    if (!this.hasExpired(cutoff)) return 0;
+    try {
+      return this.transaction(() => this.purgeInside(cutoff));
+    } catch (error) {
+      console.error('Limpeza de tarefas expiradas adiada:', error);
+      return 0;
+    }
+  }
+
+  /** Limpeza explícita (inicialização e de hora em hora); erros sobem para quem chamou. */
   purgeExpired(): number {
-    const count = this.transaction(() => this.purgeInside());
+    const cutoff = this.cutoff();
+    if (!this.hasExpired(cutoff)) return 0;
+    const count = this.transaction(() => this.purgeInside(cutoff));
     if (count > 0) this.notify({ type: 'purged', count });
     return count;
   }
-
   private guard<T>(fn: () => TaskResult<T>): TaskResult<T> {
     try {
       return fn();
@@ -113,11 +151,12 @@ export class SqliteTaskRepository implements TaskRepository {
   }
 
   async list(): Promise<TaskLists> {
-    const purged = this.transaction(() => this.purgeInside());
+    const cutoff = this.cutoff();
+    const purged = this.purgeIfNeeded(cutoff);
     if (purged > 0) this.notify({ type: 'purged', count: purged });
     const rows = this.db
-      .prepare('SELECT * FROM tasks ORDER BY completed ASC, created_at ASC, id ASC')
-      .all() as unknown as Row[];
+      .prepare(`SELECT * FROM tasks WHERE ${NOT_EXPIRED_SQL} ORDER BY completed ASC, created_at ASC, id ASC`)
+      .all(cutoff) as unknown as Row[];
     const tasks = rows.map(toTask);
     return {
       active: tasks.filter((t) => !t.completed),
@@ -129,16 +168,15 @@ export class SqliteTaskRepository implements TaskRepository {
 
   async get(id: string): Promise<TaskResult<Task>> {
     if (!isTaskId(id)) return fail('invalid_id', 'Identificador de tarefa inválido.');
-    let purged = 0;
-    const result = this.guard(() =>
-      this.transaction((): TaskResult<Task> => {
-        purged = this.purgeInside(); // uma concluída expirada já não existe
-        const row = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as unknown as Row | undefined;
-        return row ? ok(toTask(row)) : fail('not_found', 'A tarefa não existe mais.');
-      }),
-    );
+    const cutoff = this.cutoff();
+    const purged = this.purgeIfNeeded(cutoff);
     if (purged > 0) this.notify({ type: 'purged', count: purged });
-    return result;
+    return this.guard(() => {
+      const row = this.db
+        .prepare(`SELECT * FROM tasks WHERE id = ? AND ${NOT_EXPIRED_SQL}`)
+        .get(id, cutoff) as unknown as Row | undefined;
+      return row ? ok(toTask(row)) : fail('not_found', 'A tarefa não existe mais.');
+    });
   }
   async create(title: string): Promise<TaskResult<Task>> {
     const valid = validateTitle(title);
