@@ -19,7 +19,8 @@ export type SpeechEvent =
   | 'grabbed'
   | 'stretch'
   | 'yawn'
-  | 'lookaround';
+  | 'lookaround'
+  | 'dizzy';
 
 export type DayPart = 'morning' | 'afternoon' | 'evening' | 'night';
 
@@ -92,6 +93,7 @@ export const LINES: Record<SpeechEvent, readonly Line[]> = {
   stretch: [L('Aaahh, que gostoso.'), L('Hora de alongar!'), L('Estalou tudo aqui.')],
   yawn: [L('Aaaah... que sono.'), L('Uaaah! Desculpa.'), L('Tô com soninho...')],
   lookaround: [L('Alguém por aí?'), L('Hum, tudo calmo.'), L('Procurando você...')],
+  dizzy: [L('Tô tonto... tudo girando.'), L('Uuuu, o mundo girou!'), L('Ai ai, que tontura.'), L('Preciso sentar um pouco...')],
   idle: [
     L('Se precisar, é só chamar.'),
     L('Lembra de beber água!'),
@@ -125,6 +127,7 @@ const EVENT_COOLDOWN_MS: Record<SpeechEvent, number> = {
   stretch: 60_000,
   yawn: 60_000,
   lookaround: 90_000,
+  dizzy: 20_000,
 };
 
 /** Falas "de fundo": somem enquanto o foco está correndo (o Mochi fica quietinho). */
@@ -142,6 +145,7 @@ const SUPPRESSED_DURING_FOCUS: readonly SpeechEvent[] = [
   'stretch',
   'yawn',
   'lookaround',
+  'dizzy',
 ];
 
 /** Falas que passam por cima do intervalo mínimo geral (respondem a algo que a pessoa fez/terminou). */
@@ -151,7 +155,7 @@ const URGENT: readonly SpeechEvent[] = ['taskCompleted', 'focusFinished', 'break
  * Reações a algo que a pessoa fez ao Mochi (carinho, susto, arraste, cócegas): também passam por cima do
  * intervalo geral, mas cada uma tem o seu próprio intervalo e não contam no teto por hora.
  */
-const REACTIVE: readonly SpeechEvent[] = ['happy', 'giggle', 'annoyed', 'surprised', 'grabbed'];
+const REACTIVE: readonly SpeechEvent[] = ['happy', 'giggle', 'annoyed', 'surprised', 'grabbed', 'dizzy'];
 
 /** Intervalo mínimo entre quaisquer duas falas (ms). */
 export const MIN_GAP_MS = 9_000;

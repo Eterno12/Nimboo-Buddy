@@ -2,6 +2,7 @@ import type { IslandExtent, PresentationState } from './presentation';
 import type { TasksApi } from './tasks';
 import type { FocusApi } from './focus';
 import type { Settings } from './settings';
+import type { CalendarResult, CalendarState } from './calendar';
 
 /** Preferências + o que só o processo principal sabe (para a tela de configurações). */
 export interface SettingsSnapshot {
@@ -58,6 +59,12 @@ export const IPC = {
   islandClosed: 'island:closed',
   /** main -> renderer: pedido de alternar a ilha vindo do menu (alternativa ao clique). */
   islandToggle: 'island:toggle',
+  /** Agenda (iCal): estado, endereço (só entra, nunca sai), remoção e atualização. */
+  calendarGet: 'calendar:get',
+  calendarSetUrl: 'calendar:set-url',
+  calendarClear: 'calendar:clear',
+  calendarRefresh: 'calendar:refresh',
+  calendarChanged: 'calendar:changed',
   /** renderer -> main: há (ou não) um balão de fala visível; a forma da janela acompanha. */
   bubbleVisible: 'bubble:visible',
   /** main -> renderer: o atalho global pediu a ilha (abre direto nas tarefas). */
@@ -128,6 +135,14 @@ export interface MochiApi {
     get(): Promise<SettingsSnapshot>;
     update(patch: Partial<Omit<Settings, 'version'>>): Promise<SettingsSnapshot>;
     onChange(listener: (snapshot: SettingsSnapshot) => void): () => void;
+  };
+  /** Agenda por endereço iCal (somente leitura). O endereço nunca volta para a interface. */
+  calendar: {
+    get(): Promise<CalendarState>;
+    setUrl(url: string): Promise<CalendarResult<CalendarState>>;
+    clear(): Promise<CalendarState>;
+    refresh(): Promise<CalendarState>;
+    onChange(listener: (state: CalendarState) => void): () => void;
   };
   /** Informa que o balão de fala está visível (ou não). */
   bubbleVisible(visible: boolean): void;

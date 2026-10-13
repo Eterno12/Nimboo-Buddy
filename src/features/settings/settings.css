@@ -235,3 +235,67 @@
   border-color: var(--s-danger);
   color: var(--s-danger);
 }
+
+
+/* ---------- Tema escuro (mesmos valores da ilha; verificados em contrast.test.ts) ---------- */
+.panel[data-theme='dark'] .settings {
+  --s-bg: #342b3f;
+  --s-text: #f3eef7;
+  --s-muted: #b9afc4;
+  --s-field-bg: #3d3548;
+  --s-border: #948b9f;
+  --s-hover: #40374c;
+  --s-accent: #8fd9a8;
+  --s-accent-text: #1f1a26;
+  --s-danger: #ff9fb2;
+  --s-focus: #8fd9a8;
+}
+
+.panel[data-theme='dark'] .settings select,
+.panel[data-theme='dark'] .settings input {
+  color-scheme: dark;
+}
+
+.settings-chip-wide {
+  min-width: 96px;
+}
+
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.settings-text {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--s-border);
+  border-radius: 8px;
+  background: var(--s-field-bg);
+  color: var(--s-text);
+  font: inherit;
+  user-select: text;
+}
+
+.settings-inline {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.settings-help {
+  margin-top: 10px;
+  color: var(--s-muted);
+  font-size: 12.5px;
+}
+
+.settings-help summary {
+  cursor: pointer;
+}
+
+.settings-help ol {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}

@@ -255,6 +255,12 @@ receber `tasks:changed`.
   `SpeechBubble`). Falas: boas-vindas por hora, tarefa concluída, foco, sono/acordar, cócegas, ociosa.
 - **Cor:** paletas por `data-palette` + variáveis `--m-*` em `mascot.css`; `Mascot.tsx` usa `var()`.
 
+## 12. Agenda, tema escuro e física do arraste (rodada seguinte)
+
+- **Agenda:** `shared/calendar.ts` (tipos, `validateCalendarUrl`, `todaysAgenda`) → `electron/calendar/ics.ts` (parser/expansão de recorrências) → `calendarSync.ts` (cofre, cópia local, 15 min, falhas) → `calendarService.ts` (IPC, `net.fetch`, `safeStorage`) → `useCalendar`/`AgendaSection`/configurações. Os eventos com horário alimentam uma 2ª instância do `ReminderScheduler`.
+- **Tema:** `settings.theme` + `useTheme` (resolve `auto` por `prefers-color-scheme`) → `data-theme` em `.panel`; tokens escuros em `tasks.css`/`settings.css`/`panel.css`.
+- **Arraste:** `dragPhysics.ts` (puro) + `useDragPhysics` (rAF, escreve `--drag-rot`) → camada `.mascot-drag`; estado `dizzy` no `mascotController`.
+
 ## 11. Foco evoluído, prazos/lembretes e empacotamento
 
 - **Foco:** `shared/focus.ts` (tipos, `nextStep`, validação) → `FocusTimer` (ciclo, tarefa, `configure`) →

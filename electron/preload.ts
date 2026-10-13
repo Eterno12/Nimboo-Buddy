@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { IPC, type CursorPoint, type MochiApi, type SettingsSnapshot } from '../shared/ipc';
 import type { Entrance, PresentationState } from '../shared/presentation';
 import type { FocusKind, FocusState } from '../shared/focus';
+import { EMPTY_CALENDAR, type CalendarState } from '../shared/calendar';
 
 /** Sanitiza o que vem do main antes de entregar à página. */
 function asPresentation(value: unknown): PresentationState {
@@ -88,6 +89,13 @@ const api: MochiApi = {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
     update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
     onChange: (listener) => listen<[SettingsSnapshot]>(IPC.settingsChanged, (s) => listener(s)),
+  },
+  calendar: {
+    get: async () => (await ipcRenderer.invoke(IPC.calendarGet)) ?? EMPTY_CALENDAR,
+    setUrl: (url) => ipcRenderer.invoke(IPC.calendarSetUrl, url),
+    clear: async () => (await ipcRenderer.invoke(IPC.calendarClear)) ?? EMPTY_CALENDAR,
+    refresh: async () => (await ipcRenderer.invoke(IPC.calendarRefresh)) ?? EMPTY_CALENDAR,
+    onChange: (listener) => listen<[CalendarState]>(IPC.calendarChanged, (s) => listener(s)),
   },
   bubbleVisible: (visible) => ipcRenderer.send(IPC.bubbleVisible, visible === true),
   onSummon: (listener) => listen<[]>(IPC.islandSummon, () => listener()),

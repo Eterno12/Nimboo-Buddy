@@ -244,3 +244,33 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Arquivos:** só `dist/` e `dist-electron/` entram no `app.asar` (~0,4 MB); React vira devDependency
   porque o Vite já o embute.
 - **Limitações:** sem assinatura de código (SmartScreen avisa); sem atualização automática.
+
+## D31 — Agenda (Google Agenda) por endereço iCal, somente leitura
+- **Decisão:** a pessoa cola o "endereço secreto no formato iCal" (ou qualquer URL `https://` de iCal /
+  `webcal://`). O **processo principal** baixa (`net.fetch`, 20 s, máx. 8 MB, só https, sem IP/localhost/
+  usuário:senha), converte em eventos dos próximos 7 dias e guarda uma cópia local. A cada 15 min atualiza.
+- **Segredo:** o endereço é um segredo (quem o tem vê a agenda). Fica **criptografado** com `safeStorage`
+  (DPAPI) em `userData/calendar-url.bin`; se o cofre não existe, **não guarda**. Nunca volta para o
+  renderer (só `configured`, o domínio e os eventos), não aparece em log nem em mensagem de erro.
+- **Interpretação** (`electron/calendar/ics.ts`): dobras de linha, escapes, TZID (IANA; desconhecido cai no
+  relógio local), dia inteiro, DTEND/DURATION, RRULE (DAILY/WEEKLY/MONTHLY/YEARLY, INTERVAL, COUNT, UNTIL,
+  BYDAY com ordinais, BYMONTHDAY), EXDATE, RECURRENCE-ID e STATUS:CANCELLED; regras antigas pulam direto
+  para a janela; teto de ocorrências.
+- **Uso:** "Agenda de hoje" no topo das Tarefas (ilha e painel) e lembretes dos eventos com horário (mesmo
+  agendador dos prazos: na hora e N min antes). Falhas mantêm os últimos eventos e mostram o aviso.
+- **Fora de escopo:** escrever na agenda, OAuth/login, várias agendas, eventos com participantes/convites.
+- **Teste:** `MOCHI_E2E_CALENDAR_FILE` (só app não empacotado) troca o download por um arquivo local.
+
+## D32 — Tema do painel: Automático / Claro / Escuro
+- **Decisão:** `theme` nas preferências; `auto` acompanha `prefers-color-scheme` em tempo real. Vale para
+  painel, tarefas, foco e configurações; a ilha é sempre escura. Os tokens escuros **reusam** os valores da
+  ilha (`#342b3f`…), então o contraste já medido vale, e `contrast.test.ts` os verifica no CSS real. A janela
+  do painel nasce com o fundo certo (sem "piscar" claro).
+
+## D33 — Física do arraste e estado "enjoado"
+- **Decisão:** módulo puro `dragPhysics.ts`: pêndulo com mola e amortecimento alimentado pela aceleração
+  horizontal do cursor (inclina para onde vai). Sacudir com força (aceleração da mão presente) tira a
+  mola e vira **giro livre** com atrito; a mola sozinha nunca reinicia um giro. 2 voltas em 3 s →
+  estado `dizzy` por 5 s (olhos em espiral, cambaleio, estrelas, som e fala próprios).
+- **Detalhes:** o pivô é o centro do corpo (girar em volta de si não sai da janela de 240 px); só
+  `transform` é escrito (variável CSS, sem re-render do React). Vale no modo flutuante e no Mochi do canto.

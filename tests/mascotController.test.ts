@@ -162,3 +162,21 @@ test('comportamentos espontâneos NÃO impedem o sono (o contador só reinicia c
   );
   assert.ok(seen.some((s) => s.state === 'lookaround'), 'e olhou em volta antes');
 });
+
+test('enjoo (girou demais): dura ~5 s, não é interrompido por carinho e volta ao repouso', () => {
+  c.dizzy();
+  assert.equal(snap.state, 'dizzy');
+  c.pet(); // happy tem prioridade menor
+  assert.equal(snap.state, 'dizzy');
+  tick(S.STATE_DURATION_MS.dizzy! - 100);
+  assert.equal(snap.state, 'dizzy');
+  tick(200);
+  assert.equal(snap.state, 'idle');
+  assert.equal(S.STATE_DURATION_MS.dizzy, 5000);
+});
+
+test('segurar durante o enjoo prevalece (grabbed tem prioridade máxima)', () => {
+  c.dizzy();
+  c.grab();
+  assert.equal(snap.state, 'grabbed');
+});

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { DEFAULT_SETTINGS, parseSettings } from '../shared/settings.ts';
+import { resolveTheme } from '../src/features/settings/useTheme.ts';
 import { createSettingsStore } from '../electron/settingsStore.ts';
 
 test('parseSettings: entradas inválidas viram padrão', () => {
@@ -173,4 +174,16 @@ test('foco e lembretes: padrões, inteiros dentro do limite e antecedência em p
   assert.equal(bad.pomodoroCycle, false);
   assert.equal(parseSettings({ version: 3, focusMinutes: 181 }).focusMinutes, 25);
   assert.equal(parseSettings({ version: 3, focusMinutes: 180 }).focusMinutes, 180);
+});
+
+test('tema: padrão automático; só auto/claro/escuro são aceitos; auto segue o sistema', () => {
+  assert.equal(DEFAULT_SETTINGS.theme, 'auto');
+  assert.equal(parseSettings({ version: 3, theme: 'dark' }).theme, 'dark');
+  assert.equal(parseSettings({ version: 3, theme: 'light' }).theme, 'light');
+  assert.equal(parseSettings({ version: 3, theme: 'neon' }).theme, 'auto');
+  assert.equal(parseSettings({ version: 2, theme: 'dark' }).theme, 'auto', 'v2 não tinha tema');
+  assert.equal(resolveTheme('auto', true), 'dark');
+  assert.equal(resolveTheme('auto', false), 'light');
+  assert.equal(resolveTheme('dark', false), 'dark');
+  assert.equal(resolveTheme('light', true), 'light');
 });

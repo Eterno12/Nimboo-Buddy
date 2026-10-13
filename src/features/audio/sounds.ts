@@ -42,7 +42,8 @@ export type SoundName =
   | 'stretch'
   | 'lookaround'
   | 'sleepy'
-  | 'pop';
+  | 'pop'
+  | 'dizzy';
 
 /** Limites que todo som precisa respeitar (verificados em `tests/sounds.test.ts`). */
 export const SOUND_LIMITS = { maxDuration: 1.6, maxGain: 0.6, minFreq: 150, maxFreq: 2400 } as const;
@@ -115,6 +116,12 @@ export const SOUNDS: Record<SoundName, readonly Note[]> = {
     { at: 0.35, freq: 260, dur: 0.6, gain: 0.18, wave: 'sine', glideTo: 170 },
   ],
   pop: [{ at: 0, freq: 480, dur: 0.05, gain: 0.35, wave: 'triangle', glideTo: 700 }],
+  // enjoado: três notas descendo, "cambaleando", bem moles
+  dizzy: [
+    { at: 0, freq: 460, dur: 0.26, gain: 0.26, wave: 'sine', glideTo: 330 },
+    { at: 0.22, freq: 400, dur: 0.26, gain: 0.24, wave: 'sine', glideTo: 280 },
+    { at: 0.44, freq: 340, dur: 0.5, gain: 0.22, wave: 'sine', glideTo: 210 },
+  ],
 };
 
 /**

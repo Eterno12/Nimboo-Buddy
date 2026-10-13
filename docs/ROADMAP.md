@@ -110,4 +110,5 @@ as funcionalidades da v1 estabilizarem.
 ## Estado desta rodada (2026-10-13)
 - ✅ Abrir sempre como ilha; som e fala por animação; foco com tempo livre/Pomodoro/tarefa/contador;
   tarefas com prazo e lembrete; migração v2; empacotamento (instalador NSIS).
-- ⏳ Próximo: notas (migração v3), segundo personagem, assinatura de código, atualização automática.
+- ✅ Física ao segurar + enjoo; modo noturno do painel; Google Agenda por endereço iCal (somente leitura).
+- ⏳ Próximo: notas (migração v3), segundo personagem, assinatura de código, atualização automática, login Google (OAuth) se a agenda precisar de escrita.

@@ -4,11 +4,15 @@ import { TasksView } from '../tasks/TasksView';
 import { FocusView } from '../focus/FocusView';
 import { useFocus } from '../focus/useFocus';
 import { SettingsView } from '../settings/SettingsView';
+import { useSettings } from '../settings/useSettings';
+import { useTheme } from '../settings/useTheme';
 import './panel.css';
 
 /** Painel (modo flutuante e configurações): tarefas e modo foco; notas e IA entram aqui depois. */
 export function PanelView() {
   const focus = useFocus();
+  const { settings } = useSettings();
+  const theme = useTheme(settings.theme);
   const [screen, setScreen] = useState<PanelScreen>('home');
 
   // A tela pedida por quem abriu o painel (bandeja, engrenagem da ilha) e mudanças posteriores.
@@ -24,14 +28,14 @@ export function PanelView() {
 
   if (screen === 'settings') {
     return (
-      <main className="panel panel-settings">
+      <main className="panel panel-settings" data-theme={theme}>
         <SettingsView onBack={() => setScreen('home')} />
       </main>
     );
   }
 
   return (
-    <main className="panel">
+    <main className="panel" data-theme={theme}>
       <div className="panel-bar">
         <span>Mochi</span>
         <button type="button" className="panel-gear" onClick={() => setScreen('settings')} aria-label="Abrir configurações" title="Configurações">

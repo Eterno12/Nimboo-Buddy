@@ -54,3 +54,25 @@
   overflow-y: auto;
   scrollbar-width: thin;
 }
+
+
+/* ---------- Tema escuro ---------- */
+.panel[data-theme='dark'] {
+  background: #342b3f;
+  color: #f3eef7;
+  color-scheme: dark;
+}
+
+.panel[data-theme='dark'] .panel-bar,
+.panel[data-theme='dark'] .panel-gear {
+  color: #b9afc4;
+}
+
+.panel[data-theme='dark'] .panel-gear:hover {
+  background: #40374c;
+  color: #f3eef7;
+}
+
+.panel[data-theme='dark'] .panel-gear:focus-visible {
+  outline-color: #8fd9a8;
+}

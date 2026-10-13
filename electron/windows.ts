@@ -64,14 +64,14 @@ export function createMascotWindow(bounds: Rect, options: MascotWindowOptions): 
   return win;
 }
 
-export function createPanelWindow(): BrowserWindow {
+export function createPanelWindow(dark = false): BrowserWindow {
   const win = new BrowserWindow({
     width: 380,
     height: 640,
     title: 'Mochi',
     autoHideMenuBar: true,
     show: false,
-    backgroundColor: '#fdf8f3',
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),
   });
   lockNavigation(win);

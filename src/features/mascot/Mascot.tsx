@@ -74,6 +74,7 @@ export function Mascot({ state, replay, hop, blinking, mood, palette = 'mint', s
       {/* A chave reinicia a sombra junto com o salto ao repetir o mesmo estado. */}
       <ellipse key={`sh${replay}`} className="mascot-shadow" cx="100" cy="184" rx="58" ry="8" />
 
+      <g className="mascot-drag">
       <g className="mascot-breath">
         <g key={replay} className={`mascot-motion ${hop ? 'is-hopping' : ''}`} onAnimationEnd={handleAnimationEnd}>
           <g className="mascot-tilt">
@@ -118,6 +119,10 @@ export function Mascot({ state, replay, hop, blinking, mood, palette = 'mint', s
                     <circle cx="75" cy="128" r="1.5" fill="#fff" opacity="0.7" />
                     <circle cx="119" cy="128" r="1.5" fill="#fff" opacity="0.7" />
                   </g>
+                  <g className="face face-eyes-dizzy" fill="none" stroke="#3b3040" strokeWidth="3" strokeLinecap="round">
+                    <path className="spiral" d="M78 124 m-1 0 a1 1 0 1 1 2 0 a3 3 0 1 1 -6 0 a5 5 0 1 1 10 0 a7.5 7.5 0 1 1 -15 0" />
+                    <path className="spiral" d="M122 124 m-1 0 a1 1 0 1 1 2 0 a3 3 0 1 1 -6 0 a5 5 0 1 1 10 0 a7.5 7.5 0 1 1 -15 0" />
+                  </g>
                   <g
                     className="face face-eyes-happy"
                     stroke="#3b3040"
@@ -156,11 +161,20 @@ export function Mascot({ state, replay, hop, blinking, mood, palette = 'mint', s
                   strokeWidth="3.5"
                   strokeLinecap="round"
                 />
+                <path
+                  className="face face-mouth-wavy"
+                  d="M86 150 q4.5 -7 9 0 t9 0 t9 0"
+                  fill="none"
+                  stroke="#3b3040"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                />
                 <ellipse className="face face-mouth-yawn" cx="100" cy="152" rx="9" ry="12" fill="#7a3550" />
               </g>
             </g>
           </g>
         </g>
+      </g>
       </g>
 
       {state === 'sleepy' && (
@@ -176,6 +190,14 @@ export function Mascot({ state, replay, hop, blinking, mood, palette = 'mint', s
           <text x="140" y="80" fontSize="18" className="z z1">z</text>
           <text x="152" y="62" fontSize="14" className="z z2">z</text>
           <text x="162" y="48" fontSize="11" className="z z3">z</text>
+        </g>
+      )}
+
+      {state === 'dizzy' && (
+        <g className="mascot-dizzy-stars" fill="#ffd166" stroke="#fff" strokeWidth="1.5" paintOrder="stroke">
+          <path d="M100 38 l2.4 5 5.4 .8 -3.9 3.8 .9 5.4 -4.8 -2.6 -4.8 2.6 .9 -5.4 -3.9 -3.8 5.4 -.8 z" />
+          <path d="M138 62 l1.9 4 4.3 .6 -3.1 3 .7 4.3 -3.8 -2 -3.8 2 .7 -4.3 -3.1 -3 4.3 -.6 z" fill="#ff9fb2" />
+          <path d="M62 62 l1.9 4 4.3 .6 -3.1 3 .7 4.3 -3.8 -2 -3.8 2 .7 -4.3 -3.1 -3 4.3 -.6 z" fill="#7fd6ff" />
         </g>
       )}
 

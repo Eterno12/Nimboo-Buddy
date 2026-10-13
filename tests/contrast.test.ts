@@ -132,3 +132,55 @@ test('balão de fala: contraste do texto nos dois temas', () => {
   assert.ok(ratio('#3b3040', '#fffaf5') >= 4.5, 'balão solto');
   assert.ok(colors.includes('#2b2433') && colors.includes('#fffaf5'));
 });
+
+/** Tema escuro do painel: os mesmos testes de contraste, sobre os tokens escuros reais do CSS. */
+function readBlock(file: string, selector: string, prefix: string): Record<string, string> {
+  const css = fs.readFileSync(new URL(file, import.meta.url), 'utf8');
+  const start = css.indexOf(`${selector} {`);
+  assert.ok(start >= 0, `bloco ${selector} não encontrado`);
+  const body = css.slice(start, css.indexOf('}', start));
+  const out: Record<string, string> = {};
+  for (const m of body.matchAll(new RegExp(`(${prefix}[\\w-]+):\\s*(#[0-9a-fA-F]{6})\\b`, 'g'))) out[m[1]] = m[2].toLowerCase();
+  return out;
+}
+
+test('painel escuro (tarefas e foco): texto >= 4,5:1 e componentes >= 3:1', () => {
+  const d = readBlock('../src/features/tasks/tasks.css', ".panel[data-theme='dark'] .tasks[data-variant='panel']", '--t-');
+  const text: [string, string, string][] = [
+    ['texto/fundo', d['--t-text'], d['--t-bg']],
+    ['secundário/fundo', d['--t-muted'], d['--t-bg']],
+    ['texto/campo', d['--t-text'], d['--t-field-bg']],
+    ['secundário/campo', d['--t-muted'], d['--t-field-bg']],
+    ['botão (texto/fundo)', d['--t-accent-text'], d['--t-accent']],
+    ['erro/fundo', d['--t-danger'], d['--t-bg']],
+    ['verde/fundo (prazo de hoje, "ok")', d['--t-accent'], d['--t-bg']],
+  ];
+  for (const [label, fg, bg] of text) assert.ok(ratio(fg, bg) >= 4.5, `${label}: ${ratio(fg, bg).toFixed(2)}:1`);
+  const ui: [string, string, string][] = [
+    ['borda/fundo', d['--t-field-border'], d['--t-bg']],
+    ['borda/campo', d['--t-field-border'], d['--t-field-bg']],
+    ['foco/fundo', d['--t-focus'], d['--t-bg']],
+    ['rolagem/fundo', d['--t-scroll-thumb'], d['--t-bg']],
+  ];
+  for (const [label, fg, bg] of ui) assert.ok(ratio(fg, bg) >= 3, `${label}: ${ratio(fg, bg).toFixed(2)}:1`);
+});
+
+test('painel escuro: o fundo do painel é o do token e as configurações usam os mesmos valores', () => {
+  const panelCss = fs.readFileSync(new URL('../src/features/panel/panel.css', import.meta.url), 'utf8');
+  const m = panelCss.match(/\.panel\[data-theme='dark'\] \{[^}]*background:\s*(#[0-9a-fA-F]{6})/);
+  assert.ok(m, 'fundo escuro do painel não encontrado');
+  const tasks = readBlock('../src/features/tasks/tasks.css', ".panel[data-theme='dark'] .tasks[data-variant='panel']", '--t-');
+  const settings = readBlock('../src/features/settings/settings.css', ".panel[data-theme='dark'] .settings", '--s-');
+  assert.equal(m[1].toLowerCase(), tasks['--t-bg']);
+  assert.equal(settings['--s-bg'], tasks['--t-bg']);
+  const text: [string, string, string][] = [
+    ['texto/fundo', settings['--s-text'], settings['--s-bg']],
+    ['secundário/fundo', settings['--s-muted'], settings['--s-bg']],
+    ['texto/campo', settings['--s-text'], settings['--s-field-bg']],
+    ['botão marcado', settings['--s-accent-text'], settings['--s-accent']],
+    ['aviso', settings['--s-danger'], settings['--s-bg']],
+  ];
+  for (const [label, fg, bg] of text) assert.ok(ratio(fg, bg) >= 4.5, `${label}: ${ratio(fg, bg).toFixed(2)}:1`);
+  assert.ok(ratio(settings['--s-border'], settings['--s-bg']) >= 3);
+  assert.ok(ratio(settings['--s-accent'], settings['--s-bg']) >= 3);
+});

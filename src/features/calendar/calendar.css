@@ -1,0 +1,120 @@
+/*
+ * Agenda de hoje (somente leitura). Usa os tokens `--t-*` de tasks.css (verificados em contrast.test.ts),
+ * então herda os temas claro, escuro e da ilha.
+ */
+.agenda {
+  flex: none;
+  border: 1px solid var(--t-field-border);
+  border-radius: 10px;
+  background: var(--t-hover);
+}
+
+.agenda-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--t-text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agenda-head svg {
+  flex: none;
+  color: var(--t-muted);
+  transition: transform 160ms ease-out;
+}
+
+.agenda-head svg[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+.agenda-count {
+  margin-left: auto;
+  color: var(--t-muted);
+  font-weight: 400;
+}
+
+.agenda-warn {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--t-danger);
+  border-radius: 50%;
+  color: var(--t-danger);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.agenda-head:focus-visible,
+.agenda-connect:focus-visible {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}
+
+.agenda-list {
+  margin: 0;
+  padding: 0 10px 8px;
+  list-style: none;
+}
+
+.agenda-item,
+.agenda-empty,
+.agenda-more {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.agenda-time {
+  flex: none;
+  min-width: 52px;
+  color: var(--t-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--t-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agenda-item[data-past='true'] .agenda-title {
+  color: var(--t-muted);
+  text-decoration: line-through;
+}
+
+.agenda-empty,
+.agenda-more {
+  color: var(--t-muted);
+}
+
+.agenda-connect {
+  flex: none;
+  padding: 6px 10px;
+  border: 1px dashed var(--t-field-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--t-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.agenda-connect:hover {
+  background: var(--t-hover);
+  color: var(--t-text);
+}

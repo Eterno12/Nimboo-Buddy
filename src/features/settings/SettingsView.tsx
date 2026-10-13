@@ -6,11 +6,14 @@ import {
   MOCHI_COLORS,
   MOCHI_SCALES,
   REMINDER_LEADS_MIN,
+  THEMES,
+  type ThemePreference,
   SHORTCUT_PRESETS,
   type MochiColor,
   type Settings,
 } from '../../../shared/settings';
 import { configureSound, playSound } from '../audio/soundEngine';
+import { useCalendar } from '../calendar/useCalendar';
 import { useSettings } from './useSettings';
 import './settings.css';
 
@@ -32,6 +35,8 @@ const COLOR_SWATCH: Record<MochiColor, [string, string]> = {
   lemon: ['#fffbd6', '#f5de72'],
   rose: ['#ffe6ee', '#ffa3bb'],
 };
+
+const THEME_LABEL: Record<ThemePreference, string> = { auto: 'Automático', light: 'Claro', dark: 'Escuro' };
 
 const percent = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -83,6 +88,94 @@ function MinutesField({
   );
 }
 
+const syncTime = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+/** Google Agenda por endereço iCal (somente leitura). O endereço é um segredo: nunca é exibido de volta. */
+function CalendarSettings() {
+  const { state, busy, setUrl, clear, refresh } = useCalendar();
+  const [text, setText] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+
+  const connect = async () => {
+    setMessage(null);
+    const result = await setUrl(text);
+    if (result.ok) setText('');
+    else setMessage(result.message);
+  };
+
+  return (
+    <fieldset className="settings-group">
+      <legend>Google Agenda</legend>
+      {state.configured ? (
+        <>
+          <p className="settings-hint" data-tone={state.error ? 'warn' : 'ok'} role="status">
+            {state.error
+              ? state.error
+              : `Conectada (${state.host ?? 'agenda'})${state.lastSync ? ` · atualizada às ${syncTime.format(new Date(state.lastSync))}` : ''}.`}
+          </p>
+          <div className="settings-inline">
+            <button type="button" className="settings-small" disabled={busy} onClick={() => void refresh()}>
+              {busy ? 'Atualizando…' : 'Atualizar agora'}
+            </button>
+            <button type="button" className="settings-small" disabled={busy} onClick={() => void clear()}>
+              Remover agenda
+            </button>
+          </div>
+          <p className="settings-hint">Só leitura: o Mochi mostra os eventos de hoje nas tarefas e avisa antes.</p>
+        </>
+      ) : (
+        <>
+          <label className="settings-stack">
+            <span>Endereço secreto no formato iCal</span>
+            <input
+              type="password"
+              className="settings-text"
+              value={text}
+              placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
+              autoComplete="off"
+              spellCheck={false}
+              disabled={!state.canStore || busy}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && text.trim() !== '') void connect();
+              }}
+            />
+          </label>
+          <div className="settings-inline">
+            <button
+              type="button"
+              className="settings-small"
+              disabled={!state.canStore || busy || text.trim() === ''}
+              onClick={() => void connect()}
+            >
+              {busy ? 'Conectando…' : 'Conectar'}
+            </button>
+          </div>
+          {message && (
+            <p className="settings-hint" data-tone="warn" role="alert">
+              {message}
+            </p>
+          )}
+          {!state.canStore && (
+            <p className="settings-hint" data-tone="warn">
+              O cofre de senhas do Windows não está disponível, então o endereço não pode ser guardado.
+            </p>
+          )}
+          <details className="settings-help">
+            <summary>Como achar esse endereço</summary>
+            <ol>
+              <li>No Google Agenda (no computador), abra Configurações.</li>
+              <li>Escolha a sua agenda na lista da esquerda.</li>
+              <li>Em “Integrar agenda”, copie o “Endereço secreto no formato iCal”.</li>
+              <li>Cole aqui. Ele fica guardado criptografado neste computador; qualquer pessoa com esse endereço vê sua agenda, então não o compartilhe.</li>
+            </ol>
+          </details>
+        </>
+      )}
+    </fieldset>
+  );
+}
+
 /** Tela de configurações (no painel). Cada mudança vale na hora e é salva pelo processo principal. */
 export function SettingsView({ onBack }: SettingsViewProps) {
   const { settings, packaged, shortcutActive, effective, update } = useSettings();
@@ -104,6 +197,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       bubbles: DEFAULT_SETTINGS.bubbles,
       doNotDisturb: DEFAULT_SETTINGS.doNotDisturb,
       color: DEFAULT_SETTINGS.color,
+      theme: DEFAULT_SETTINGS.theme,
       focusMinutes: DEFAULT_SETTINGS.focusMinutes,
       breakMinutes: DEFAULT_SETTINGS.breakMinutes,
       longBreakMinutes: DEFAULT_SETTINGS.longBreakMinutes,
@@ -173,6 +267,25 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           {clamped(settings.mochiScale, effective.mochiScale) ??
             'No modo flutuante e quando o Mochi aparece no canto da tela.'}
         </p>
+      </fieldset>
+
+      <fieldset className="settings-group">
+        <legend>Aparência do painel</legend>
+        <div className="settings-chips" role="radiogroup" aria-label="Tema do painel">
+          {THEMES.map((th) => (
+            <button
+              key={th}
+              type="button"
+              role="radio"
+              aria-checked={settings.theme === th}
+              className="settings-chip settings-chip-wide"
+              onClick={() => set({ theme: th })}
+            >
+              {THEME_LABEL[th]}
+            </button>
+          ))}
+        </div>
+        <p className="settings-hint">Automático segue o tema do Windows. A ilha é sempre escura.</p>
       </fieldset>
 
       <fieldset className="settings-group">
@@ -332,6 +445,8 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           </select>
         </label>
       </fieldset>
+
+      <CalendarSettings />
 
       <fieldset className="settings-group">
         <legend>Atalho e inicialização</legend>

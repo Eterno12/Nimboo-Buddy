@@ -24,6 +24,10 @@ export const SHORTCUT_PRESETS = [
 export const MOCHI_COLORS = ['mint', 'peach', 'sky', 'lilac', 'lemon', 'rose'] as const;
 export type MochiColor = (typeof MOCHI_COLORS)[number];
 
+/** Tema do painel e das configurações: segue o Windows (automático) ou fixo. A ilha é sempre escura. */
+export const THEMES = ['auto', 'light', 'dark'] as const;
+export type ThemePreference = (typeof THEMES)[number];
+
 export interface Settings {
   version: 3;
   /** Modo preferido: `island` (padrão; ilha que se esconde) ou `floating` (mascote fixo, solto). */
@@ -52,6 +56,8 @@ export interface Settings {
   doNotDisturb: boolean;
   /** Cor do Mochi. */
   color: MochiColor;
+  /** Tema do painel/configurações. */
+  theme: ThemePreference;
   /** Modo foco: duração (min) do último foco iniciado e das pausas. */
   focusMinutes: number;
   breakMinutes: number;
@@ -85,6 +91,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   bubbles: true,
   doNotDisturb: true,
   color: 'mint',
+  theme: 'auto',
   focusMinutes: 25,
   breakMinutes: 5,
   longBreakMinutes: 15,
@@ -145,6 +152,9 @@ export function parseSettings(raw: unknown): Settings {
     if (typeof r.doNotDisturb === 'boolean') out.doNotDisturb = r.doNotDisturb;
     if (typeof r.color === 'string' && (MOCHI_COLORS as readonly string[]).includes(r.color)) {
       out.color = r.color as MochiColor;
+    }
+    if (typeof r.theme === 'string' && (THEMES as readonly string[]).includes(r.theme)) {
+      out.theme = r.theme as ThemePreference;
     }
     out.focusMinutes = intInRange(r.focusMinutes, 1, 180, DEFAULT_SETTINGS.focusMinutes);
     out.breakMinutes = intInRange(r.breakMinutes, 1, 60, DEFAULT_SETTINGS.breakMinutes);

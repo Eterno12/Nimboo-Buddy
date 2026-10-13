@@ -66,6 +66,8 @@ export interface MascotController {
   activity(): void;
   /** O usuário começou a arrastar o mascote. */
   grab(): void;
+  /** Girou demais (física do arraste): fica enjoado por alguns segundos. */
+  dizzy(): void;
   /** O usuário soltou o mascote. */
   release(): void;
   endHop(): void;
@@ -122,7 +124,7 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
   }
 
   /**
-   * mbient: comportamento espontâneo (olhar em volta, espreguiçar). Esses NÃO reiniciam o
+   * ambient: comportamento espontâneo (olhar em volta, espreguiçar). Esses NÃO reiniciam o
    * contador de sono: sem isso, as animações de fundo (a cada ~12 s) o impediam de dormir.
    */
   function enter(next: MascotState, force = false, after?: MascotState, ambient = false) {
@@ -245,6 +247,10 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
       else armSleep();
     },
     grab: () => enter('grabbed', true),
+    dizzy() {
+      setAffection(affection - 0.02); // um pouquinho menos feliz depois de rodar tanto
+      enter('dizzy', true);
+    },
     release() {
       if (snap.state !== 'grabbed') return;
       enter(rest(), true);

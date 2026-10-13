@@ -17,6 +17,7 @@ export const ANIMATION_SOUND: Partial<Record<MascotState, SoundName>> = {
   stretch: 'stretch',
   lookaround: 'lookaround',
   sleepy: 'sleepy',
+  dizzy: 'dizzy',
 };
 
 export const ANIMATION_LINE: Partial<Record<MascotState, SpeechEvent>> = {
@@ -30,4 +31,5 @@ export const ANIMATION_LINE: Partial<Record<MascotState, SpeechEvent>> = {
   stretch: 'stretch',
   lookaround: 'lookaround',
   sleepy: 'sleepy',
+  dizzy: 'dizzy',
 };

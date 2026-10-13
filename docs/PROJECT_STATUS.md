@@ -12,13 +12,16 @@ copiado de planos. Legenda de evidência:
 | Verificação | Resultado |
 |---|---|
 | `npm run build` | limpo (`tsc` sem erros) |
-| `npm test` | **214/214** — `tasks` 29, `geometry` 26, `focus` 21, `personality` 18, `island` 17, `settings` 15, `durability` 14, `mascotController` 12, `contrast` 11, `reminders` 11, `removal` 10, `backup` 6, `dnd` 5, `sounds` 5, `draft` 5, `focusLog` 5, `dueFormat` 4 |
+| `npm test` | **253/253** — `tasks` 29, `geometry` 26, `focus` 21, `personality` 18, `island` 17, `calendar` 16, `settings` 16, `durability` 14, `mascotController` 14, `contrast` 13, `reminders` 11, `removal` 10, `calendarSync` 10, `dragPhysics` 8, `backup` 6, `sounds` 5, `focusLog` 5, `dnd` 5, `draft` 5, `dueFormat` 4 |
 | `npm run test:tasks` | **53/53** (`tasks` + `removal` + `durability`) |
 | `npm run test:e2e` | **14/14** passos (tarefas; app real via CDP, dados isolados) |
 | `npm run test:e2e:focus` | **11/11** passos (tempo livre, tarefa vinculada, sessão real de 1 min com a ilha escondida; ~1,5 min) |
 | `npm run test:e2e:settings` | **13/13** passos (abre como ilha, tamanhos, cor, balões, validação, painel, prazo e lembrete) |
+| `npm run test:e2e:calendar` (`node tests/e2e/calendar-ui.e2e.mjs`) | **8/8** passos (sem rede, com o gancho de arquivo: endereço inválido, conexão, "Agenda de hoje", lembrete, segredo criptografado e persistente, remoção) |
+| `node tests/e2e/drag-ui.e2e.mjs` | **4/4** passos (segurar, balançar, girar e enjoar no app real) |
+| Rede real | agenda pública do Google (feriados do Brasil) lida em ~0,6 s; endereço errado → "não encontrada (código 404)" |
 | `npm run pack` + `node tests/e2e/packaged.e2e.mjs` | **5/5** passos no `Mochi.exe` empacotado (ilha, `packaged`, banco, foco, preferências) |
-| `npm run dist` | gera `release/Mochi Setup 0.2.0.exe` (106 MB, NSIS por usuário, **sem assinatura**) |
+| `npm run dist` | gera `release/Mochi Setup 0.3.0.exe` (106 MB, NSIS por usuário, **sem assinatura**) |
 
 Verificações manuais com o app real nesta etapa: atalho global (Ctrl+Alt+M enviado por `keybd_event`
 com a ilha escondida → ilha volta, tarefas abertas, campo em foco) e "não incomodar" (janela em tela
@@ -57,7 +60,10 @@ Vite 8.3, TypeScript 7.0. Máquina de desenvolvimento com 1 monitor a 100 % de e
 | **Tarefas com prazo e lembrete:** data/hora opcional, atrasada/hoje destacados, lembrete na hora e N min antes (balão + som + notificação se oculto) | repositório, validação, agendador [auto]; e2e (lembrete real) |
 | **Migração v2 do banco** (`due_at`, `focus_sessions`) com backup automático | [auto] |
 | **Empacotamento:** `npm run pack`/`dist` (electron-builder, NSIS por usuário, ícone do blob); app empacotado reconhece `isPackaged` | e2e empacotado [auto]; instalador **construído**, não instalado nesta máquina |
-| Contraste das cores (tarefas, configurações, balão) calculado sobre o CSS real | [auto] |
+| **Segurar o Mochi:** balança para onde vai, gira se for sacudido, enjoa (~5 s) com 2 voltas em 3 s; som e fala próprios (D33) | física [auto] (8); app real [auto] e2e (4 passos) + capturas |
+| **Modo noturno do painel:** Automático (segue o Windows) / Claro / Escuro, em tarefas, foco, agenda e configurações (D32) | contraste dos tokens escuros [auto]; capturas [manual] |
+| **Google Agenda (iCal, somente leitura):** "Agenda de hoje", lembretes dos eventos, segredo criptografado (D31) | parser (16) e sincronização (10) [auto]; e2e (8); rede real [manual] |
+| Contraste das cores (tarefas, configurações, balão, painel escuro) calculado sobre o CSS real | [auto] |
 
 ## Parcialmente implementado
 
@@ -78,7 +84,7 @@ Vite 8.3, TypeScript 7.0. Máquina de desenvolvimento com 1 monitor a 100 % de e
 ## Não existe (não presumir)
 
 Notas, assistente de IA, login, sincronização, versão mobile, assinatura de código do instalador,
-atualização automática, recorrência de tarefas (prazo é uma data só), internacionalização (textos fixos em
+atualização automática, recorrência de tarefas (prazo é uma data só), escrever na agenda/login Google (OAuth), várias agendas, internacionalização (textos fixos em
 pt-BR), tema escuro do painel, opção de movimento reduzido (decidido: o mascote sempre anima), edição de
 título de tarefa, ordenação manual de tarefas, outros personagens (só o blob verde, com paletas), atalho
 global personalizado livre (só os predefinidos), escolha do monitor da ilha pela interface.
@@ -104,15 +110,19 @@ global personalizado livre (só os predefinidos), escolha do monitor da ilha pel
 | 19 | Ctrl+Alt+Espaço (antigo padrão) já é usado por outros apps (ex.: Claude) | informativa | padrão agora é Ctrl+Alt+M; a tela de configurações avisa quando o atalho não pôde ser registrado |
 | 22 | O e2e depende do foco/ponteiro do sistema (ilha recolhe se outra janela toma o foco) | informativa | os passos sensíveis usam "nunca esconder" e `keepAlive`; ainda pode oscilar com a máquina ocupada |
 | 23 | Instalador sem assinatura de código | média | o Windows SmartScreen mostra aviso na 1ª instalação; assinar exige certificado |
-| 24 | `npm run pack`/`dist` baixam binários (Electron, NSIS) na 1ª vez | informativa | precisa de internet no build; o app em si continua sem rede |
+| 24 | `npm run pack`/`dist` baixam binários (Electron, NSIS) na 1ª vez | informativa | precisa de internet no build |
+| 25 | A agenda só atualiza a cada 15 min e só por endereço iCal (sem login) | informativa | "Atualizar agora" nas configurações; eventos recém-criados podem demorar a aparecer (limite do Google para o endereço secreto) |
+| 26 | O endereço secreto do Google Agenda é um segredo de longa duração | média | fica criptografado (DPAPI) e nunca volta à interface; quem o tem lê a agenda — regenerar no Google invalida o antigo |
+| 27 | O app passa a usar internet (só se a agenda for conectada) | informativa | regra atualizada em `CLAUDE.md`; D31 |
 | 20 | Um teste de durabilidade (`mutações continuam aplicando a retenção...`) falhou **uma vez** com a máquina carregada | baixa | passou em 3 execuções seguintes; usa espera curta por bloqueio entre conexões; se repetir, aumentar `busy_timeout` do teste |
 | 21 | Vigia de tela cheia é um processo PowerShell oculto (um por execução) | baixa | sem módulos nativos e sem `-EncodedCommand`/`-ExecutionPolicy` (parecem malware para antivírus); se o PowerShell estiver bloqueado, só a função "não incomodar" some |
 
 ## Próxima etapa recomendada
 
-1. **Instalar de verdade e conferir** (por você): rodar `release/Mochi Setup 0.2.0.exe`, ligar "iniciar com o
+1. **Instalar de verdade e conferir** (por você): rodar `release/Mochi Setup 0.3.0.exe`, ligar "iniciar com o
    Windows", reiniciar e ver se abre como ilha.
-2. **Notas rápidas** (fase D do `ROADMAP.md`): a migração v3 já tem backup automático.
-3. **Segundo personagem** (o quadradinho): o desenho (`Mascot.tsx`) e o catálogo de falas são os pontos de troca.
-4. **Assinatura de código** e atualização automática, se for distribuir para outras pessoas.
-5. Higiene: decidir o destino de `.agents/` e `skills-lock.json`; configurar a identidade do git.
+2. **Experimentar com a sua agenda real:** colar o endereço secreto e conferir eventos recorrentes, fusos e lembretes.
+3. **Notas rápidas** (fase D do `ROADMAP.md`): a migração v3 já tem backup automático.
+4. **Segundo personagem** (o quadradinho): o desenho (`Mascot.tsx`) e o catálogo de falas são os pontos de troca.
+5. **Assinatura de código** e atualização automática, se for distribuir para outras pessoas.
+6. Higiene: decidir o destino de `.agents/` e `skills-lock.json`; configurar a identidade do git.

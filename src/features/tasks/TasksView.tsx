@@ -14,6 +14,7 @@ import { formatDue, fromLocalInputValue, presetDue, toLocalInputValue } from './
 import { draftStore, useDraft } from './draftStore';
 import { useTasks } from './useTasks';
 import { StorageNotice } from './StorageNotice';
+import { AgendaSection } from '../calendar/AgendaSection';
 import './tasks.css';
 
 interface TasksViewProps {
@@ -219,6 +220,7 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
       </header>
 
       <StorageNotice />
+      <AgendaSection variant={variant} />
 
       <form className="tasks-form" onSubmit={submit} noValidate>
         <textarea

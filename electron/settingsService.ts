@@ -15,6 +15,7 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'bubbles',
   'doNotDisturb',
   'color',
+  'theme',
   'focusMinutes',
   'breakMinutes',
   'longBreakMinutes',

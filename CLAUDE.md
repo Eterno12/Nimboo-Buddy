@@ -22,11 +22,13 @@ npm run dev          # Vite + Electron com recarga (teclas 1..= forçam estados 
 npm start            # compila e abre o app
 npm run build        # tsc --noEmit + vite build + esbuild do main/preload (dist/, dist-electron/)
 npm run typecheck    # só tipos
-npm test             # 214 testes unitários (node:test), ~4 s, sem GUI
+npm test             # 253 testes unitários (node:test), ~4 s, sem GUI
 npm run test:tasks   # só tarefas (armazenamento, exclusão com desfazer, durabilidade/limpeza)
 npm run test:e2e     # interface de tarefas no app REAL via CDP; compila antes; precisa de sessão gráfica
 npm run test:e2e:focus # modo foco no app REAL (~1,5 min: inclui uma sessão de 1 min até o fim)
 npm run test:e2e:settings # configurações (tamanhos, cor, balões, painel, prazo/lembrete) no app REAL
+node tests/e2e/calendar-ui.e2e.mjs   # agenda (sem rede, com o gancho de arquivo)
+node tests/e2e/drag-ui.e2e.mjs       # arraste com física/enjoo no app REAL
 npm run pack         # app empacotado em release/win-unpacked (depois: node tests/e2e/packaged.e2e.mjs)
 npm run dist         # instalador release/Mochi Setup <versão>.exe (NSIS por usuário, sem assinatura)
 ```
@@ -56,8 +58,7 @@ interface de tarefas ou na ilha, também `npm run test:e2e`; se mexeu no modo fo
 - O banco só é aberto no processo principal. O renderer nunca recebe SQL, caminho de arquivo nem conexão.
 - Handlers `ipcMain` validam o remetente (janela do app, quadro principal, URL do app) e validam os argumentos.
 - Manter a CSP de `index.html`, navegação/`window.open` bloqueados e permissões negadas.
-- Sem rede: nenhuma funcionalidade atual depende de internet. Qualquer chamada externa (IA, sync)
-  exige decisão explícita registrada em `docs/DECISIONS.md`.
+- **Rede:** só o processo principal fala com a internet, e só para a agenda (iCal) quando a pessoa cola o endereço (D31): https, sem IP/localhost, endereço criptografado com `safeStorage`, nunca devolvido ao renderer. O renderer continua sem rede (CSP). Qualquer chamada externa nova (IA, sync) exige decisão explícita registrada em `docs/DECISIONS.md`.
 
 ## Convenções e armadilhas
 

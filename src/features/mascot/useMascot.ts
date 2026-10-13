@@ -32,6 +32,7 @@ export function useMascot() {
       cursor: (s: CursorSample) => ref.current?.cursor(s),
       activity: () => ref.current?.activity(),
       grab: () => ref.current?.grab(),
+      dizzy: () => ref.current?.dizzy(),
       release: () => ref.current?.release(),
       endHop: () => ref.current?.endHop(),
       debugSet: (s: Parameters<MascotController['debugSet']>[0]) => ref.current?.debugSet(s),

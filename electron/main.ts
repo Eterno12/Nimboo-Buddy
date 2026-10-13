@@ -1,5 +1,16 @@
 import path from 'node:path';
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, Notification, screen, session, type Tray } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  globalShortcut,
+  ipcMain,
+  Menu,
+  nativeTheme,
+  Notification,
+  screen,
+  session,
+  type Tray,
+} from 'electron';
 import { IPC, type PanelView, type SettingsSnapshot } from '../shared/ipc';
 import type { Settings } from '../shared/settings';
 import { createPanelWindow } from './windows';
@@ -12,6 +23,7 @@ import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
 import { ReminderScheduler, type Reminder } from './reminders';
 import { FocusLog } from './focus/focusLog';
+import { startCalendarService, type CalendarService } from './calendarService';
 import type { FocusConfig } from '../shared/focus';
 
 let mascot: BrowserWindow | null = null;
@@ -21,6 +33,8 @@ let focus: FocusService | null = null;
 let settingsStore: SettingsStore | null = null;
 let settingsService: SettingsService | null = null;
 let reminders: ReminderScheduler | null = null;
+let eventReminders: ReminderScheduler | null = null;
+let calendar: CalendarService | null = null;
 let focusLog: FocusLog | null = null;
 let panel: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -39,7 +53,8 @@ const isAppUrl = (url: string): boolean =>
 function showPanel(view: PanelView = 'home'): void {
   if (!panel || panel.isDestroyed()) {
     pendingPanelView = view;
-    panel = createPanelWindow();
+    const preference = settingsStore?.get().theme ?? 'auto';
+    panel = createPanelWindow(preference === 'dark' || (preference === 'auto' && nativeTheme.shouldUseDarkColors));
     // Fechar o painel apenas o oculta, exceto ao sair do app.
     panel.on('close', (event) => {
       if (!quitting) {
@@ -170,7 +185,9 @@ function applySettingsChange(previous: Settings, next: Settings): void {
   if (previous.launchAtLogin !== next.launchAtLogin) applyLaunchAtLogin(next.launchAtLogin);
   if (previous.doNotDisturb !== next.doNotDisturb) applyDoNotDisturb(next.doNotDisturb);
   focus?.configure(focusConfigOf(next));
-  reminders?.setConfig({ enabled: next.remindersEnabled, leadMinutes: next.reminderLeadMin });
+  const reminderConfig = { enabled: next.remindersEnabled, leadMinutes: next.reminderLeadMin };
+  reminders?.setConfig(reminderConfig);
+  eventReminders?.setConfig(reminderConfig);
 }
 
 function buildMenu(): Menu {
@@ -281,6 +298,11 @@ if (!app.requestSingleInstanceLock()) {
       config: { enabled: startup.remindersEnabled, leadMinutes: startup.reminderLeadMin },
       onReminder: deliverReminder,
     });
+    // Lembretes dos eventos da agenda (mesmo agendador dos prazos de tarefas, instância própria).
+    eventReminders = new ReminderScheduler({
+      config: { enabled: startup.remindersEnabled, leadMinutes: startup.reminderLeadMin },
+      onReminder: deliverReminder,
+    });
     // O banco fica em userData/data; só o processo principal o abre.
     tasks = startTasksService({
       dbPath: path.join(app.getPath('userData'), 'data', 'mochi.db'),
@@ -326,6 +348,18 @@ if (!app.requestSingleInstanceLock()) {
     applyLaunchAtLogin(initial.launchAtLogin);
     applyDoNotDisturb(initial.doNotDisturb);
 
+    // Agenda por endereço iCal (somente leitura): só baixa se a pessoa colou um endereço.
+    calendar = startCalendarService({
+      userDataDir: app.getPath('userData'),
+      isAppUrl,
+      onEvents: (events) =>
+        eventReminders?.sync(
+          events
+            .filter((e) => !e.allDay)
+            .map((e) => ({ id: e.id, title: e.title, dueAt: e.start, completed: false })),
+        ),
+    });
+
     // O temporizador vive no main; ao terminar, a ilha volta (se estava escondida) ou
     // avisa por notificação quando o mascote está oculto.
     focus = startFocusService({
@@ -358,6 +392,8 @@ if (!app.requestSingleInstanceLock()) {
     windowMode?.dispose();
     focus?.close();
     reminders?.dispose();
+    eventReminders?.dispose();
+    calendar?.close();
     tasks?.close();
     tray?.destroy();
   });

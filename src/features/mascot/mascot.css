@@ -588,3 +588,73 @@
   --m-shade: #c43b66;
   --m-stroke: #ea6f93;
 }
+
+
+/* ---------- Segurar: balanço/giro (física em JS) e enjoo ---------- */
+/* A rotação vem de `--drag-rot`, escrita a cada quadro por useDragPhysics. O pivô é o centro do corpo:
+   girando em volta de si ele não sai da janela (um pêndulo preso na folha seria cortado nas bordas). */
+.mascot-drag {
+  transform-box: view-box;
+  transform-origin: 100px 128px;
+  transform: rotate(var(--drag-rot, 0deg));
+}
+
+.mascot[data-state='dizzy'] .face-eyes-dizzy,
+.mascot[data-state='dizzy'] .face-mouth-wavy {
+  opacity: 1;
+  transition-duration: 0.18s;
+}
+
+.mascot .spiral {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+.mascot[data-state='dizzy'] .spiral {
+  animation: spiral-spin 0.9s linear infinite;
+}
+
+.mascot[data-state='dizzy'] .spiral:last-child {
+  animation-direction: reverse;
+}
+
+/* Cambaleia (enjoado) e fica um pouco pálido. */
+.mascot[data-state='dizzy'] .mascot-tilt {
+  animation: dizzy-wobble 1.1s ease-in-out infinite;
+}
+
+.mascot[data-state='dizzy'] .mascot-body {
+  filter: saturate(0.7) brightness(1.04);
+}
+
+.mascot[data-state='dizzy'] .mascot-leaf {
+  --leaf-rot: 14deg;
+}
+
+.mascot-dizzy-stars {
+  transform-box: view-box;
+  transform-origin: 100px 74px;
+  animation: dizzy-orbit 1.4s linear infinite;
+}
+
+@keyframes spiral-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dizzy-wobble {
+  0%,
+  100% {
+    transform: rotate(-7deg) translateX(-3px);
+  }
+  50% {
+    transform: rotate(7deg) translateX(3px);
+  }
+}
+
+@keyframes dizzy-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Mascot } from './Mascot';
 import { useMascot } from './useMascot';
+import { useDragPhysics } from './useDragPhysics';
 import { MASCOT_STATES } from './mascotStates';
 import { AMBIENT_SOUNDS } from '../audio/sounds';
 import { ANIMATION_LINE, ANIMATION_SOUND } from '../personality/animationReactions';
@@ -41,6 +42,8 @@ export function MascotView() {
   const mascot = useMascot();
   const { pet, activity, debugSet, cursor, grab, release, greet, celebrate } = mascot;
   const svgRef = useRef<SVGSVGElement | null>(null);
+  // Segurar e arrastar: balança para onde vai, gira se for sacudido e fica enjoado se girar demais.
+  const drag = useDragPhysics({ svgRef, onDizzy: mascot.dizzy });
   const press = useRef<{ x: number; y: number; dragging: boolean } | null>(null);
 
   // `island` é referenciado pelo callback de presença antes de ser criado: usa ref.
@@ -298,7 +301,10 @@ export function MascotView() {
     e.currentTarget.setPointerCapture(e.pointerId);
     press.current = { x: e.screenX, y: e.screenY, dragging: false };
     activity();
-    if (draggable) window.mochi.startDrag();
+    if (draggable) {
+      window.mochi.startDrag();
+      drag.begin(e.screenX);
+    }
   };
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
@@ -310,6 +316,7 @@ export function MascotView() {
       p.dragging = true;
       grab();
     }
+    drag.move(e.screenX);
     window.mochi.moveDrag();
   };
 
@@ -318,7 +325,10 @@ export function MascotView() {
     if (!p) return;
     press.current = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
-    if (draggable) window.mochi.endDrag();
+    if (draggable) {
+      window.mochi.endDrag();
+      drag.end();
+    }
     if (p.dragging) release();
     else if (inIsland) island.toggle();
     else pet();

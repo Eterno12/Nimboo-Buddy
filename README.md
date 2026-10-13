@@ -114,6 +114,14 @@ Ao criar uma tarefa, o relógio ao lado do campo define data e hora (ou use Hoje
 selo de prazo permite alterar. Atrasadas e as de hoje ficam destacadas. O Mochi avisa na hora e alguns
 minutos antes (configurável) com balão e som; se estiver oculto, vira notificação.
 
+### Google Agenda
+
+Em Configurações → **Google Agenda**, cole o "endereço secreto no formato iCal" da sua agenda (o app explica onde achar). O Mochi mostra a **Agenda de hoje** no topo das tarefas e avisa dos eventos na hora e antes. É somente leitura, o endereço fica criptografado neste computador e nunca é exibido de volta.
+
+### Aparência e brincadeiras
+
+Em Configurações: tema **Automático/Claro/Escuro** do painel. Segurando o Mochi, ele balança para onde você o leva, gira se for sacudido e fica **enjoado** se girar demais.
+
 ### Instalador
 
 `npm run dist` gera `release/Mochi Setup <versão>.exe` (instalação por usuário, sem administrador, sem
@@ -125,7 +133,7 @@ assinatura de código). `npm run pack` gera só a pasta `release/win-unpacked`. 
 | Preferências (modo, posição, tamanhos, cor, sons, atalho…) | `%APPDATA%\mochi-desktop\settings.json` |
 | Tarefas (SQLite) | `%APPDATA%\mochi-desktop\data\mochi.db` (cópias antes de migrar: `mochi.db.bak-v<n>-<data>`) |
 
-Os dados ficam só neste computador; o app não usa a internet. Detalhes de formato, migrações e
+Os dados ficam só neste computador. O app só usa a internet **se você conectar o Google Agenda** (e só para ler a sua agenda); sem isso, nada sai da máquina. Detalhes de formato, migrações e
 recuperação em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Para testar o app sem tocar nos seus
 dados, rode o Electron com `--user-data-dir=<pasta temporária>` (é o que o `test:e2e` faz).
 

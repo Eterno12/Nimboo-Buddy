@@ -538,3 +538,23 @@
   color: var(--t-danger);
   font-weight: 600;
 }
+
+
+/* ---------- Tema escuro do painel (mesmos valores da ilha; verificados em contrast.test.ts) ---------- */
+.panel[data-theme='dark'] .tasks[data-variant='panel'] {
+  --t-bg: #342b3f;
+  --t-text: #f3eef7;
+  --t-muted: #b9afc4;
+  --t-field-bg: #3d3548;
+  --t-field-border: #948b9f;
+  --t-hover: #40374c;
+  --t-accent: #8fd9a8;
+  --t-accent-text: #1f1a26;
+  --t-danger: #ff9fb2;
+  --t-focus: #8fd9a8;
+  --t-scroll-thumb: #948b9f;
+}
+
+.panel[data-theme='dark'] .tasks[data-variant='panel'] .tasks-due-input {
+  color-scheme: dark;
+}
