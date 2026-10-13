@@ -92,3 +92,6 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Por quê:** instaladas por `npx skills add` como apoio a design/animação. São instruções de terceiros:
   consultivas, nunca acima de `CLAUDE.md`. Não estão em `.claude/skills`, logo não são carregadas
   automaticamente.
+- **Versionamento:** ficam **fora do git** por precaução (100 arquivos, 7 MB, só uma licença presente;
+  redistribuição não confirmada). Estão em `.git/info/exclude` (local); o `.gitignore` compartilhado
+  não decide isso. Para versionar ou descartar, registre a decisão aqui.

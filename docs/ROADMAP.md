@@ -7,7 +7,8 @@ arquitetura de `ARCHITECTURE.md` e as decisões de `DECISIONS.md`.
 ## Funcionalidades planejadas (próximas, em ordem sugerida)
 
 ### Fase A — Higiene (pequena, sem funcionalidade nova)
-- `git init`, `.gitignore` revisado, commit-base; decidir sobre `.agents/` e `skills-lock.json`.
+- ~~`git init`, `.gitignore` revisado, commit-base~~ (feito: `193d2d3`). Resta decidir sobre `.agents/` e
+  `skills-lock.json` (hoje fora do versionamento) e configurar a identidade do git.
 - Remover/ignorar artefatos de teste; opcional: CI simples (build + `npm test`).
 - Testes unitários do `mascotController` (hoje sem cobertura automatizada).
 

@@ -57,7 +57,7 @@ internacionalização (textos fixos em pt-BR), tema escuro do painel, opção de
 
 | # | Item | Gravidade | Detalhe |
 |---|---|---|---|
-| 1 | Não é repositório git; sem CI | média | não há histórico nem proteção contra perda do código |
+| 1 | Repositório git só local (commit-base `193d2d3`, ramo `main`); sem remoto e sem CI | baixa | o histórico existe, mas não há cópia fora desta máquina; identidade do git não configurada |
 | 2 | Verificação de DPI 125/150 %, barra de tarefas no topo, 2º monitor e apps em tela cheia | média | geometria coberta por testes unitários; o app real só foi visto em 1 monitor/100 % |
 | 3 | Borda superior pode disparar a ilha sem querer (arrastar janela ao topo, menus de apps em tela cheia) | baixa | mitigado com 250 ms de permanência e 1,5 s de carência |
 | 4 | Exclusão definitiva e sem marca (*tombstone*) | pré-requisito de sync | outro dispositivo poderia "ressuscitar" tarefas |
@@ -73,12 +73,12 @@ internacionalização (textos fixos em pt-BR), tema escuro do painel, opção de
 | 14 | Rascunho é por janela e não persiste | baixa | decisão; ilha e painel têm rascunhos independentes |
 | 15 | Ao perder o foco a ilha recolhe mesmo com rascunho | baixa | o texto é preservado, mas a ilha não "fica presa" aberta |
 | 16 | Duas observações isoladas de a ilha não esconder (~11–13 s) | baixa | não reproduzidas em 8 tentativas seguintes; suspeita de hover/ambiente |
-| 17 | Skills de terceiros em `.agents/skills` | informativa | não carregadas automaticamente pelo Claude Code |
+| 17 | Skills de terceiros em `.agents/skills` + `skills-lock.json` | informativa | **fora do versionamento** até aprovação (100 arquivos, 7 MB, licenças desconhecidas); excluídas localmente em `.git/info/exclude`; não carregadas automaticamente pelo Claude Code |
 | 18 | `tests/e2e` depende de temporização e de sessão gráfica | informativa | não roda em CI sem GUI; não faz parte de `npm test` |
 
 ## Próxima etapa recomendada
 
-1. **Higiene (pequena):** `git init` + commit-base; decidir o destino de `.agents/` e `skills-lock.json`.
+1. **Higiene (resta pouco):** decidir o destino de `.agents/` e `skills-lock.json` (versionar, ignorar de vez ou remover) e configurar a identidade do git.
 2. **Endurecimento P3 das tarefas** (itens 9–12 acima): `synchronous=FULL`, `list()` sem escrita quando nada
    expirou, backup antes de migrar, aviso ao usuário quando o banco é recuperado.
 3. **Testes unitários do `mascotController`** (lógica pura, hoje sem cobertura automatizada).
