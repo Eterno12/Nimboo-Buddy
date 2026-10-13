@@ -10,7 +10,7 @@ arquitetura de `ARCHITECTURE.md` e as decisões de `DECISIONS.md`.
 - ~~`git init`, `.gitignore` revisado, commit-base~~ (feito: `193d2d3`). Resta decidir sobre `.agents/` e
   `skills-lock.json` (hoje fora do versionamento) e configurar a identidade do git.
 - Remover/ignorar artefatos de teste; opcional: CI simples (build + `npm test`).
-- Testes unitários do `mascotController` (hoje sem cobertura automatizada).
+- ✅ Testes unitários do `mascotController` (12; revelaram e corrigiram o bug do sono).
 
 ### Fase B — Endurecimento das tarefas ("P3")
 Pré-requisito saudável antes de novos tipos de dado.
@@ -18,8 +18,8 @@ Pré-requisito saudável antes de novos tipos de dado.
 - ✅ `list()`/`get()` sem transação de escrita quando nada expirou; leituras nunca falham por causa da
   limpeza — D16.
 - ✅ Riscos e pré-requisitos da sincronização documentados (seção abaixo, lugar único).
-- ⏳ Backup do arquivo antes de aplicar migrações (obrigatório antes da migração v2).
-- ⏳ Aviso ao usuário quando o banco foi recuperado de um arquivo corrompido.
+- ✅ Backup do arquivo antes de aplicar migrações (D21).
+- ✅ Aviso ao usuário quando o banco foi recuperado de um arquivo corrompido (D21).
 
 ### Fase C — Temporizador ("Modo foco") — v1 implementada, ver D18
 - ✅ Relógio no processo principal; tela na ilha (`IslandExtent` `focus`) e cartão no painel; selo com o
@@ -98,3 +98,11 @@ A higiene ──▶ B endurecimento ──▶ C temporizador ──▶ E app com
 
 C e D são independentes entre si. E pode começar em paralelo à C, mas o **empacotamento** deve esperar
 as funcionalidades da v1 estabilizarem.
+
+## Próximos passos já combinados (após configurações, sons, balões e "não incomodar")
+- **Empacotamento** (instalador, ícone): habilita "iniciar com o Windows" de verdade e a distribuição.
+- **Outros personagens**: o blob ganhou paletas; novos personagens (ex.: quadradinho de cantos arredondados)
+  trocam o desenho e o catálogo de falas, sem mudar balões, sons nem janela.
+- **Tarefas com data e lembrete** (balão + som discretos), depois **Notas** (fase D, com backup já pronto).
+- **Foco evoluído**: ciclo Pomodoro, duração livre, vínculo com tarefa, contagem diária.
+- **Escolha do monitor da ilha** pela interface; atalho global personalizado livre.

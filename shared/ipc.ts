@@ -1,6 +1,21 @@
 import type { IslandExtent, PresentationState } from './presentation';
 import type { TasksApi } from './tasks';
 import type { FocusApi } from './focus';
+import type { Settings } from './settings';
+
+/** Preferências + o que só o processo principal sabe (para a tela de configurações). */
+export interface SettingsSnapshot {
+  settings: Settings;
+  /** App instalado: só então "iniciar com o Windows" tem efeito. */
+  packaged: boolean;
+  /** O atalho global escolhido foi registrado (outro app pode já usá-lo). */
+  shortcutActive: boolean;
+  /** Fatores realmente aplicados (o pedido, limitado ao que cabe no monitor). */
+  effective: { islandScale: number; mochiScale: number };
+}
+
+/** Telas do painel que podem ser abertas de fora (menu da bandeja, engrenagem da ilha). */
+export type PanelView = 'home' | 'settings';
 
 /** Contrato único entre main, preload e renderer. */
 export const IPC = {
@@ -23,10 +38,16 @@ export const IPC = {
   tasksReopen: 'tasks:reopen',
   tasksScheduleRemove: 'tasks:schedule-remove',
   tasksUndoRemove: 'tasks:undo-remove',
+  /** renderer -> main (invoke): aviso sobre o armazenamento (ou 
+ull) e sua dispensa. */
+  tasksNotice: 'tasks:notice',
+  tasksDismissNotice: 'tasks:dismiss-notice',
   /** main -> renderer: alguma tarefa mudou (recarregue a lista). */
   tasksChanged: 'tasks:changed',
   /** main -> renderer: uma tarefa acabou de ser concluída. */
   tasksCompleted: 'tasks:completed',
+  /** main -> renderer: uma tarefa acabou de ser criada. */
+  tasksCreated: 'tasks:created',
   /** renderer -> main: o layout da nova apresentação já foi desenhado. */
   presentationApplied: 'presentation:applied',
   /** renderer -> main (invoke): libera a forma cheia da ilha antes da animação de abrir. */
@@ -35,6 +56,17 @@ export const IPC = {
   islandClosed: 'island:closed',
   /** main -> renderer: pedido de alternar a ilha vindo do menu (alternativa ao clique). */
   islandToggle: 'island:toggle',
+  /** renderer -> main: há (ou não) um balão de fala visível; a forma da janela acompanha. */
+  bubbleVisible: 'bubble:visible',
+  /** main -> renderer: o atalho global pediu a ilha (abre direto nas tarefas). */
+  islandSummon: 'island:summon',
+  /** Preferências e navegação do painel. */
+  settingsGet: 'settings:get',
+  settingsUpdate: 'settings:update',
+  settingsChanged: 'settings:changed',
+  panelOpenSettings: 'panel:open-settings',
+  panelInitialView: 'panel:initial-view',
+  panelNavigate: 'panel:navigate',
   /** renderer -> main: a ilha começou a se esconder (a linha-dica aparece neste instante). */
   islandHiding: 'island:hiding',
   /** renderer -> main: a ilha terminou de subir e se esconder; o Mochi pode surgir no canto. */
@@ -88,6 +120,23 @@ export interface MochiApi {
   tasks: TasksApi;
   /** Modo foco (temporizador; o relógio vive no processo principal). */
   focus: FocusApi;
+  /** Preferências: lê, altera (validadas no main) e acompanha mudanças feitas em qualquer janela. */
+  settings: {
+    get(): Promise<SettingsSnapshot>;
+    update(patch: Partial<Omit<Settings, 'version'>>): Promise<SettingsSnapshot>;
+    onChange(listener: (snapshot: SettingsSnapshot) => void): () => void;
+  };
+  /** Informa que o balão de fala está visível (ou não). */
+  bubbleVisible(visible: boolean): void;
+  /** O atalho global pediu a ilha. Retorna a função de cancelamento. */
+  onSummon(listener: () => void): () => void;
+  /** Abre o painel já nas configurações (engrenagem da ilha). */
+  openSettings(): void;
+  /** Painel: tela inicial pedida por quem o abriu e mudanças de tela posteriores. */
+  panel: {
+    initialView(): Promise<PanelView>;
+    onNavigate(listener: (view: PanelView) => void): () => void;
+  };
   /** Informa que a ilha começou a se esconder. */
   islandHiding(): void;
   /** Informa que a ilha terminou de se esconder (o Mochi surge no canto). */

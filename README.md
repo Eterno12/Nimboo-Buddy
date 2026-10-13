@@ -25,6 +25,7 @@ npm test             # testes unitários (runner nativo do Node, sem dependênci
 npm run test:tasks   # só armazenamento e regras das tarefas
 npm run test:e2e     # interface de tarefas no app real (precisa de sessão gráfica)
 npm run test:e2e:focus # modo foco no app real (~1,5 min)
+npm run test:e2e:settings # configurações no app real
 ```
 
 > Se o npm bloquear scripts de instalação, rode `node node_modules/electron/install.js` uma vez para
@@ -85,12 +86,30 @@ No painel (modo flutuante) ou na ilha expandida (botão **Tarefas**).
 - Falhas ao concluir/reabrir/excluir aparecem como mensagem; mudanças e erros são anunciados para leitores
   de tela. Todas as janelas se atualizam sozinhas.
 
+### Configurações
+
+Engrenagem na ilha aberta, na barra do painel, ou *Configurações* no menu da bandeja.
+
+- **Tamanho da ilha** (80–140 %) e **do Mochi solto** (70–160 %), separados; valem na hora.
+- **Cor do Mochi** (menta, pêssego, céu, lilás, limão, rosa). Outros personagens virão depois.
+- **Esconder a ilha depois de** 3 s, 6 s, 10 s ou nunca.
+- **Não incomodar:** o Mochi sai da frente quando um app está em tela cheia (jogo, vídeo, apresentação) e
+  volta depois.
+- **Balões de fala** (o Mochi comenta de vez em quando e fica quietinho durante o foco) e **sons suaves**
+  (tec, sininhos e uma vozinha fina), com volume.
+- **Atalho global** para chamar a ilha direto nas tarefas (padrão **Ctrl+Alt+M**; avisa se outro programa já
+  o usa). **Iniciar com o Windows** é opcional e só vale no app instalado.
+
+### Modo foco
+
+Atalho **Foco** na ilha (ou o cartão no painel): 15, 25, 45 ou 60 minutos, e pausa de 5. Pausar, retomar
+e cancelar. A pílula recolhida mostra o tempo; ao terminar, o Mochi comemora e a ilha volta.
 ## Dados e preferências
 
 | O quê | Onde |
 |---|---|
-| Preferências (modo, posição) | `%APPDATA%\mochi-desktop\settings.json` |
-| Tarefas (SQLite) | `%APPDATA%\mochi-desktop\data\mochi.db` |
+| Preferências (modo, posição, tamanhos, cor, sons, atalho…) | `%APPDATA%\mochi-desktop\settings.json` |
+| Tarefas (SQLite) | `%APPDATA%\mochi-desktop\data\mochi.db` (cópias antes de migrar: `mochi.db.bak-v<n>-<data>`) |
 
 Os dados ficam só neste computador; o app não usa a internet. Detalhes de formato, migrações e
 recuperação em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Para testar o app sem tocar nos seus

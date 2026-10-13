@@ -22,14 +22,15 @@ npm run dev          # Vite + Electron com recarga (teclas 1..= forçam estados 
 npm start            # compila e abre o app
 npm run build        # tsc --noEmit + vite build + esbuild do main/preload (dist/, dist-electron/)
 npm run typecheck    # só tipos
-npm test             # 125 testes unitários (node:test), ~2 s, sem GUI
+npm test             # 178 testes unitários (node:test), ~3 s, sem GUI
 npm run test:tasks   # só tarefas (armazenamento, exclusão com desfazer, durabilidade/limpeza)
 npm run test:e2e     # interface de tarefas no app REAL via CDP; compila antes; precisa de sessão gráfica
 npm run test:e2e:focus # modo foco no app REAL (~1,5 min: inclui uma sessão de 1 min até o fim)
+npm run test:e2e:settings # configurações (tamanhos, cor, balões, painel) no app REAL
 ```
 
 Antes de dar uma tarefa por concluída: `npm run build` limpo e `npm test` verde; se mexeu na
-interface de tarefas ou na ilha, também `npm run test:e2e`; se mexeu no modo foco, `npm run test:e2e:focus`.
+interface de tarefas ou na ilha, também `npm run test:e2e`; se mexeu no modo foco, `npm run test:e2e:focus`; se mexeu em preferências/tamanhos/balões, `npm run test:e2e:settings`.
 
 ## Arquitetura em 8 linhas
 
@@ -74,7 +75,16 @@ interface de tarefas ou na ilha, também `npm run test:e2e`; se mexeu no modo fo
   `transaction()`.
 - **Encoding:** gravar JSON/configs em UTF-8 **sem BOM** (um BOM quebra o Vite). Cuidado com `Set-Content
   -Encoding UTF8` do Windows PowerShell 5.1.
-- **Terminal novo no Windows:** o Node pode não estar no PATH (`C:\Program Files\nodejs`); `npm.ps1` pode
+- **Tamanho:** nunca use px da janela para decidir layout interno; o renderer vive em coordenadas "base" e o
+  `.shell` é ampliado por `--ui-scale` (D20). Constantes de geometria são base; o main aplica o fator.
+- **Processos externos:** nada de `powershell -EncodedCommand`/`-ExecutionPolicy` (antivírus; travou em teste).
+  Scripts curtos vão em `-Command` simples.
+- **Atalho global:** conferir `globalShortcut.isRegistered`; Ctrl+Alt+Espaço costuma estar ocupado.
+- **Testes com relógio falso:** `mock.timers.tick` não executa timers criados dentro de callbacks no mesmo
+  tick; avance em passos (ex.: 60 × 1 s). Scripts de depuração e2e devem ficar em `tests/e2e/` (a raiz do
+  app é calculada a partir deles) e sempre matar o Electron no `finally`.
+- **Falas do Mochi:** novas frases vão em `src/features/personality/personality.ts` (≤ 38 caracteres; o teste
+  confere). Nunca cobrar nem julgar a pessoa.- **Terminal novo no Windows:** o Node pode não estar no PATH (`C:\Program Files\nodejs`); `npm.ps1` pode
   ser bloqueado pela política de execução (use `npm.cmd` ou `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`).
 - **Testar sem tocar nos dados do usuário:** rode o Electron com `--user-data-dir=<pasta temporária>`.
   O banco real fica em `%APPDATA%\mochi-desktop\data\mochi.db` e **nunca** deve ser alterado por testes.

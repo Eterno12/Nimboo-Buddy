@@ -1,23 +1,39 @@
 import path from 'node:path';
-import { app, BrowserWindow, ipcMain, Menu, Notification, screen, session, type Tray } from 'electron';
-import { IPC } from '../shared/ipc';
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu, Notification, screen, session, type Tray } from 'electron';
+import { IPC, type PanelView, type SettingsSnapshot } from '../shared/ipc';
+import type { Settings } from '../shared/settings';
 import { createPanelWindow } from './windows';
 import { createTray } from './tray';
-import { createSettingsStore } from './settingsStore';
+import { createSettingsStore, type SettingsStore } from './settingsStore';
 import { createWindowModeManager, type WindowModeManager } from './windowMode';
 import { startTasksService, type TasksService } from './tasksService';
 import { startFocusService, type FocusService } from './focusService';
+import { startSettingsService, type SettingsService } from './settingsService';
+import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
 
 let mascot: BrowserWindow | null = null;
 let windowMode: WindowModeManager | null = null;
 let tasks: TasksService | null = null;
 let focus: FocusService | null = null;
+let settingsStore: SettingsStore | null = null;
+let settingsService: SettingsService | null = null;
 let panel: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
+/** Tela do painel pedida por quem o abriu; entregue uma vez quando o painel (novo) a pede. */
+let pendingPanelView: PanelView = 'home';
+/** O atalho global escolhido está registrado (outro app pode já tê-lo). */
+let shortcutActive = false;
+let fullscreenWatcher: FullscreenWatcher | null = null;
+/** O Mochi foi escondido por causa de um app em tela cheia (e não pela pessoa). */
+let hiddenByFullscreen = false;
 
-function showPanel(): void {
+const isAppUrl = (url: string): boolean =>
+  process.env.VITE_DEV_SERVER_URL ? url.startsWith(process.env.VITE_DEV_SERVER_URL) : url.startsWith('file://');
+
+function showPanel(view: PanelView = 'home'): void {
   if (!panel || panel.isDestroyed()) {
+    pendingPanelView = view;
     panel = createPanelWindow();
     // Fechar o painel apenas o oculta, exceto ao sair do app.
     panel.on('close', (event) => {
@@ -29,14 +45,96 @@ function showPanel(): void {
     panel.once('ready-to-show', () => panel?.show());
     return;
   }
+  panel.webContents.send(IPC.panelNavigate, view);
   panel.show();
   panel.focus();
 }
 
 function toggleMascot(): void {
   if (!mascot || mascot.isDestroyed()) return;
+  hiddenByFullscreen = false; // a escolha da pessoa vale mais que a automática
   if (mascot.isVisible()) mascot.hide();
   else mascot.show();
+}
+
+/** O que o renderer precisa saber além das preferências. */
+function settingsSnapshot(): SettingsSnapshot {
+  return {
+    settings: (settingsStore as SettingsStore).get(),
+    packaged: app.isPackaged,
+    shortcutActive,
+    effective: windowMode?.getScales() ?? { islandScale: 1, mochiScale: 1 },
+  };
+}
+
+/** Atalho global: na ilha, abre direto nas tarefas; no modo flutuante, abre o painel. */
+function onGlobalShortcut(): void {
+  hiddenByFullscreen = false;
+  if (windowMode?.getMode() === 'floating') {
+    showPanel();
+    return;
+  }
+  void windowMode?.summon();
+}
+
+/** (Re)registra o atalho global. `null` desliga. Falha (atalho em uso por outro app) não é erro fatal. */
+function applyShortcut(accelerator: string | null): void {
+  globalShortcut.unregisterAll();
+  shortcutActive = false;
+  if (!accelerator) return;
+  try {
+    globalShortcut.register(accelerator, onGlobalShortcut);
+    // Confere pelo estado real: o retorno de `register` nem sempre reflete o registro no Windows.
+    shortcutActive = globalShortcut.isRegistered(accelerator);
+  } catch (error) {
+    console.error('Não foi possível registrar o atalho global:', error);
+  }
+}
+
+/** Só no app instalado: em desenvolvimento registraria o executável do Electron, não o Mochi. */
+function applyLaunchAtLogin(enabled: boolean): void {
+  if (!app.isPackaged) return;
+  try {
+    app.setLoginItemSettings({ openAtLogin: enabled });
+  } catch (error) {
+    console.error('Não foi possível ajustar "iniciar com o Windows":', error);
+  }
+}
+
+/** Esconde o Mochi enquanto há um app em tela cheia e o traz de volta depois. */
+function applyDoNotDisturb(enabled: boolean): void {
+  if (!enabled) {
+    fullscreenWatcher?.stop();
+    fullscreenWatcher = null;
+    if (hiddenByFullscreen && mascot && !mascot.isDestroyed()) mascot.show();
+    hiddenByFullscreen = false;
+    return;
+  }
+  if (fullscreenWatcher) return;
+  fullscreenWatcher = startFullscreenWatcher({
+    onChange: (fullscreen) => {
+      if (!mascot || mascot.isDestroyed()) return;
+      if (fullscreen) {
+        if (mascot.isVisible()) {
+          hiddenByFullscreen = true;
+          mascot.hide();
+        }
+      } else if (hiddenByFullscreen) {
+        hiddenByFullscreen = false;
+        mascot.show();
+      }
+    },
+  });
+}
+
+/** Efeitos de uma mudança de preferências que vão além de redesenhar as janelas. */
+function applySettingsChange(previous: Settings, next: Settings): void {
+  if (previous.islandScale !== next.islandScale || previous.mochiScale !== next.mochiScale) {
+    windowMode?.refreshLayout();
+  }
+  if (previous.shortcut !== next.shortcut) applyShortcut(next.shortcut);
+  if (previous.launchAtLogin !== next.launchAtLogin) applyLaunchAtLogin(next.launchAtLogin);
+  if (previous.doNotDisturb !== next.doNotDisturb) applyDoNotDisturb(next.doNotDisturb);
 }
 
 function buildMenu(): Menu {
@@ -62,7 +160,8 @@ function buildMenu(): Menu {
   }
 
   return Menu.buildFromTemplate([
-    { label: 'Mostrar painel', click: showPanel },
+    { label: 'Mostrar painel', click: () => showPanel() },
+    { label: 'Configurações', click: () => showPanel('settings') },
     { label: mascotVisible ? 'Ocultar mascote' : 'Mostrar mascote', click: toggleMascot },
     ...modeItems,
     { type: 'separator' },
@@ -140,19 +239,46 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     registerDragHandlers();
     const settings = createSettingsStore(path.join(app.getPath('userData'), 'settings.json'));
+    settingsStore = settings;
     // O banco fica em userData/data; só o processo principal o abre.
     tasks = startTasksService({
       dbPath: path.join(app.getPath('userData'), 'data', 'mochi.db'),
-      isAppUrl: (url) =>
-        process.env.VITE_DEV_SERVER_URL ? url.startsWith(process.env.VITE_DEV_SERVER_URL) : url.startsWith('file://'),
+      isAppUrl,
     });
     windowMode = createWindowModeManager(settings);
     mascot = windowMode.window;
+
+    // Painel: tela inicial pedida por quem o abriu (menu da bandeja, engrenagem da ilha).
+    const trustedSender = (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      return !!win && !win.isDestroyed() && event.senderFrame === event.sender.mainFrame && isAppUrl(event.senderFrame?.url ?? '');
+    };
+    ipcMain.handle(IPC.panelInitialView, (event): PanelView => {
+      if (!trustedSender(event)) return 'home';
+      const view = pendingPanelView;
+      pendingPanelView = 'home';
+      return view;
+    });
+    ipcMain.on(IPC.panelOpenSettings, (event) => {
+      if (trustedSender(event)) showPanel('settings');
+    });
+
+    // Preferências: tamanhos, atalho global, iniciar com o Windows, não incomodar.
+    settingsService = startSettingsService({
+      store: settings,
+      isAppUrl,
+      snapshot: settingsSnapshot,
+      onChanged: applySettingsChange,
+    });
+    const initial = settings.get();
+    applyShortcut(initial.shortcut);
+    applyLaunchAtLogin(initial.launchAtLogin);
+    applyDoNotDisturb(initial.doNotDisturb);
+
     // O temporizador vive no main; ao terminar, a ilha volta (se estava escondida) ou
     // avisa por notificação quando o mascote está oculto.
     focus = startFocusService({
-      isAppUrl: (url) =>
-        process.env.VITE_DEV_SERVER_URL ? url.startsWith(process.env.VITE_DEV_SERVER_URL) : url.startsWith('file://'),
+      isAppUrl,
       onFinished: (kind) => {
         const visible = !!mascot && !mascot.isDestroyed() && mascot.isVisible();
         if (!visible && Notification.isSupported()) {
@@ -173,6 +299,9 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     quitting = true;
     if (cursorTimer) clearInterval(cursorTimer);
+    globalShortcut.unregisterAll();
+    fullscreenWatcher?.stop();
+    settingsService?.close();
     windowMode?.dispose();
     focus?.close();
     tasks?.close();

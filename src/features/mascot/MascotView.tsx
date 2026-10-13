@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Mascot } from './Mascot';
 import { useMascot } from './useMascot';
 import { MASCOT_STATES } from './mascotStates';
@@ -8,6 +8,11 @@ import { IslandContent, type IslandView } from '../island/IslandContent';
 import { useDraft } from '../tasks/draftStore';
 import { useFocus } from '../focus/useFocus';
 import { FocusBadge } from '../focus/FocusView';
+import { useSettings } from '../settings/useSettings';
+import { useSpeech } from '../personality/useSpeech';
+import type { SpeechEvent } from '../personality/personality';
+import { SpeechBubble } from '../personality/SpeechBubble';
+import { configureSound, playSound } from '../audio/soundEngine';
 import '../island/island.css';
 
 const DRAG_THRESHOLD_PX = 4;
@@ -41,14 +46,23 @@ export function MascotView() {
   /** Uma sessão de foco terminou com a ilha escondida: ao voltar, abre na tela de foco. */
   const openFocusOnShown = useRef(false);
   const showFocusRef = useRef<() => void>(() => {});
+  /** O atalho global pediu a ilha com ela escondida: ao voltar, abre direto nas tarefas. */
+  const summonOnShown = useRef(false);
+  const summonRef = useRef<() => void>(() => {});
+  /** `say` só existe depois de `useSpeech` (que depende do estado da ilha): usa ref. */
+  const sayRef = useRef<(event: SpeechEvent) => void>(() => {});
   const { presentation, presenceRef, exitUp } = usePresence({
     onShown: (state) => {
       greet(); // chegou em cena: cumprimenta
+      sayRef.current('hello');
       if (state.mode === 'island') {
         islandRef.current?.resume(ISLAND_FIRST_EXPOSURE_MS);
         if (openFocusOnShown.current) {
           openFocusOnShown.current = false;
           showFocusRef.current();
+        } else if (summonOnShown.current) {
+          summonOnShown.current = false;
+          summonRef.current();
         }
       }
     },
@@ -56,6 +70,17 @@ export function MascotView() {
   const mode = presentation?.mode ?? null;
   const island = useIsland(mode, { exit: exitUp });
   islandRef.current = island;
+
+  // Preferências: tamanhos, cor, tempo para esconder, sons e balões.
+  const { settings, effective } = useSettings();
+  const scale = mode === 'island' ? effective.islandScale : effective.mochiScale;
+  const { setHideMs } = island;
+  useEffect(() => {
+    setHideMs(settings.hideDelaySec === 0 ? Infinity : settings.hideDelaySec * 1000);
+  }, [settings.hideDelaySec, setHideMs]);
+  useEffect(() => {
+    configureSound({ enabled: settings.soundEnabled, volume: settings.soundVolume });
+  }, [settings.soundEnabled, settings.soundVolume]);
 
   // Campo de tarefa com foco ou com rascunho: a ilha não recolhe por inatividade.
   const { hold } = useDraft();
@@ -80,9 +105,28 @@ export function MascotView() {
   // Modo foco (temporizador): o estado vem do main; aqui só se exibe.
   const focus = useFocus();
 
-  // Uma tarefa foi concluída (em qualquer janela): o Mochi comemora.
+  // Balões de fala (personalidade). Ficam de fora enquanto a ilha está aberta.
+  const focusActive = focus.state.status === 'running' || focus.state.status === 'paused';
+  const speech = useSpeech({
+    enabled: settings.bubbles,
+    mood: mascot.mood,
+    focusActive,
+    suppressed: inIsland && island.open,
+  });
+  sayRef.current = speech.say;
+
+  // Uma tarefa foi concluída (em qualquer janela): o Mochi comemora, fala e faz "plim".
   // Reabrir ou excluir não disparam este evento.
-  useEffect(() => window.mochi.tasks.onCompleted(() => celebrate()), [celebrate]);
+  useEffect(
+    () =>
+      window.mochi.tasks.onCompleted(() => {
+        celebrate();
+        playSound('taskDone');
+        sayRef.current('taskCompleted');
+      }),
+    [celebrate],
+  );
+  useEffect(() => window.mochi.tasks.onCreated(() => playSound('tick')), []);
 
   // Uma sessão de foco terminou: o Mochi comemora e a ilha mostra o resultado. Se ela
   // estava escondida, o main a traz de volta e a tela de foco abre quando ela chegar.
@@ -94,8 +138,10 @@ export function MascotView() {
   };
   useEffect(
     () =>
-      window.mochi.focus.onFinished(() => {
+      window.mochi.focus.onFinished((kind) => {
         celebrate();
+        playSound(kind === 'focus' ? 'focusDone' : 'breakDone');
+        sayRef.current(kind === 'focus' ? 'focusFinished' : 'breakFinished');
         if (modeRef.current === 'island') {
           showFocusRef.current();
         } else {
@@ -104,6 +150,59 @@ export function MascotView() {
       }),
     [celebrate],
   );
+
+  // Sons e falas das mudanças do temporizador (início, pausa, retomada).
+  const previousFocus = useRef(focus.state.status);
+  useEffect(() => {
+    const before = previousFocus.current;
+    const now = focus.state.status;
+    previousFocus.current = now;
+    if (before === now) return;
+    if (now === 'running' && (before === 'idle' || before === 'finished')) {
+      playSound(focus.state.kind === 'focus' ? 'focusStart' : 'tick');
+      if (focus.state.kind === 'focus') sayRef.current('focusStart');
+    } else if (now === 'running' && before === 'paused') {
+      playSound('resume');
+    } else if (now === 'paused') {
+      playSound('pause');
+    }
+  }, [focus.state.status, focus.state.kind]);
+
+  // O atalho global pede a ilha: abre direto nas tarefas (com o campo de nova tarefa em foco).
+  summonRef.current = () => {
+    const anims = presenceRef.current?.getAnimations() ?? [];
+    void Promise.allSettled(anims.map((a) => a.finished)).then(() => {
+      island.expand();
+      void openTasks();
+    });
+  };
+  useEffect(
+    () =>
+      window.mochi.onSummon(() => {
+        if (modeRef.current === 'island') summonRef.current();
+        else summonOnShown.current = true;
+      }),
+    [],
+  );
+
+  // Reações do Mochi ao próprio estado: dormir, acordar, cócegas, emburrar.
+  const previousState = useRef(mascot.state);
+  useEffect(() => {
+    const before = previousState.current;
+    const now = mascot.state;
+    previousState.current = now;
+    if (before === now) return;
+    if (now === 'sleepy') sayRef.current('sleepy');
+    else if (before === 'sleepy' && now === 'stretch') sayRef.current('woke');
+    else if (now === 'annoyed') sayRef.current('annoyed');
+    else if (now === 'giggle') sayRef.current('giggle');
+  }, [mascot.state]);
+
+  // De vez em quando, uma frase solta (a personalidade decide se cabe: foco, intervalos, teto/hora).
+  useEffect(() => {
+    const id = window.setInterval(() => sayRef.current('idle'), 2 * 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   // Atalhos para inspecionar cada estado; existem apenas em `npm run dev`.
   useEffect(() => {
@@ -202,6 +301,7 @@ export function MascotView() {
       data-mode={mode}
       data-open={inIsland && island.open ? 'true' : 'false'}
       data-view={view}
+      style={{ '--ui-scale': scale } as CSSProperties}
       onPointerEnter={() => island.setHover(true)}
       onPointerLeave={() => island.setHover(false)}
       onPointerDown={onPointerDown}
@@ -235,6 +335,7 @@ export function MascotView() {
               focus={focus}
               onOpenTasks={() => void openTasks()}
               onOpenFocus={() => void openFocus()}
+              onOpenSettings={() => window.mochi.openSettings()}
               onBack={() => setView('home')}
             />
             {inIsland && <FocusBadge state={focus.state} />}
@@ -248,10 +349,12 @@ export function MascotView() {
             hop={mascot.hop}
             blinking={mascot.blinking}
             mood={mascot.mood}
+            palette={settings.color}
             onHopEnd={mascot.endHop}
             onHoverChange={mascot.hoverChange}
           />
         </div>
+        <SpeechBubble bubble={speech.bubble} placement={inIsland ? 'island' : 'floating'} />
       </div>
     </div>
   );

@@ -1,0 +1,203 @@
+/*
+ * Configurações (painel claro). Os valores de cor são os mesmos tokens verificados em
+ * `tasks.css` (texto >= 4,5:1; bordas e botões >= 3:1; `tests/contrast.test.ts` cobre este arquivo).
+ */
+.settings {
+  --s-bg: #fdf8f3;
+  --s-text: #3b3040;
+  --s-muted: #6f6478;
+  --s-field-bg: #ffffff;
+  --s-border: #857b8e;
+  --s-hover: #f1ebe5;
+  --s-accent: #25754a;
+  --s-accent-text: #ffffff;
+  --s-danger: #b3364f;
+  --s-focus: #25754a;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--s-text);
+  font: 400 13.5px/1.35 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  user-select: none;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.settings-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--s-muted);
+  cursor: pointer;
+}
+
+.settings-back:hover {
+  background: var(--s-hover);
+  color: var(--s-text);
+}
+
+.settings-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.settings-group legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.settings-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-chip {
+  min-width: 46px;
+  height: 32px;
+  padding: 0 4px;
+  border: 1px solid var(--s-border);
+  border-radius: 10px;
+  background: var(--s-field-bg);
+  color: var(--s-text);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.settings-chip:hover {
+  background: var(--s-hover);
+}
+
+.settings-chip[aria-checked='true'] {
+  border-color: var(--s-accent);
+  background: var(--s-accent);
+  color: var(--s-accent-text);
+}
+
+.settings-swatches {
+  display: flex;
+  gap: 10px;
+}
+
+.settings-swatch {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid var(--s-border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.settings-swatch[aria-checked='true'] {
+  border-color: var(--s-accent);
+  box-shadow: 0 0 0 2px var(--s-bg), 0 0 0 4px var(--s-accent);
+}
+
+.settings-hint {
+  margin: 6px 0 0;
+  color: var(--s-muted);
+  font-size: 12.5px;
+}
+
+.settings-hint[data-tone='warn'] {
+  color: var(--s-danger);
+}
+
+.settings-hint[data-tone='ok'] {
+  color: var(--s-accent);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.settings-row select {
+  max-width: 190px;
+  padding: 5px 8px;
+  border: 1px solid var(--s-border);
+  border-radius: 8px;
+  background: var(--s-field-bg);
+  color: var(--s-text);
+  font: inherit;
+}
+
+.settings-row input[type='range'] {
+  flex: 1;
+  accent-color: var(--s-accent);
+}
+
+.settings-check {
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.settings-check input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--s-accent);
+}
+
+.settings-check small {
+  display: block;
+  margin-top: 1px;
+  color: var(--s-muted);
+  font-size: 12.5px;
+}
+
+.settings-small {
+  padding: 5px 12px;
+  border: 1px solid var(--s-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--s-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-small:hover:not(:disabled) {
+  background: var(--s-hover);
+}
+
+.settings-small:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.settings :focus-visible {
+  outline: 2px solid var(--s-focus);
+  outline-offset: 2px;
+}

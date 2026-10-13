@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC, type CursorPoint, type MochiApi } from '../shared/ipc';
+import { IPC, type CursorPoint, type MochiApi, type SettingsSnapshot } from '../shared/ipc';
 import type { Entrance, PresentationState } from '../shared/presentation';
 import type { FocusKind, FocusState } from '../shared/focus';
 
@@ -49,8 +49,16 @@ const api: MochiApi = {
     reopen: (id) => ipcRenderer.invoke(IPC.tasksReopen, id),
     scheduleRemove: (id) => ipcRenderer.invoke(IPC.tasksScheduleRemove, id),
     undoRemove: (id) => ipcRenderer.invoke(IPC.tasksUndoRemove, id),
+    notice: async () => {
+      const value = await ipcRenderer.invoke(IPC.tasksNotice);
+      return typeof value === 'string' ? value : null;
+    },
+    dismissNotice: async () => {
+      await ipcRenderer.invoke(IPC.tasksDismissNotice);
+    },
     onChange: (listener) => listen<[]>(IPC.tasksChanged, () => listener()),
     onCompleted: (listener) => listen<[]>(IPC.tasksCompleted, () => listener()),
+    onCreated: (listener) => listen<[]>(IPC.tasksCreated, () => listener()),
   },
   focus: {
     getState: () => ipcRenderer.invoke(IPC.focusGet),
@@ -60,6 +68,19 @@ const api: MochiApi = {
     cancel: () => ipcRenderer.invoke(IPC.focusCancel),
     onChange: (listener) => listen<[FocusState]>(IPC.focusChanged, (state) => listener(state)),
     onFinished: (listener) => listen<[FocusKind]>(IPC.focusFinished, (kind) => listener(kind)),
+  },
+  settings: {
+    get: () => ipcRenderer.invoke(IPC.settingsGet),
+    update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
+    onChange: (listener) => listen<[SettingsSnapshot]>(IPC.settingsChanged, (s) => listener(s)),
+  },
+  bubbleVisible: (visible) => ipcRenderer.send(IPC.bubbleVisible, visible === true),
+  onSummon: (listener) => listen<[]>(IPC.islandSummon, () => listener()),
+  openSettings: () => ipcRenderer.send(IPC.panelOpenSettings),
+  panel: {
+    initialView: async () => ((await ipcRenderer.invoke(IPC.panelInitialView)) === 'settings' ? 'settings' : 'home'),
+    onNavigate: (listener) =>
+      listen<[unknown]>(IPC.panelNavigate, (view) => listener(view === 'settings' ? 'settings' : 'home')),
   },
   islandHiding: () => ipcRenderer.send(IPC.islandHiding),
   islandHidden: () => ipcRenderer.send(IPC.islandHidden),

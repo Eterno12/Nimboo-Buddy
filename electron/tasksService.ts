@@ -10,7 +10,8 @@ import {
   type TaskResult,
   type TaskSnapshot,
 } from '../shared/tasks';
-import { openDatabase } from './tasks/database';
+import { openDatabaseDetailed } from './tasks/database';
+import { SchemaTooNewError } from './tasks/migrations';
 import { SqliteTaskRepository } from './tasks/sqliteTaskRepository';
 import { RemovalScheduler } from './tasks/removalScheduler';
 import type { DatabaseSync } from 'node:sqlite';
@@ -37,6 +38,8 @@ const CHANNELS = [
   IPC.tasksReopen,
   IPC.tasksScheduleRemove,
   IPC.tasksUndoRemove,
+  IPC.tasksNotice,
+  IPC.tasksDismissNotice,
 ];
 
 /**
@@ -47,6 +50,8 @@ export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): Ta
   let db: DatabaseSync | null = null;
   let repo: SqliteTaskRepository | null = null;
   let scheduler: RemovalScheduler | null = null;
+  /** Aviso ao usuário sobre o armazenamento (arquivo recuperado, banco de versão mais nova, falha). */
+  let notice: string | null = null;
 
   /**
    * Avisa todas as janelas. Cada envio é isolado: uma janela com problema não
@@ -59,6 +64,7 @@ export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): Ta
       try {
         win.webContents.send(IPC.tasksChanged);
         if (change?.type === 'completed') win.webContents.send(IPC.tasksCompleted);
+        if (change?.type === 'created') win.webContents.send(IPC.tasksCreated);
       } catch (error) {
         console.error('Falha ao avisar uma janela sobre mudanças nas tarefas:', error);
       }
@@ -66,13 +72,23 @@ export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): Ta
   };
 
   try {
-    db = openDatabase(dbPath);
+    const opened = openDatabaseDetailed(dbPath);
+    db = opened.db;
+    if (opened.recoveredFrom) {
+      notice =
+        'O arquivo das suas tarefas estava danificado e foi guardado à parte. Começamos uma lista nova; ' +
+        'se precisar das tarefas antigas, a cópia está na pasta de dados do Mochi.';
+    }
     repo = new SqliteTaskRepository(db, { onChange: (c) => broadcast(c) });
     scheduler = new RemovalScheduler(repo, { onChange: () => broadcast() });
     repo.purgeExpired(); // limpeza na inicialização
   } catch (error) {
     // O app segue funcionando (mascote, ilha); só as tarefas ficam indisponíveis.
     console.error('Não foi possível abrir o banco de tarefas:', error);
+    notice =
+      error instanceof SchemaTooNewError
+        ? 'Suas tarefas foram criadas por uma versão mais nova do Mochi. Atualize o app para usá-las.'
+        : 'Não foi possível abrir suas tarefas agora. Elas continuam salvas; tente reiniciar o Mochi.';
     try {
       db?.close();
     } catch {
@@ -129,6 +145,11 @@ export function startTasksService({ dbPath, isAppUrl }: TasksServiceOptions): Ta
   handle<Task>(IPC.tasksReopen, async (ctx, id) => gone<Task>(ctx, id) ?? ctx.repo.reopen(id as string));
   handle<PendingRemoval>(IPC.tasksScheduleRemove, ({ scheduler: s }, id) => s.schedule(id as string));
   handle<Task>(IPC.tasksUndoRemove, ({ scheduler: s }, id) => s.undo(id as string));
+
+  ipcMain.handle(IPC.tasksNotice, (event): string | null => (trusted(event) ? notice : null));
+  ipcMain.handle(IPC.tasksDismissNotice, (event): void => {
+    if (trusted(event)) notice = null;
+  });
 
   return {
     close() {

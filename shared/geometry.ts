@@ -129,3 +129,27 @@ export function islandBounds(display: DisplayInfo, size: Size, topOffset = 0): R
     height,
   };
 }
+
+/** Retângulo ampliado por um fator (valores inteiros, como o Windows exige para formas). */
+export function scaleRect(rect: Rect, scale: number): Rect {
+  return {
+    x: Math.round(rect.x * scale),
+    y: Math.round(rect.y * scale),
+    width: Math.round(rect.width * scale),
+    height: Math.round(rect.height * scale),
+  };
+}
+
+/** Tamanho ampliado por um fator. */
+export function scaleSize(size: Size, scale: number): Size {
+  return { width: Math.round(size.width * scale), height: Math.round(size.height * scale) };
+}
+
+/**
+ * Limita o fator pedido para que `base` ampliado caiba em `area` (monitor pequeno, escala alta
+ * do Windows). Nunca devolve menos de 0,5.
+ */
+export function fitScale(scale: number, base: Size, area: Rect): number {
+  const max = Math.min(area.width / base.width, area.height / base.height);
+  return Math.max(0.5, Math.floor(Math.min(scale, max) * 100) / 100);
+}

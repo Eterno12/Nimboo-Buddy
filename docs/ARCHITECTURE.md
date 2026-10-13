@@ -37,6 +37,8 @@ de 380×520, `#panel`, criada sob demanda; fechar só oculta).
 | `electron/windows.ts` | `createMascotWindow`, `createPanelWindow`, `secureWebPreferences`, bloqueio de navegação |
 | `electron/preload.ts` | Única superfície exposta ao renderer (ver §4) |
 | `electron/settingsStore.ts` | `settings.json`: leitura tolerante, escrita atômica com debounce |
+| `electron/settingsService.ts` | IPC das preferências (campos editáveis, difusão de mudanças) |
+| `electron/dnd.ts` | Vigia de tela cheia (`SHQueryUserNotificationState` via PowerShell oculto) + parser |
 | `electron/tasksService.ts` | Liga repositório + agendador ao IPC; difunde mudanças; limpeza horária |
 | `electron/tasks/` | `database.ts` (abrir/recuperar), `migrations.ts`, `sqliteTaskRepository.ts`, `removalScheduler.ts` |
 | `electron/focusService.ts` | Liga o temporizador ao IPC (remetente validado); difunde `focus:changed`/`focus:finished` |
@@ -48,7 +50,7 @@ de 380×520, `#panel`, criada sob demanda; fechar só oculta).
 | `src/features/tasks/` | `TasksView.tsx`, `useTasks.ts`, `draftStore.ts`, `tasks.css` |
 | `src/features/panel/` | `PanelView.tsx` (hospeda `FocusView` e `TasksView`) |
 | `scripts/` | `dev.mjs` (Vite + Electron), `build-electron.mjs` (esbuild → `dist-electron/*.cjs`) |
-| `tests/` | Testes unitários (`*.test.ts`), `helpers/`, `e2e/tasks-ui.e2e.mjs`, `e2e/focus-ui.e2e.mjs` |
+| `tests/` | Testes unitários (`*.test.ts`), `helpers/`, `e2e/tasks-ui.e2e.mjs`, `e2e/focus-ui.e2e.mjs`, `e2e/settings-ui.e2e.mjs` |
 
 ## 3. Janela do mascote e suas apresentações
 
@@ -128,6 +130,13 @@ sem expor `ipcRenderer` nem o objeto `event`.
 | `tasks:schedule-remove` / `tasks:undo-remove` | R→M | invoke | excluir com desfazer |
 | `tasks:changed` | M→R | evento | recarregue a lista |
 | `tasks:completed` | M→R | evento | só ao concluir (dispara `celebrate`) |
+| `tasks:created` | M→R | evento | tarefa criada (som de "tec") |
+| `tasks:notice` / `tasks:dismiss-notice` | R→M | invoke | aviso de armazenamento (arquivo recuperado etc.) |
+| `settings:get/update` | R→M | invoke | preferências (campos editáveis validados no main) |
+| `settings:changed` | M→R | evento | snapshot novo (preferências + tamanhos efetivos + estado do atalho) |
+| `bubble:visible` | R→M | send | há balão: a forma da ilha recolhida inclui a área dele |
+| `island:summon` | M→R | evento | atalho global: abrir direto nas tarefas |
+| `panel:open-settings` / `panel:initial-view` / `panel:navigate` | R→M / R→M / M→R | send / invoke / evento | navegação do painel |
 | `focus:get/start/pause/resume/cancel` | R→M | invoke | modo foco; `start(kind, minutes)` validado no main; respostas `FocusResult` |
 | `focus:changed` | M→R | evento | estado novo (início/pausa/retomada/fim/cancelamento) — **não** a cada segundo |
 | `focus:finished` | M→R | evento | sessão terminou sozinha (comemorar; trazer a ilha) |
@@ -192,7 +201,7 @@ receber `tasks:changed`.
 
 | O quê | Onde | Notas |
 |---|---|---|
-| Preferências | `userData/settings.json` | `{version:2, mode, floating:{x,y}|null, displayId}`; v1 migra para `island`; escrita atômica; corrompido → `.bak` |
+| Preferências | `userData/settings.json` | `{version:3, mode, floating, displayId, islandScale, mochiScale, hideDelaySec, launchAtLogin, shortcut, soundEnabled, soundVolume, bubbles, doNotDisturb, color}`; v1/v2 migram com padrões; escrita atômica; corrompido → `.bak` |
 | Tarefas | `userData/data/mochi.db` | ver §5 |
 | Rascunho, humor, estado do mascote | memória do renderer | não persistem entre execuções (decisão) |
 
@@ -223,3 +232,25 @@ receber `tasks:changed`.
 - **Timers ou lógica que precisam sobreviver à ilha recolhida/oculta** devem morar no **main** (como o
   agendador de exclusões), não no componente: o conteúdo da ilha é desmontado ao recolher.
 - Não remontar `Mascot` ao trocar de apresentação (perde estado e reinicia animações).
+
+## 10. Configurações, sons, personalidade e "não incomodar"
+
+- **Preferências (v3):** `shared/settings.ts` (`parseSettings`, passos permitidos) → `electron/settingsService.ts`
+  (IPC `settings:get/update/changed`, lista de campos editáveis) → `useSettings` no renderer. Os efeitos fora
+  das janelas (layout, atalho, login, tela cheia) ficam em `applySettingsChange` (`main.ts`).
+- **Tamanho:** `windowMode.sizes()` aplica `fitScale` ao pedido; `islandShapes()` amplia todas as formas e
+  acrescenta a área do balão (`bubble:visible`). O renderer ampliou o `.shell` com `--ui-scale` (efetivo, vindo
+  do snapshot). `refreshLayout()` reaplica tamanho/posição quando a preferência muda.
+- **Painel:** `PanelView` tem duas telas (`home`, `settings`). `main.showPanel(view)` entrega a tela inicial
+  por `panel:initial-view` (janela nova) ou `panel:navigate` (janela existente). A engrenagem da ilha envia
+  `panel:open-settings`; a bandeja tem "Configurações".
+- **Atalho global:** `applyShortcut` (`globalShortcut`, conferido por `isRegistered`) → `windowMode.summon()`
+  → evento `island:summon` → o renderer espera a entrada terminar, expande a ilha e abre as tarefas.
+  No modo flutuante abre o painel.
+- **Não incomodar:** `electron/dnd.ts` (vigia PowerShell + parser testável) → `applyDoNotDisturb` esconde o
+  mascote (`hiddenByFullscreen`) e o devolve ao sair da tela cheia; escolhas manuais da pessoa têm prioridade.
+- **Sons:** `src/features/audio/` (`sounds.ts` planos puros; `soundEngine.ts` WebAudio). Só a janela do
+  mascote toca os sons de eventos.
+- **Personalidade/balões:** `src/features/personality/` (`personality.ts` escolhedor puro, `useSpeech`,
+  `SpeechBubble`). Falas: boas-vindas por hora, tarefa concluída, foco, sono/acordar, cócegas, ociosa.
+- **Cor:** paletas por `data-palette` + variáveis `--m-*` em `mascot.css`; `Mascot.tsx` usa `var()`.

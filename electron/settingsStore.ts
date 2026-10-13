@@ -55,7 +55,7 @@ export function createSettingsStore(filePath: string, debounceMs = 300): Setting
   return {
     get: () => ({ ...current, floating: current.floating ? { ...current.floating } : null }),
     update(patch) {
-      current = parseSettings({ ...current, ...patch, version: 2 });
+      current = parseSettings({ ...current, ...patch, version: 3 });
       dirty = true;
       clearTimeout(timer);
       timer = setTimeout(write, debounceMs);

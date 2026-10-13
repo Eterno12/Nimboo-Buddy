@@ -1,0 +1,170 @@
+import type { Mood } from '../mascot/mascotStates.ts';
+
+/** Coisas que o Mochi pode comentar. Cada uma tem frases curtas (máx. ~38 caracteres). */
+export type SpeechEvent =
+  | 'hello'
+  | 'taskCompleted'
+  | 'focusStart'
+  | 'focusFinished'
+  | 'breakFinished'
+  | 'sleepy'
+  | 'woke'
+  | 'annoyed'
+  | 'giggle'
+  | 'idle';
+
+export type DayPart = 'morning' | 'afternoon' | 'evening' | 'night';
+
+export function dayPartOf(date: Date): DayPart {
+  const h = date.getHours();
+  if (h >= 5 && h < 12) return 'morning';
+  if (h >= 12 && h < 18) return 'afternoon';
+  if (h >= 18 && h < 23) return 'evening';
+  return 'night';
+}
+
+interface Line {
+  text: string;
+  /** Só neste(s) humor(es). */
+  mood?: readonly Mood[];
+  /** Só nesta parte do dia. */
+  part?: DayPart;
+}
+
+const L = (text: string, extra: Omit<Line, 'text'> = {}): Line => ({ text, ...extra });
+
+/** O texto é do Mochi: fofo, brincalhão, nunca cobra nem julga. */
+export const LINES: Record<SpeechEvent, readonly Line[]> = {
+  hello: [
+    L('Bom dia! Vamos nessa?', { part: 'morning' }),
+    L('Bom dia~ já tomou água?', { part: 'morning' }),
+    L('Dia novo, tarefas novas!', { part: 'morning' }),
+    L('Boa tarde! Tudo certo por aí?', { part: 'afternoon' }),
+    L('Oi, voltei! Precisa de mim?', { part: 'afternoon' }),
+    L('Boa noite! Como foi o dia?', { part: 'evening' }),
+    L('Oi~ já fez uma pausa hoje?', { part: 'evening' }),
+    L('Já é tarde... bora descansar?', { part: 'night' }),
+    L('Madrugada, hein? Água e cama!', { part: 'night' }),
+    L('Oi! Tava com saudade.', { mood: ['low'] }),
+  ],
+  taskCompleted: [
+    L('Mais uma! Mandou bem!'),
+    L('Feito! Você é demais.'),
+    L('Tarefa concluída. Yay!'),
+    L('Isso aí!'),
+    L('Uma a menos. Orgulho!'),
+  ],
+  focusStart: [
+    L('Foco ligado. Fico quietinho.'),
+    L('Bora! Tô torcendo por você.'),
+    L('Tec tec... foco total.'),
+  ],
+  focusFinished: [
+    L('Terminou! Hora de respirar.'),
+    L('Sessão concluída! Que orgulho.'),
+    L('Boa! Que tal uma pausa?'),
+  ],
+  breakFinished: [
+    L('Pausa acabou. Pronto pra mais?'),
+    L('Voltando? Eu te espero aqui.'),
+  ],
+  sleepy: [L('Zzz... só um cochilinho.'), L('Tô com soninho...'), L('Vou dar uma cochilada.')],
+  woke: [L('Hm? Ah, oi!'), L('Opa, acordei!'), L('Voltei!')],
+  annoyed: [L('Ei, calma! Cócegas!'), L('Para, para! Hihi... não.'), L('Tá bom, já entendi!')],
+  giggle: [L('Hihi!'), L('Hehe, cosquinhas!'), L('Aiii, que gostoso!')],
+  idle: [
+    L('Se precisar, é só chamar.'),
+    L('Lembra de beber água!'),
+    L('Postura! Ombros pra trás.'),
+    L('Que tal alongar um pouquinho?'),
+    L('Eu tô aqui, viu?'),
+    L('Respira fundo. Isso.'),
+    L('Faz tempo sem carinho... snif.', { mood: ['low'] }),
+    L('Tava pensando em você.', { mood: ['high'] }),
+    L('Dia bom pra riscar tarefas!', { mood: ['high'] }),
+  ],
+};
+
+/** Tempo mínimo (ms) entre duas falas do MESMO tipo. Evita repetição sem silenciar eventos importantes. */
+const EVENT_COOLDOWN_MS: Record<SpeechEvent, number> = {
+  hello: 20 * 60_000,
+  taskCompleted: 0,
+  focusStart: 0,
+  focusFinished: 0,
+  breakFinished: 0,
+  sleepy: 5 * 60_000,
+  woke: 3 * 60_000,
+  annoyed: 20_000,
+  giggle: 45_000,
+  idle: 4 * 60_000,
+};
+
+/** Falas "de fundo": somem enquanto o foco está correndo (o Mochi fica quietinho). */
+const SUPPRESSED_DURING_FOCUS: readonly SpeechEvent[] = ['hello', 'sleepy', 'woke', 'giggle', 'idle', 'annoyed'];
+
+/** Falas que passam por cima do intervalo mínimo geral (respondem a algo que a pessoa fez/terminou). */
+const URGENT: readonly SpeechEvent[] = ['taskCompleted', 'focusFinished', 'breakFinished', 'focusStart'];
+
+/** Intervalo mínimo entre quaisquer duas falas (ms). */
+export const MIN_GAP_MS = 9_000;
+/** Teto de falas "de fundo" (hello/idle/sleepy/woke/giggle) por hora. */
+export const AMBIENT_PER_HOUR = 8;
+
+export interface SpeechContext {
+  now: Date;
+  mood: Mood;
+  /** Há uma sessão de foco em andamento (rodando ou pausada). */
+  focusActive: boolean;
+}
+
+export interface Personality {
+  /** Texto a dizer agora, ou `null` se não deve falar (intervalo, foco, limite por hora). */
+  pick(event: SpeechEvent, context: SpeechContext): string | null;
+}
+
+/**
+ * Escolhe o que o Mochi diz. Regras: respeita o foco, nunca fala demais (intervalo geral, intervalo
+ * por tipo e teto por hora) e evita repetir as últimas frases. `random` é injetável para testes.
+ */
+export function createPersonality(random: () => number = Math.random): Personality {
+  const lastByEvent = new Map<SpeechEvent, number>();
+  const recent = new Map<SpeechEvent, string[]>();
+  const ambient: number[] = []; // instantes das falas "de fundo" na última hora
+  let lastAny = -Infinity;
+
+  return {
+    pick(event, ctx) {
+      const t = ctx.now.getTime();
+      if (ctx.focusActive && SUPPRESSED_DURING_FOCUS.includes(event)) return null;
+      if (!URGENT.includes(event) && t - lastAny < MIN_GAP_MS) return null;
+      if (t - (lastByEvent.get(event) ?? -Infinity) < EVENT_COOLDOWN_MS[event]) return null;
+
+      const isAmbient = !URGENT.includes(event);
+      if (isAmbient) {
+        while (ambient.length > 0 && t - ambient[0] > 3_600_000) ambient.shift();
+        if (ambient.length >= AMBIENT_PER_HOUR) return null;
+      }
+
+      const part = dayPartOf(ctx.now);
+      const candidates = LINES[event].filter(
+        (line) => (!line.mood || line.mood.includes(ctx.mood)) && (!line.part || line.part === part),
+      );
+      if (candidates.length === 0) return null;
+      const seen = recent.get(event) ?? [];
+      const fresh = candidates.filter((c) => !seen.includes(c.text));
+      const pool = fresh.length > 0 ? fresh : candidates;
+      const choice = pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))].text;
+
+      lastAny = t;
+      lastByEvent.set(event, t);
+      recent.set(event, [...seen, choice].slice(-3));
+      if (isAmbient) ambient.push(t);
+      return choice;
+    },
+  };
+}
+
+/** Duração de exibição do balão (ms): mínimo confortável + tempo de leitura. */
+export function bubbleDurationMs(text: string): number {
+  return Math.min(7000, 2600 + text.length * 55);
+}

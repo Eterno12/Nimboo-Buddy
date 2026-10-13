@@ -11,6 +11,7 @@ import {
 } from '../../../shared/tasks';
 import { draftStore, useDraft } from './draftStore';
 import { useTasks } from './useTasks';
+import { StorageNotice } from './StorageNotice';
 import './tasks.css';
 
 interface TasksViewProps {
@@ -196,6 +197,8 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
         <h2>Tarefas</h2>
         {tasks.active.length > 0 && <span className="tasks-count">{tasks.active.length}</span>}
       </header>
+
+      <StorageNotice />
 
       <form className="tasks-form" onSubmit={submit} noValidate>
         <textarea

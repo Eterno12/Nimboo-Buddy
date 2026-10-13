@@ -60,11 +60,13 @@ export function useIsland(mode: PresentationMode | null, { exit }: UseIslandOpti
   const actions = useMemo(
     () => ({
       toggle: () => ref.current?.toggle(),
-      expand: () => ref.current?.expand(),
       activity: () => ref.current?.activity(),
       setHover: (h: boolean) => ref.current?.setHover(h),
       setHold: (h: boolean) => ref.current?.setHold(h),
       transitionEnded: () => ref.current?.transitionEnded(),
+      expand: () => ref.current?.expand(),
+      /** Inatividade (recolhida) até a ilha se esconder; `Infinity` = nunca. */
+      setHideMs: (ms: number) => ref.current?.setHideMs(ms),
       /** A ilha está à vista: começa a contar o tempo para esconder. */
       resume: (graceMs: number) => ref.current?.resume(graceMs),
     }),

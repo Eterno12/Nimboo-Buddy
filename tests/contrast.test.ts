@@ -83,3 +83,52 @@ test('referência: os valores reais ficam dentro do esperado (guarda contra regr
   assert.ok(ratio(panel['--t-field-border'], panel['--t-bg']) >= 3);
   assert.ok(ratio(island['--t-field-border'], island['--t-bg']) >= 3);
 });
+
+/** Configurações: tokens `--s-*` de settings.css, no fundo do painel. */
+function readSettingsTokens(): Record<string, string> {
+  const css = fs.readFileSync(new URL('../src/features/settings/settings.css', import.meta.url), 'utf8');
+  const start = css.indexOf('.settings {');
+  assert.ok(start >= 0, 'bloco .settings não encontrado');
+  const body = css.slice(start, css.indexOf('}', start));
+  const out: Record<string, string> = {};
+  for (const m of body.matchAll(/(--s-[\w-]+):\s*(#[0-9a-fA-F]{6})\b/g)) out[m[1]] = m[2].toLowerCase();
+  return out;
+}
+
+test('configurações: texto >= 4,5:1 e componentes >= 3:1 no fundo do painel', () => {
+  const s = readSettingsTokens();
+  for (const k of ['--s-bg', '--s-text', '--s-muted', '--s-field-bg', '--s-border', '--s-accent', '--s-accent-text', '--s-danger']) {
+    assert.match(s[k] ?? '', /^#[0-9a-f]{6}$/, k);
+  }
+  const text: [string, string, string][] = [
+    ['texto/fundo', s['--s-text'], s['--s-bg']],
+    ['secundário/fundo', s['--s-muted'], s['--s-bg']],
+    ['texto/campo', s['--s-text'], s['--s-field-bg']],
+    ['botão marcado (texto/fundo)', s['--s-accent-text'], s['--s-accent']],
+    ['aviso (erro/fundo)', s['--s-danger'], s['--s-bg']],
+    ['aviso ok (verde/fundo)', s['--s-accent'], s['--s-bg']],
+  ];
+  for (const [label, fg, bg] of text) assert.ok(ratio(fg, bg) >= 4.5, `${label}: ${ratio(fg, bg).toFixed(2)}:1`);
+  const ui: [string, string, string][] = [
+    ['borda dos campos/fundo', s['--s-border'], s['--s-bg']],
+    ['borda/preenchimento', s['--s-border'], s['--s-field-bg']],
+    ['botão marcado/fundo', s['--s-accent'], s['--s-bg']],
+  ];
+  for (const [label, fg, bg] of ui) assert.ok(ratio(fg, bg) >= 3, `${label}: ${ratio(fg, bg).toFixed(2)}:1`);
+});
+
+test('configurações: o fundo é o mesmo do painel real', () => {
+  const panelCss = fs.readFileSync(new URL('../src/features/panel/panel.css', import.meta.url), 'utf8');
+  const m = panelCss.match(/background:\s*(#[0-9a-fA-F]{6})/);
+  assert.equal(m?.[1].toLowerCase(), readSettingsTokens()['--s-bg']);
+});
+
+/** Balão e selo da ilha: texto claro sobre o escuro da ilha (e escuro sobre claro no balão solto). */
+test('balão de fala: contraste do texto nos dois temas', () => {
+  const css = fs.readFileSync(new URL('../src/features/personality/speech.css', import.meta.url), 'utf8');
+  const colors = [...css.matchAll(/(?:background|color):\s*(#[0-9a-fA-F]{6})/g)].map((m) => m[1].toLowerCase());
+  assert.ok(colors.length >= 4, 'cores do balão não encontradas');
+  assert.ok(ratio('#f3eef7', '#2b2433') >= 4.5, 'balão da ilha');
+  assert.ok(ratio('#3b3040', '#fffaf5') >= 4.5, 'balão solto');
+  assert.ok(colors.includes('#2b2433') && colors.includes('#fffaf5'));
+});

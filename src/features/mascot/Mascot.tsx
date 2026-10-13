@@ -1,5 +1,6 @@
 import type { AnimationEvent, CSSProperties, Ref } from 'react';
 import type { MascotState, Mood } from './mascotStates';
+import type { MochiColor } from '../../../shared/settings';
 import './mascot.css';
 
 interface MascotProps {
@@ -8,6 +9,8 @@ interface MascotProps {
   hop: boolean;
   blinking: boolean;
   mood: Mood;
+  /** Cor do Mochi (as paletas ficam em mascot.css). */
+  palette?: MochiColor;
   /** Usado pela view para escrever as variáveis de "olhar" sem re-renderizar. */
   svgRef: Ref<SVGSVGElement>;
   onHopEnd: () => void;
@@ -33,7 +36,7 @@ const SPARKLES = [
  * Camadas de movimento (cada uma com um único dono de `transform`):
  *   breath (contínua) > motion (saltos) > tilt (postura) > corpo / folha / rosto
  */
-export function Mascot({ state, replay, hop, blinking, mood, svgRef, onHopEnd, onHoverChange }: MascotProps) {
+export function Mascot({ state, replay, hop, blinking, mood, palette = 'mint', svgRef, onHopEnd, onHoverChange }: MascotProps) {
   const handleAnimationEnd = (e: AnimationEvent<SVGGElement>) => {
     if (e.target === e.currentTarget) onHopEnd();
   };
@@ -46,6 +49,7 @@ export function Mascot({ state, replay, hop, blinking, mood, svgRef, onHopEnd, o
       className={classes}
       data-state={state}
       data-mood={mood}
+      data-palette={palette}
       viewBox="0 0 200 200"
       width="100%"
       height="100%"
@@ -54,12 +58,12 @@ export function Mascot({ state, replay, hop, blinking, mood, svgRef, onHopEnd, o
     >
       <defs>
         <radialGradient id="mochi-body" cx="40%" cy="30%" r="80%">
-          <stop offset="0%" stopColor="#e4fbd4" />
-          <stop offset="100%" stopColor="#8fd9a8" />
+          <stop offset="0%" style={{ stopColor: 'var(--m-body-hi)' }} />
+          <stop offset="100%" style={{ stopColor: 'var(--m-body-lo)' }} />
         </radialGradient>
         <linearGradient id="mochi-shade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="55%" stopColor="#2f8f5b" stopOpacity="0" />
-          <stop offset="100%" stopColor="#2f8f5b" stopOpacity="0.28" />
+          <stop offset="55%" style={{ stopColor: 'var(--m-shade)' }} stopOpacity="0" />
+          <stop offset="100%" style={{ stopColor: 'var(--m-shade)' }} stopOpacity="0.28" />
         </linearGradient>
         <linearGradient id="mochi-leaf" x1="0" y1="1" x2="1" y2="0">
           <stop offset="0%" stopColor="#5fbf7f" />
@@ -89,7 +93,7 @@ export function Mascot({ state, replay, hop, blinking, mood, svgRef, onHopEnd, o
               className="mascot-body"
               d={BODY_PATH}
               fill="url(#mochi-body)"
-              stroke="#5fb383"
+              style={{ stroke: 'var(--m-stroke)' }}
               strokeWidth="3"
               onPointerEnter={() => onHoverChange(true)}
               onPointerLeave={() => onHoverChange(false)}

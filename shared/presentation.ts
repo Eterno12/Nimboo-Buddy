@@ -1,4 +1,4 @@
-import type { Rect, Size } from './geometry';
+import { scaleRect, type Rect, type Size } from './geometry.ts';
 import type { PresentationMode } from './settings';
 
 /**
@@ -62,3 +62,25 @@ export interface PresentationState {
 export const EDGE_REVEAL_HALF_WIDTH = 140;
 /** Janela da linha-dica: largura da zona; altura = linha de 2px + brilho. */
 export const EDGE_HINT_SIZE: Size = { width: EDGE_REVEAL_HALF_WIDTH * 2, height: 8 };
+
+/**
+ * Área do balão de fala do Mochi, logo abaixo da pílula recolhida (coordenadas base da janela da
+ * ilha). Entra na forma da janela só enquanto há um balão, para o resto continuar atravessável.
+ */
+export const ISLAND_BUBBLE_RECT: Rect = { x: 44, y: 58, width: 264, height: 76 };
+
+/**
+ * Formas da janela da ilha, já ampliadas: a ilha (recolhida ou aberta) e, se houver balão com a
+ * ilha recolhida, a área dele. Nunca excede a janela ampliada.
+ */
+export function islandShapes(open: boolean, extent: IslandExtent, scale: number, bubble: boolean): Rect[] {
+  const shapes = [scaleRect(islandShape(open, extent), scale)];
+  if (bubble && !open) shapes.push(scaleRect(ISLAND_BUBBLE_RECT, scale));
+  const maxW = Math.round(ISLAND_WINDOW_SIZE.width * scale);
+  const maxH = Math.round(ISLAND_WINDOW_SIZE.height * scale);
+  return shapes.map((r) => ({
+    ...r,
+    width: Math.max(1, Math.min(r.width, maxW - r.x)),
+    height: Math.max(1, Math.min(r.height, maxH - r.y)),
+  }));
+}

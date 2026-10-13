@@ -2,11 +2,14 @@ import { ipcMain, screen, type BrowserWindow, type Display } from 'electron';
 import { IPC } from '../shared/ipc';
 import {
   bottomCornerBounds,
+  clampRectToArea,
   edgeHintBounds,
+  fitScale,
   floatingBounds,
   islandBounds,
   pickDisplayForRect,
   resolveIslandDisplay,
+  scaleSize,
   type DisplayInfo,
   type Rect,
 } from '../shared/geometry';
@@ -14,7 +17,7 @@ import {
   EDGE_HINT_SIZE,
   EDGE_REVEAL_HALF_WIDTH,
   ISLAND_WINDOW_SIZE,
-  islandShape,
+  islandShapes,
   type Entrance,
   type IslandExtent,
   type PresentationState,
@@ -54,6 +57,12 @@ export interface WindowModeManager {
   /** O modo preferido é a ilha, mas ela está escondida e o Mochi está no canto. */
   isAway(): boolean;
   isIslandOpen(): boolean;
+  /** Reaplica tamanhos (e posição) depois de uma mudança de configuração. */
+  refreshLayout(): void;
+  /** Fatores efetivos (o pedido, limitado ao monitor). */
+  getScales(): { islandScale: number; mochiScale: number };
+  /** Traz o mascote e leva à ilha pronta para uso (atalho global). */
+  summon(): Promise<void>;
   setMode(mode: PresentationMode): Promise<void>;
   toggleMode(): Promise<void>;
   /** Traz a ilha de volta (a partir do Mochi no canto). */
@@ -90,13 +99,26 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   let edgeHintTimer: ReturnType<typeof setTimeout> | undefined;
   /** A ilha começou a se esconder (animação de saída em curso). */
   let hiding = false;
+  /** Há um balão de fala visível (a forma da ilha recolhida cresce para incluí-lo). */
+  let bubbleVisible = false;
 
   const islandDisplay = (): DisplayInfo =>
     resolveIslandDisplay(settings.get().displayId, allDisplays(), primaryId());
-  const islandRect = (): Rect => islandBounds(islandDisplay(), ISLAND_WINDOW_SIZE);
+  /** Tamanhos efetivos: o pedido nas preferências, limitado ao que cabe no monitor. */
+  const sizes = () => {
+    const s = settings.get();
+    const area = islandDisplay().workArea;
+    return {
+      islandScale: fitScale(s.islandScale, ISLAND_WINDOW_SIZE, area),
+      mochiSize: Math.round(MASCOT_SIZE * fitScale(s.mochiScale, { width: MASCOT_SIZE, height: MASCOT_SIZE }, area)),
+    };
+  };
+  const shapesNow = () => islandShapes(islandOpen, islandExtent, sizes().islandScale, bubbleVisible);
+  const islandRect = (): Rect =>
+    islandBounds(islandDisplay(), scaleSize(ISLAND_WINDOW_SIZE, sizes().islandScale));
   const floatingTarget = (): Rect => {
     const s = settings.get();
-    return floatingBounds(s.floating, MASCOT_SIZE, allDisplays(), primaryId(), s.displayId);
+    return floatingBounds(s.floating, sizes().mochiSize, allDisplays(), primaryId(), s.displayId);
   };
 
   const presentationMode = (): PresentationMode => (mode === 'island' && !away ? 'island' : 'floating');
@@ -105,7 +127,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   let baseline: Rect = mode === 'floating' ? floatingTarget() : { x: 0, y: 0, width: 0, height: 0 };
   const initial = mode === 'island' ? islandRect() : baseline;
   const window = createMascotWindow(initial, { focusable: mode === 'floating' });
-  if (mode === 'island') window.setShape([islandShape(false)]);
+  if (mode === 'island') window.setShape(shapesNow());
 
   /** Esconde a linha-dica (a ilha voltou, o modo mudou, o mascote foi ocultado ou o app encerra). */
   const hideEdgeHint = () => {
@@ -165,10 +187,12 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     islandOpen = false;
     islandExtent = 'home';
     window.setFocusable(false);
+    bubbleVisible = false;
     window.setBounds(islandRect());
-    window.setShape([islandShape(false)]);
+    window.setShape(shapesNow());
   };
   const layoutFloating = (bounds: Rect) => {
+    bubbleVisible = false;
     window.setFocusable(true);
     window.setBounds(bounds);
     // Forma vazia desligaria a janela inteira; "sem forma" é o retângulo todo.
@@ -228,7 +252,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     if (presentationMode() !== 'island' || busy) return;
     islandOpen = true;
     islandExtent = 'home';
-    window.setShape([islandShape(true, 'home')]);
+    window.setShape(shapesNow());
     window.setFocusable(true);
     window.focus();
   });
@@ -238,7 +262,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     if (extent !== 'home' && extent !== 'tasks' && extent !== 'focus') return;
     if (presentationMode() !== 'island' || busy || !islandOpen) return;
     islandExtent = extent;
-    window.setShape([islandShape(true, islandExtent)]);
+    window.setShape(shapesNow());
   });
   /** Volta à forma compacta depois da animação de recolher e libera o foco. */
   const onIslandClosed = (event: Electron.IpcMainEvent) => {
@@ -246,7 +270,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     islandOpen = false;
     islandExtent = 'home';
     window.setFocusable(false);
-    window.setShape([islandShape(false)]);
+    window.setShape(shapesNow());
   };
   ipcMain.on(IPC.islandClosed, onIslandClosed);
 
@@ -294,7 +318,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     if (mode !== 'island' || away || busy || window.isDestroyed()) return;
     const corner: 'left' | 'right' = lastCorner === 'left' ? 'right' : 'left'; // alterna os cantos
     lastCorner = corner;
-    const bounds = bottomCornerBounds(islandDisplay(), MASCOT_SIZE, corner);
+    const bounds = bottomCornerBounds(islandDisplay(), sizes().mochiSize, corner);
     away = true;
     islandOpen = false;
     awayAt = Date.now();
@@ -326,6 +350,46 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     // que é o momento em que `transition` resolve: aí a linha esmaece.
     await transition(layoutIsland, { mode: 'island', entrance: { kind: 'drop' } });
     fadeOutEdgeHint();
+  }
+
+  /** O renderer mostra/oculta um balão de fala: a forma da ilha recolhida inclui a área dele. */
+  const onBubbleVisible = (event: Electron.IpcMainEvent, visible: unknown) => {
+    if (!fromWindow(event)) return;
+    const next = visible === true && presentationMode() === 'island';
+    if (next === bubbleVisible) return;
+    bubbleVisible = next;
+    if (presentationMode() === 'island' && !busy) window.setShape(shapesNow());
+  };
+  ipcMain.on(IPC.bubbleVisible, onBubbleVisible);
+
+  /** Reaplica tamanhos e posição (depois de mudar o tamanho da ilha ou do Mochi nas preferências). */
+  function refreshLayout(): void {
+    if (window.isDestroyed() || busy) return;
+    if (presentationMode() === 'island') {
+      window.setBounds(islandRect());
+      window.setShape(shapesNow());
+      return;
+    }
+    const size = sizes().mochiSize;
+    const current = window.getBounds();
+    let target: Rect;
+    if (away) {
+      target = bottomCornerBounds(islandDisplay(), size, lastCorner);
+    } else {
+      const placed = floatingBounds({ x: current.x, y: current.y }, size, allDisplays(), primaryId());
+      target = clampRectToArea(placed, pickDisplayForRect(placed, allDisplays(), primaryId()).workArea);
+      baseline = target;
+    }
+    window.setBounds(target);
+    window.setShape([{ x: 0, y: 0, width: target.width, height: target.height }]);
+  }
+
+  /** Atalho global: traz o mascote e pede à ilha para abrir direto nas tarefas. */
+  async function summon(): Promise<void> {
+    if (window.isDestroyed() || mode !== 'island') return;
+    if (!window.isVisible()) window.show();
+    if (away) await showIsland();
+    if (!window.isDestroyed()) window.webContents.send(IPC.islandSummon);
   }
 
   async function setMode(next: PresentationMode): Promise<void> {
@@ -363,6 +427,12 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     getPresentation: presentationMode,
     isAway: () => away,
     isIslandOpen: () => islandOpen,
+    refreshLayout,
+    getScales: () => {
+      const s = sizes();
+      return { islandScale: s.islandScale, mochiScale: s.mochiSize / MASCOT_SIZE };
+    },
+    summon,
     setMode,
     toggleMode: () => setMode(mode === 'floating' ? 'island' : 'floating'),
     showIsland,
@@ -398,6 +468,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
       ipcMain.removeListener(IPC.islandClosed, onIslandClosed);
       ipcMain.removeListener(IPC.islandHidden, onIslandHidden);
       ipcMain.removeListener(IPC.islandHiding, onIslandHiding);
+      ipcMain.removeListener(IPC.bubbleVisible, onBubbleVisible);
       ipcMain.removeListener(IPC.leaveDone, onLeaveDone);
       hideEdgeHint();
       if (edgeHint && !edgeHint.isDestroyed()) edgeHint.destroy();

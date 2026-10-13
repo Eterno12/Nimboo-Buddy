@@ -44,6 +44,8 @@ export interface IslandController {
    * por inatividade fica suspenso. Esc, clique e perda de foco continuam recolhendo.
    */
   setHold(hold: boolean): void;
+  /** Muda a inatividade (já recolhida) que esconde a ilha; Infinity = nunca esconde sozinha. */
+  setHideMs(ms: number): void;
   /** A transição de recolher terminou. */
   transitionEnded(): void;
   /**
@@ -59,7 +61,7 @@ export interface IslandController {
 
 export function createIslandController(deps: IslandDeps, options: IslandOptions = {}): IslandController {
   const idleMs = options.idleMs ?? 8000;
-  const hideMs = options.hideMs ?? 3000;
+  let hideMs = options.hideMs ?? 3000;
   const closeFallbackMs = options.closeFallbackMs ?? 450;
   const tickMs = options.tickMs ?? 250;
 
@@ -155,6 +157,9 @@ export function createIslandController(deps: IslandDeps, options: IslandOptions 
     setHold(next) {
       if (holding && !next) lastActivity = Date.now(); // soltou: conta do zero, sem recolher na hora
       holding = next;
+    },
+    setHideMs(ms) {
+      hideMs = ms;
     },
     transitionEnded: shrinkWindow,
     resume(graceMs = 0) {

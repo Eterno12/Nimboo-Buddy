@@ -14,7 +14,7 @@ test('parseSettings: entradas inválidas viram padrão', () => {
 
 test('parseSettings: aceita valores válidos e arredonda posição', () => {
   const s = parseSettings({ version: 2, mode: 'floating', floating: { x: 10.6, y: 20 }, displayId: 3 });
-  assert.deepEqual(s, { version: 2, mode: 'floating', floating: { x: 11, y: 20 }, displayId: 3 });
+  assert.deepEqual(s, { ...DEFAULT_SETTINGS, mode: 'floating', floating: { x: 11, y: 20 }, displayId: 3 });
 });
 
 test('parseSettings: campos inválidos caem no padrão e extras são descartados', () => {
@@ -41,10 +41,8 @@ test('store: arquivo ausente usa padrões e grava ao dar flush', () => {
   store.update({ mode: 'island', floating: { x: 5, y: 6 } });
   store.flush();
   assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), {
-    version: 2,
-    mode: 'island',
+    ...DEFAULT_SETTINGS,
     floating: { x: 5, y: 6 },
-    displayId: null,
   });
   assert.ok(!fs.existsSync(`${file}.tmp`));
   // Reabrir lê o que foi salvo.
@@ -74,7 +72,7 @@ test('store: get devolve cópia (mutação externa não vaza)', () => {
 
 test('parseSettings: versão 1 migra para o padrão atual (ilha) e mantém a posição', () => {
   const s = parseSettings({ version: 1, mode: 'floating', floating: { x: 5, y: 6 }, displayId: 2 });
-  assert.deepEqual(s, { version: 2, mode: 'island', floating: { x: 5, y: 6 }, displayId: 2 });
+  assert.deepEqual(s, { ...DEFAULT_SETTINGS, floating: { x: 5, y: 6 }, displayId: 2 });
 });
 
 test('padrão é a ilha', () => {
@@ -97,5 +95,59 @@ test('store: arquivo v1 antigo é lido e migrado', () => {
   const s = createSettingsStore(file).get();
   assert.equal(s.mode, 'island');
   assert.deepEqual(s.floating, { x: 9, y: 9 });
+  fs.rmSync(dir, { recursive: true });
+});
+
+test('v2 (sem os campos novos) migra para v3 com os padrões e mantém o que existia', () => {
+  const s = parseSettings({ version: 2, mode: 'floating', floating: { x: 1, y: 2 }, displayId: 7 });
+  assert.equal(s.version, 3);
+  assert.equal(s.mode, 'floating');
+  assert.deepEqual(s.floating, { x: 1, y: 2 });
+  assert.equal(s.displayId, 7);
+  assert.equal(s.islandScale, 1);
+  assert.equal(s.mochiScale, 1);
+  assert.equal(s.launchAtLogin, false, 'iniciar com o Windows nunca liga sozinho');
+  assert.equal(s.shortcut, DEFAULT_SETTINGS.shortcut);
+});
+
+test('v3: tamanhos viram o passo permitido mais próximo; lixo volta ao padrão', () => {
+  const near = parseSettings({ version: 3, islandScale: 1.07, mochiScale: 5, hideDelaySec: 9 });
+  assert.equal(near.islandScale, 1.1);
+  assert.equal(near.mochiScale, 1.6);
+  assert.equal(near.hideDelaySec, 10);
+  const junk = parseSettings({
+    version: 3,
+    islandScale: 'grande',
+    mochiScale: NaN,
+    launchAtLogin: 'sim',
+    shortcut: 'Control+Q',
+    soundEnabled: 1,
+    bubbles: null,
+    color: 'neon',
+    soundVolume: 'alto',
+  });
+  assert.deepEqual(junk, DEFAULT_SETTINGS);
+});
+
+test('v3: atalho só aceita os predefinidos ou null (desligado); volume é limitado a 0..1', () => {
+  assert.equal(parseSettings({ version: 3, shortcut: null }).shortcut, null);
+  assert.equal(parseSettings({ version: 3, shortcut: 'Control+Alt+J' }).shortcut, 'Control+Alt+J');
+  assert.equal(parseSettings({ version: 3, shortcut: 'Control+Alt+Delete' }).shortcut, DEFAULT_SETTINGS.shortcut);
+  assert.equal(parseSettings({ version: 3, soundVolume: 7 }).soundVolume, 1);
+  assert.equal(parseSettings({ version: 3, soundVolume: -2 }).soundVolume, 0);
+});
+
+test('store: update parcial mantém o resto e persiste os novos campos', () => {
+  const { dir, file } = tempFile();
+  const store = createSettingsStore(file, 10_000);
+  store.update({ islandScale: 1.25, color: 'peach', soundEnabled: false });
+  store.update({ mochiScale: 0.7 });
+  store.flush();
+  const reopened = createSettingsStore(file).get();
+  assert.equal(reopened.islandScale, 1.25);
+  assert.equal(reopened.mochiScale, 0.7);
+  assert.equal(reopened.color, 'peach');
+  assert.equal(reopened.soundEnabled, false);
+  assert.equal(reopened.mode, 'island');
   fs.rmSync(dir, { recursive: true });
 });

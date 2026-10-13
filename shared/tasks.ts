@@ -121,8 +121,14 @@ export interface TasksApi {
   scheduleRemove(id: string): Promise<TaskResult<PendingRemoval>>;
   /** Cancela uma exclusão agendada (falha se o prazo acabou ou a tarefa expirou). */
   undoRemove(id: string): Promise<TaskResult<Task>>;
+  /** Aviso sobre o armazenamento (arquivo recuperado, versão mais nova, falha ao abrir) ou 
+ull. */
+  notice(): Promise<string | null>;
+  dismissNotice(): Promise<void>;
   /** Alguma tarefa mudou (em qualquer janela): recarregue a lista. */
   onChange(listener: () => void): () => void;
   /** Uma tarefa foi concluída agora (não dispara ao reabrir ou excluir). */
   onCompleted(listener: () => void): () => void;
+  /** Uma tarefa foi criada agora. */
+  onCreated(listener: () => void): () => void;
 }

@@ -395,3 +395,39 @@
   outline: 2px solid var(--t-focus);
   outline-offset: 2px;
 }
+
+/* Aviso sobre o armazenamento (arquivo recuperado etc.), dispensável. */
+.tasks-notice {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 10px;
+  background: var(--t-hover);
+  color: var(--t-text);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.tasks-notice p {
+  flex: 1;
+  margin: 0;
+}
+
+.tasks-notice button {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tasks-notice button:focus-visible {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}

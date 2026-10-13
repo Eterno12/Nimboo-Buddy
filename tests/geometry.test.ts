@@ -8,8 +8,12 @@ import {
   resolveIslandDisplay,
   bottomCornerBounds,
   edgeHintBounds,
+  fitScale,
+  scaleRect,
+  scaleSize,
   type DisplayInfo,
 } from '../shared/geometry.ts';
+import { islandShapes, ISLAND_BUBBLE_RECT, ISLAND_WINDOW_SIZE } from '../shared/presentation.ts';
 
 const primary: DisplayInfo = {
   id: 1,
@@ -123,4 +127,72 @@ test('edgeHintBounds: segundo monitor com origem deslocada e largura limitada ao
   const r = edgeHintBounds(second, { width: 280, height: 8 });
   assert.equal(r.x, 1920 + (1280 - 280) / 2);
   assert.equal(edgeHintBounds(second, { width: 5000, height: 8 }).width, 1280);
+});
+test('scaleRect/scaleSize: arredondam para inteiros', () => {
+  assert.deepEqual(scaleRect({ x: 88, y: 0, width: 176, height: 58 }, 1.25), { x: 110, y: 0, width: 220, height: 73 });
+  assert.deepEqual(scaleSize({ width: 352, height: 380 }, 0.9), { width: 317, height: 342 });
+});
+
+test('fitScale: limita ao que cabe no monitor e nunca passa de 50% para baixo', () => {
+  const area = { x: 0, y: 0, width: 1920, height: 1040 };
+  assert.equal(fitScale(1.4, ISLAND_WINDOW_SIZE, area), 1.4);
+  const small = { x: 0, y: 0, width: 800, height: 450 }; // 380 * s <= 450 → 1.18
+  assert.equal(fitScale(1.4, ISLAND_WINDOW_SIZE, small), 1.18);
+  assert.equal(fitScale(1, ISLAND_WINDOW_SIZE, { x: 0, y: 0, width: 100, height: 100 }), 0.5);
+});
+
+test('islandShapes: sem balão é só a ilha; com balão a área dele entra (apenas recolhida)', () => {
+  assert.equal(islandShapes(false, 'home', 1, false).length, 1);
+  const withBubble = islandShapes(false, 'home', 1, true);
+  assert.equal(withBubble.length, 2);
+  assert.deepEqual(withBubble[1], ISLAND_BUBBLE_RECT);
+  assert.equal(islandShapes(true, 'tasks', 1, true).length, 1, 'aberta: o balão some');
+});
+
+test('islandShapes: ampliadas, nenhuma forma excede a janela ampliada', () => {
+  for (const scale of [0.8, 0.9, 1, 1.1, 1.25, 1.4]) {
+    const w = Math.round(ISLAND_WINDOW_SIZE.width * scale);
+    const h = Math.round(ISLAND_WINDOW_SIZE.height * scale);
+    for (const open of [false, true]) {
+      for (const extent of ['home', 'tasks', 'focus'] as const) {
+        for (const r of islandShapes(open, extent, scale, true)) {
+          assert.ok(r.x >= 0 && r.y >= 0 && r.width >= 1 && r.height >= 1);
+          assert.ok(r.x + r.width <= w, `largura ${scale}/${open}/${extent}`);
+          assert.ok(r.y + r.height <= h, `altura ${scale}/${open}/${extent}`);
+        }
+      }
+    }
+  }
+});
+
+test('ilha ampliada continua centralizada no topo e dentro da área útil', () => {
+  const size = scaleSize(ISLAND_WINDOW_SIZE, 1.4);
+  const r = islandBounds(primary, size);
+  assert.equal(r.x, Math.round((1920 - size.width) / 2));
+  assert.equal(r.y, 0);
+  assert.ok(r.x >= 0 && r.x + r.width <= 1920);
+});
+
+test('geometria com monitor à esquerda do primário (coordenadas negativas) e barra à esquerda', () => {
+  const left: DisplayInfo = {
+    id: 3,
+    bounds: { x: -1280, y: 0, width: 1280, height: 1024 },
+    workArea: { x: -1280 + 48, y: 0, width: 1280 - 48, height: 1024 }, // barra de 48 px à esquerda
+  };
+  const r = islandBounds(left, { width: 352, height: 380 });
+  assert.equal(r.x, Math.round(-1232 + (1232 - 352) / 2));
+  assert.deepEqual(bottomCornerBounds(left, 240, 'left'), { x: -1232, y: 784, width: 240, height: 240 });
+  assert.equal(edgeHintBounds(left, { width: 280, height: 8 }).x, -1280 + (1280 - 280) / 2);
+  const placed = floatingBounds({ x: -900, y: 100 }, 240, [primary, left], 1);
+  assert.equal(placed.x, -900, 'posição salva no monitor da esquerda é respeitada');
+});
+
+test('monitor 4K a 150% (workArea em DIP): a ilha usa os mesmos DIP, sem depender de pixels', () => {
+  const uhd: DisplayInfo = {
+    id: 4,
+    bounds: { x: 0, y: 0, width: 2560, height: 1440 }, // 3840x2160 / 1.5
+    workArea: { x: 0, y: 0, width: 2560, height: 1392 },
+  };
+  assert.deepEqual(islandBounds(uhd, { width: 352, height: 380 }), { x: 1104, y: 0, width: 352, height: 380 });
+  assert.equal(fitScale(1.4, ISLAND_WINDOW_SIZE, uhd.workArea), 1.4);
 });

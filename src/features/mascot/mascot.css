@@ -549,3 +549,42 @@
     transform: translate(var(--dx), var(--dy)) scale(1);
   }
 }
+
+
+/* ---------- Paletas do Mochi (a folha continua verde em todas) ---------- */
+.mascot {
+  --m-body-hi: #e4fbd4;
+  --m-body-lo: #8fd9a8;
+  --m-shade: #2f8f5b;
+  --m-stroke: #5fb383;
+}
+.mascot[data-palette='peach'] {
+  --m-body-hi: #ffeadb;
+  --m-body-lo: #ffb590;
+  --m-shade: #c4622f;
+  --m-stroke: #e08a5c;
+}
+.mascot[data-palette='sky'] {
+  --m-body-hi: #e3f4ff;
+  --m-body-lo: #8ec9f6;
+  --m-shade: #2f6fa8;
+  --m-stroke: #5a9fd6;
+}
+.mascot[data-palette='lilac'] {
+  --m-body-hi: #f1e8ff;
+  --m-body-lo: #c5a8f3;
+  --m-shade: #6a4aa8;
+  --m-stroke: #9a7fd4;
+}
+.mascot[data-palette='lemon'] {
+  --m-body-hi: #fffbd6;
+  --m-body-lo: #f5de72;
+  --m-shade: #a8941c;
+  --m-stroke: #d4bb3f;
+}
+.mascot[data-palette='rose'] {
+  --m-body-hi: #ffe6ee;
+  --m-body-lo: #ffa3bb;
+  --m-shade: #c43b66;
+  --m-stroke: #ea6f93;
+}

@@ -63,6 +63,8 @@ export const STATE_PRIORITY: Record<MascotState, number> = {
 export const CALM_STATES: readonly MascotState[] = ['idle', 'lookaround', 'stretch', 'yawn'];
 
 export const SLEEP_AFTER_MS = 45_000;
+/** Se na hora de dormir ele estiver ocupado com outra coisa, tenta de novo depois deste tempo. */
+export const SLEEP_RETRY_MS = 3000;
 export const BLINK_MIN_MS = 2500;
 export const BLINK_MAX_MS = 6000;
 export const BLINK_DURATION_MS = 140;

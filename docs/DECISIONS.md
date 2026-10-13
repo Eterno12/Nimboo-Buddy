@@ -142,3 +142,60 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Fim de sessão:** `celebrate`, ilha volta se estava escondida (sem roubar foco) e notificação nativa
   silenciosa só se o mascote estiver oculto — o aviso padrão é o próprio Mochi, discreto.
 - **Não suprimido:** o mascote continua animando durante o foco (D12); ficar "quieto" é uma opção futura.
+
+## D19 — Preferências v3, sempre validadas e aplicadas pelo main
+- **Decisão:** `settings.json` passa à versão 3 (tamanho da ilha, tamanho do Mochi solto, tempo para
+  esconder, atalho global, iniciar com o Windows, sons e volume, balões, não incomodar, cor). Arquivos v1/v2
+  migram com os padrões. Toda alteração entra por `settings:update` com **lista de campos editáveis**
+  (`mode`, posição e monitor continuam do `windowMode`) e passa por `parseSettings`: tamanhos viram o passo
+  permitido mais próximo, o atalho só aceita os predefinidos, cores só as da lista.
+- **Por quê:** o renderer nunca é confiável; passos fixos deixam o layout previsível (e testável) em vez de
+  um controle livre.
+- **Efeitos fora das janelas** ficam em `applySettingsChange` (main): reaplicar layout, registrar atalho,
+  `setLoginItemSettings`, ligar/desligar o vigia de tela cheia.
+
+## D20 — Tamanho: fator no main (janela e forma) + `transform: scale` no renderer
+- **Decisão:** dois fatores independentes (ilha 80–140 %, Mochi solto 70–160 %). O main multiplica a janela
+  e **todas** as formas (`scaleRect`/`islandShapes`) e limita o fator ao que cabe no monitor (`fitScale`);
+  o snapshot devolve o fator **efetivo**. O renderer ampliou o `.shell` por `transform: scale(var(--ui-scale))`
+  com `width/height: calc(100% / scale)`, então o layout interno (px) não muda.
+- **Por quê:** `getBoundingClientRect` já devolve o tamanho visual, então a matemática do cursor/olhar
+  continua certa; não é preciso `webFrame.setZoomFactor` (que é por origem e afetaria o painel).
+- **Zona de revelação e linha-dica não escalam:** são uma característica da borda da tela, não da ilha.
+- **Limitações:** em 80 % o texto fica pequeno; arredondamento de formas em DPI fracionário só foi
+  validado por testes de geometria, não em monitor real além de 100 %.
+
+## D21 — Backup antes de migrar e aviso de armazenamento
+- **Decisão:** antes de aplicar migrações a um banco **existente**, o arquivo é copiado (`wal_checkpoint`
+  antes) para `mochi.db.bak-v<n>-<data>`; ficam as 3 mais recentes. Se a cópia falhar, a migração **não**
+  roda (o app segue sem tarefas e avisa), em vez de arriscar os dados. Arquivo corrompido é preservado
+  (`.corrupt-<data>`) e o usuário vê uma faixa dispensável na lista; banco de versão mais nova também avisa.
+- **Por quê:** é a rede de segurança exigida antes de notas (migração v2) e de qualquer sincronização.
+
+## D22 — "Não incomodar" por `SHQueryUserNotificationState` num PowerShell oculto
+- **Decisão:** um processo PowerShell (`-NoProfile -NonInteractive -Command`, sem `-EncodedCommand` nem
+  política de execução) consulta o estado de notificação do Windows a cada 1,5 s e imprime `STATE n` ao
+  mudar; estados 2, 3, 4 e 7 (tela cheia, D3D, apresentação, app da Store) escondem o Mochi, e ele volta
+  quando acaba. O script encerra sozinho se o app pai sumir.
+- **Alternativas descartadas:** módulo nativo/FFI (compilação e empacotamento), heurística de janela
+  (frágil), `-EncodedCommand` (padrão de malware; o antivírus pode bloquear — travou em teste).
+- **Limitações:** um processo extra (~30 MB); depende de o PowerShell estar disponível.
+
+## D23 — Sons sintetizados e vozinha do balão
+- **Decisão:** WebAudio sem arquivos: planos de notas puros (`sounds.ts`) com limites verificados em teste
+  (≤ 1,6 s, ganho ≤ 0,6, 150–2400 Hz), passa-baixas a 3,2 kHz ("lo-fi") e envelope sem estalo. A "voz" é uma
+  sequência de 3–9 bips finos numa escala pentatônica, proporcional à frase. Só a **janela do mascote**
+  toca sons de eventos (o painel só toca o "Ouvir"), evitando som duplicado.
+- **Padrões:** ligado, volume 40 %, sempre desligável.
+
+## D24 — Personalidade: falas curtas, raras e respeitosas
+- **Decisão:** catálogo de frases por evento (hora do dia, humor) e um escolhedor puro com: intervalo geral
+  (9 s), intervalo por tipo, teto de 8 falas "de fundo" por hora, sem repetir as últimas 3 e **silêncio
+  durante o foco** (só tarefa concluída e fim de sessão passam). Balão: abaixo da pílula (forma da janela
+  cresce enquanto ele existe) ou sobre a cabeça do Mochi solto; `role=status`, cliques atravessam.
+- **Futuro:** outros personagens trocam o desenho (`Mascot.tsx`) e as frases, não o mecanismo.
+
+## D25 — Atalho global padrão: Ctrl+Alt+M
+- **Contexto:** Ctrl+Alt+Espaço estava em uso (o registro falhava e o teste revelou o conflito).
+- **Decisão:** padrão Ctrl+Alt+M (de "Mochi"), quatro predefinidos, e a tela de configurações mostra quando
+  o registro não foi possível. O sucesso é conferido por `globalShortcut.isRegistered`, não pelo retorno.

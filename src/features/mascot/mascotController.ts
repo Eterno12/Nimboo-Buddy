@@ -19,6 +19,7 @@ import {
   NEAR_ENTER_PX,
   NEAR_LEAVE_PX,
   SLEEP_AFTER_MS,
+  SLEEP_RETRY_MS,
   STARTLE_COOLDOWN_MS,
   STARTLE_DISTANCE_PX,
   STARTLE_SPEED_PX_S,
@@ -27,7 +28,7 @@ import {
   WAKE_DISTANCE_PX,
   type MascotState,
   type Mood,
-} from './mascotStates';
+} from './mascotStates.ts';
 
 export interface MascotSnapshot {
   state: MascotState;
@@ -111,15 +112,20 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
     if (mood !== snap.mood) emit({ mood });
   }
 
-  function armSleep() {
+  function armSleep(ms = SLEEP_AFTER_MS) {
     window.clearTimeout(timers.sleep);
     timers.sleep = window.setTimeout(() => {
-      // Boceja antes de dormir.
+      // Boceja antes de dormir. Se estiver no meio de algo (curioso, feliz...), tenta de novo logo.
       if (snap.state === 'idle') enter('yawn', true, 'sleepy');
-    }, SLEEP_AFTER_MS);
+      else if (snap.state !== 'sleepy') armSleep(SLEEP_RETRY_MS);
+    }, ms);
   }
 
-  function enter(next: MascotState, force = false, after?: MascotState) {
+  /**
+   * mbient: comportamento espontâneo (olhar em volta, espreguiçar). Esses NÃO reiniciam o
+   * contador de sono: sem isso, as animações de fundo (a cada ~12 s) o impediam de dormir.
+   */
+  function enter(next: MascotState, force = false, after?: MascotState, ambient = false) {
     if (!force && STATE_PRIORITY[next] < STATE_PRIORITY[snap.state]) return;
     window.clearTimeout(timers.timed);
     emit({
@@ -129,8 +135,8 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
       blinking: false,
     });
     const duration = STATE_DURATION_MS[next];
-    if (duration) timers.timed = window.setTimeout(() => enter(after ?? rest(), true), duration);
-    armSleep();
+    if (duration) timers.timed = window.setTimeout(() => enter(after ?? rest(), true, undefined, ambient), duration);
+    if (!ambient) armSleep();
   }
 
   /** Acorda espreguiçando. */
@@ -163,9 +169,9 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
       if (snap.state === 'idle') {
         const r = Math.random();
         if (r < 0.35) emit({ hop: true });
-        else if (r < 0.65) enter('lookaround');
-        else if (r < 0.85) enter('stretch');
-        else enter('yawn');
+        else if (r < 0.65) enter('lookaround', false, undefined, true);
+        else if (r < 0.85) enter('stretch', false, undefined, true);
+        else enter('yawn', false, undefined, true);
       }
       scheduleAmbient();
     }, rand(AMBIENT_MIN_MS, AMBIENT_MAX_MS) * pace);
