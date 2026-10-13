@@ -35,6 +35,8 @@ export const IPC = {
   /** renderer -> main (invoke): ajusta até onde a forma da ilha aberta se estende. */
   islandExtent: 'island:extent',
   /** renderer -> main (invoke): operações de tarefas (cada uma é específica e tipada). */
+  dataExport: 'data:export',
+  dataImport: 'data:import',
   assistantOpen: 'assistant:open',
   assistantListen: 'assistant:listen',
   assistantListenCancel: 'assistant:listen-cancel',
@@ -152,6 +154,11 @@ export interface MochiApi {
   tasks: TasksApi;
   notes: NotesApi;
   assistant: AssistantApi;
+  /** Exportar/importar tarefas e notas (arquivo JSON, pelo diÃ¡logo do Windows). */
+  data: {
+    export(): Promise<{ ok: boolean; message: string }>;
+    import(): Promise<{ ok: boolean; message: string }>;
+  };
   /** Modo foco (temporizador; o relógio vive no processo principal). */
   focus: FocusApi;
   /** Preferências: lê, altera (validadas no main) e acompanha mudanças feitas em qualquer janela. */

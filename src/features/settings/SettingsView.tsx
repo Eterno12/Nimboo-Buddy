@@ -194,6 +194,17 @@ export function SettingsView({ onBack }: SettingsViewProps) {
   }, [settings.soundEnabled, settings.soundVolume, settings.character]);
 
   const set = (patch: Partial<Omit<Settings, 'version'>>) => void update(patch);
+  const [dataBusy, setDataBusy] = useState(false);
+  const [dataMessage, setDataMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const runData = async (what: 'export' | 'import') => {
+    setDataBusy(true);
+    try {
+      const r = await (what === 'export' ? window.mochi.data.export() : window.mochi.data.import());
+      setDataMessage({ ok: r.ok, text: r.message });
+    } finally {
+      setDataBusy(false);
+    }
+  };
   const [modelDraft, setModelDraft] = useState(settings.assistantModel);
   useEffect(() => setModelDraft(settings.assistantModel), [settings.assistantModel]);
   const resetAll = () =>
@@ -580,6 +591,21 @@ export function SettingsView({ onBack }: SettingsViewProps) {
             </small>
           </span>
         </label>
+      </fieldset>
+
+      <fieldset className="settings-group">
+        <legend>Seus dados</legend>
+        <div className="settings-chips">
+          <button type="button" className="settings-small" disabled={dataBusy} onClick={() => void runData('export')}>
+            Exportar tarefas e notas…
+          </button>
+          <button type="button" className="settings-small" disabled={dataBusy} onClick={() => void runData('import')}>
+            Importar de um backup…
+          </button>
+        </div>
+        <p className="settings-hint" role="status" data-tone={dataMessage?.ok ? 'ok' : undefined}>
+          {dataMessage?.text ?? 'Gera um arquivo JSON. Ao importar, nada é sobrescrito: só o que falta é adicionado.'}
+        </p>
       </fieldset>
 
       <div className="settings-footer">

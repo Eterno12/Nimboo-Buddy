@@ -1,0 +1,259 @@
+/* ---------- Personagens ----------
+   O rosto, os estados e as animações-base são os mesmos; aqui só mudam as cores do corpo e os
+   complementos (coroa, chapéu, braços, anel...), que reagem às mesmas variáveis de estado. */
+.mascot[data-character='pineapple'] {
+  --m-body-hi: #ffeb8f;
+  --m-body-lo: #f6b73c;
+  --m-shade: #a86a12;
+  --m-stroke: #d9962a;
+}
+.mascot[data-character='square'] {
+  --m-body-hi: #eaf5ff;
+  --m-body-lo: #a9cdf5;
+  --m-shade: #3f6fb0;
+  --m-stroke: #7aa6dd;
+}
+.mascot[data-character='mushroom'] {
+  --m-body-hi: #fffaf0;
+  --m-body-lo: #f3dfc4;
+  --m-shade: #b98a5a;
+  --m-stroke: #d8b78f;
+}
+.mascot[data-character='cactus'] {
+  --m-body-hi: #d9f7c9;
+  --m-body-lo: #7fcf8e;
+  --m-shade: #2f8a4c;
+  --m-stroke: #4fa868;
+}
+.mascot[data-character='cloud'] {
+  --m-body-hi: #ffffff;
+  --m-body-lo: #d9c8f7;
+  --m-shade: #7d62c0;
+  --m-stroke: #b9a1ec;
+}
+.mascot[data-character='planet'] {
+  --m-body-hi: #ffe6f2;
+  --m-body-lo: #c6b3f5;
+  --m-shade: #6a4fb0;
+  --m-stroke: #9c86dc;
+}
+.mascot[data-character='ghost'] {
+  --m-body-hi: #ffffff;
+  --m-body-lo: #e4daf8;
+  --m-shade: #7a62c0;
+  --m-stroke: #b6a4e6;
+}
+
+/* Complementos: `transform-box: fill-box` e pivôs próprios; o balanço contínuo fica num grupo interno
+   (`mascot-sway`) para não colidir com a postura vinda do estado (--leaf-rot) nem com as animações. */
+.mascot-sway,
+.mascot-cap,
+.mascot-arm,
+.mascot-ring-spin,
+.mascot-puffs,
+.puff {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* Abacaxi: a coroa balança com energia; o pivô é o centro da base. */
+.mascot[data-character='pineapple'] .mascot-leaf {
+  transform-origin: 50% 100%;
+}
+.mascot[data-character='pineapple'] .mascot-sway {
+  animation: crown-sway 2.4s ease-in-out infinite;
+}
+@keyframes crown-sway {
+  0%,
+  100% {
+    transform: rotate(-3.5deg) scale(1, 1);
+  }
+  50% {
+    transform: rotate(3.5deg) scale(1.03, 0.98);
+  }
+}
+
+/* Quadradinho: respira como gelatina, achatando e esticando mais que o original. */
+.mascot[data-character='square'] .mascot-breath {
+  animation-name: breathe-jelly;
+}
+@keyframes breathe-jelly {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.05, 0.93);
+  }
+}
+
+/* Cogumelo: o chapéu inclina de leve, mais quando está sonolento ou curioso. */
+.mascot-cap {
+  transform-origin: 50% 100%;
+  transform: rotate(calc(var(--leaf-rot) * 0.2));
+  transition: transform 0.5s var(--ease-out-quint);
+}
+.mascot[data-character='mushroom'] .mascot-sway {
+  animation: cap-tilt 4.2s ease-in-out infinite;
+}
+@keyframes cap-tilt {
+  0%,
+  100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg) translateY(-1px);
+  }
+}
+.mascot[data-character='mushroom'][data-state='happy'] .mascot-cap,
+.mascot[data-character='mushroom'][data-state='celebrate'] .mascot-cap,
+.mascot[data-character='mushroom'][data-state='giggle'] .mascot-cap {
+  animation: cap-pop 0.6s var(--ease-out-quint);
+}
+@keyframes cap-pop {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  35% {
+    transform: rotate(-5deg) translateY(-5px);
+  }
+  70% {
+    transform: rotate(3deg) translateY(1px);
+  }
+}
+
+/* Cacto: balança de leve; a flor segue o estado (como a folha do original). Bracinhos acenam. */
+.mascot[data-character='cactus'] .mascot-flower {
+  transform-origin: 50% 100%;
+}
+.mascot[data-character='cactus'] .mascot-sway {
+  animation: crown-sway 3.6s ease-in-out infinite;
+}
+.mascot[data-character='cactus'] .mascot-arm-l {
+  transform-origin: 80% 100%;
+  animation: arm-wave-l 3.4s ease-in-out infinite;
+}
+.mascot[data-character='cactus'] .mascot-arm-r {
+  transform-origin: 20% 100%;
+  animation: arm-wave-r 3.4s ease-in-out infinite 0.6s;
+}
+@keyframes arm-wave-l {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+}
+@keyframes arm-wave-r {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+.mascot[data-character='cactus'][data-state='happy'] .mascot-arm,
+.mascot[data-character='cactus'][data-state='celebrate'] .mascot-arm,
+.mascot[data-character='cactus'][data-state='giggle'] .mascot-arm {
+  animation: arm-cheer 0.5s ease-in-out 3;
+}
+@keyframes arm-cheer {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-9deg);
+  }
+}
+
+/* Nuvem e fantasma flutuam (movimento vertical contínuo no lugar da respiração); a sombra fica
+   menor e mais clara, como se estivessem no ar. */
+.mascot[data-character='cloud'] .mascot-breath,
+.mascot[data-character='ghost'] .mascot-breath {
+  animation-name: float-bob;
+  animation-duration: 4.2s;
+}
+.mascot[data-character='ghost'] .mascot-breath {
+  animation-duration: 3.2s;
+}
+.mascot[data-character='cloud'][data-state='sleepy'] .mascot-breath,
+.mascot[data-character='ghost'][data-state='sleepy'] .mascot-breath {
+  animation-duration: 6s;
+}
+@keyframes float-bob {
+  0%,
+  100% {
+    transform: translateY(-3px) scale(1, 1);
+  }
+  50% {
+    transform: translateY(-9px) scale(1.015, 0.985);
+  }
+}
+.mascot[data-character='cloud'] .mascot-shadow,
+.mascot[data-character='ghost'] .mascot-shadow {
+  rx: 44px;
+  ry: 6px;
+  fill: rgba(0, 0, 0, 0.12);
+}
+
+.mascot[data-character='cloud'] .puff {
+  animation: puff-drift 5s ease-in-out infinite;
+}
+.mascot[data-character='cloud'] .puff2 {
+  animation-delay: 1.8s;
+}
+@keyframes puff-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(-3px, -6px);
+    opacity: 0.45;
+  }
+}
+
+/* Planeta: o anel gira em torno do corpo bem devagar (oscila), sem competir com o rosto. */
+.mascot[data-character='planet'] .mascot-ring-spin {
+  transform-origin: 50% 50%;
+  animation: ring-tilt 6s ease-in-out infinite;
+}
+@keyframes ring-tilt {
+  0%,
+  100% {
+    transform: rotate(-2.5deg) scaleY(1);
+  }
+  50% {
+    transform: rotate(2.5deg) scaleY(1.12);
+  }
+}
+.mascot[data-character='planet'][data-state='happy'] .mascot-ring-spin,
+.mascot[data-character='planet'][data-state='celebrate'] .mascot-ring-spin,
+.mascot[data-character='planet'][data-state='giggle'] .mascot-ring-spin {
+  animation: ring-spin-fast 0.9s ease-in-out;
+}
+@keyframes ring-spin-fast {
+  0%,
+  100% {
+    transform: rotate(0deg) scaleY(1);
+  }
+  50% {
+    transform: rotate(6deg) scaleY(1.3);
+  }
+}
+
+/* Fantasma: os bracinhos balançam; a barra ondulada acompanha a flutuação do corpo. */
+.mascot[data-character='ghost'] .mascot-arm-l {
+  transform-origin: 100% 50%;
+  animation: arm-wave-l 2.8s ease-in-out infinite;
+}
+.mascot[data-character='ghost'] .mascot-arm-r {
+  transform-origin: 0% 50%;
+  animation: arm-wave-r 2.8s ease-in-out infinite 0.4s;
+}

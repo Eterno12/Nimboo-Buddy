@@ -12,7 +12,7 @@ copiado de planos. Legenda de evidência:
 | Verificação | Resultado |
 |---|---|
 | `npm run build` | limpo (`tsc` sem erros) |
-| `npm test` | **298/298** — `tasks` 34, `geometry` 26, `focus` 21, `personality` 18, `island` 17, `calendar` 20, `settings` 16, `durability` 14, `mascotController` 13, `notes` 13, `contrast` 13, `characters` 12, `reminders` 11, `assistant` 10, `assistantAi` 10, `removal` 10, `calendarSync` 10, `backup` 6, `sounds` 5, `focusLog` 5, `dnd` 5, `draft` 5, `dueFormat` 4 |
+| `npm test` | **300/300** (+ `portability` 2) — `tasks` 34, `geometry` 26, `focus` 21, `personality` 18, `island` 17, `calendar` 20, `settings` 16, `durability` 14, `mascotController` 13, `notes` 13, `contrast` 13, `characters` 12, `reminders` 11, `assistant` 10, `assistantAi` 10, `removal` 10, `calendarSync` 10, `backup` 6, `sounds` 5, `focusLog` 5, `dnd` 5, `draft` 5, `dueFormat` 4 |
 | `npm run test:tasks` | **58/58** (`tasks` + `removal` + `durability`) |
 | `npm run test:e2e` | **14/14** passos (tarefas; app real via CDP, dados isolados) |
 | `npm run test:e2e:focus` | **11/11** passos (tempo livre, tarefa vinculada, sessão real de 1 min com a ilha escondida; ~1,5 min) |
@@ -23,7 +23,7 @@ copiado de planos. Legenda de evidência:
 | `npm run test:e2e:assistant` | **9/9** passos (nota por frase + desfazer; nota sem texto; tarefa com prazo, listar e concluir por nome; foco; trocar personagem; pergunta sem fonte → ativar → resposta com fonte [arquivo-fixture, sem rede]; microfone até a mensagem de privacidade do Windows; privacidade por padrão) |
 | Rede real | agenda pública do Google (feriados do Brasil) lida em ~0,6 s; endereço errado → "não encontrada (código 404)" |
 | `npm run pack` + `node tests/e2e/packaged.e2e.mjs` | **5/5** passos no `Mochi.exe` empacotado (ilha, `packaged`, banco, foco, preferências) |
-| `npm run dist` | gera `release/Mochi Setup 0.3.0.exe` (106 MB, NSIS por usuário, **sem assinatura**) |
+| `npm run dist` | gera `release/Mochi Setup 0.4.0.exe` (106,6 MB, NSIS por usuário, **sem assinatura**); `packaged.e2e` 5/5 no `win-unpacked` novo |
 
 Verificações manuais com o app real nesta etapa: atalho global (Ctrl+Alt+M enviado por `keybd_event`
 com a ilha escondida → ilha volta, tarefas abertas, campo em foco) e "não incomodar" (janela em tela
@@ -68,6 +68,7 @@ Vite 8.3, TypeScript 7.0. Máquina de desenvolvimento com 1 monitor a 100 % de e
 | **Evento → tarefa (D35):** botão "→ Virar tarefa" (título, horário como prazo, dia inteiro sem prazo), "✓ Tarefa" depois, sem duplicar, lembrete único; migração v3 | repositório, migração e conversão [auto] (9 testes); e2e (4 passos) + captura |
 | **Notas com formatação (D36):** negrito/itálico/sublinhado/tachado/código, títulos, listas, tarefas, citação, bloco de código, alinhamento, cor, marca-texto, link; busca sem acento; cor do papel; **nota flutuante** na área de trabalho (posição lembrada, reabre com o app); excluir com desfazer; migração v4 | validação do documento, repositório e migração [auto] (13); e2e (11 passos); aparência [manual] (capturas do editor e da folha) |
 | **Assistente (D37):** conversa por texto ou microfone; cria notas/tarefas com prazo, lista, conclui, foco, troca de personagem (com *Desfazer*); perguntas via Wikipédia e/ou IA local (Ollama), ambas opt-in | analisador (10), Wikipédia/Ollama/voz (10) [auto]; e2e (9 passos, sem rede); microfone com fala real **não verificado** |
+| **Exportar / importar dados:** "Seus dados" nas configurações gera um JSON (tarefas e notas) e importa sem sobrescrever (pula o que já existe, ignora itens inválidos) | exportar → importar em outro banco, duplicatas e arquivos inválidos [auto] (2); diálogos do Windows **não exercitados** |
 | **Google Agenda (iCal, somente leitura):** "Agenda de hoje", lembretes dos eventos, segredo criptografado (D31) | parser (16) e sincronização (10) [auto]; e2e (8); rede real [manual] |
 | Contraste das cores (tarefas, configurações, balão, painel escuro) calculado sobre o CSS real | [auto] |
 
@@ -139,7 +140,7 @@ global personalizado livre (só os predefinidos), escolha do monitor da ilha pel
 
 ## Próxima etapa recomendada
 
-1. **Instalar de verdade e conferir** (por você): rodar `release/Mochi Setup 0.3.0.exe`, ligar "iniciar com o
+1. **Instalar de verdade e conferir** (por você): rodar `release/Mochi Setup 0.4.0.exe`, ligar "iniciar com o
    Windows", reiniciar e ver se abre como ilha.
 2. **Experimentar com a sua agenda real:** colar o endereço secreto e conferir eventos recorrentes, fusos e lembretes.
 3. **Notas rápidas** (fase D do `ROADMAP.md`): a migração v3 já tem backup automático.

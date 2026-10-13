@@ -20,6 +20,7 @@ import { createWindowModeManager, type WindowModeManager } from './windowMode';
 import { startTasksService, type TasksService } from './tasksService';
 import { startNotesService, type NotesService } from './notesService';
 import { startAssistantService, type AssistantService } from './assistantService';
+import { startDataService, type DataService } from './dataService';
 import { startFocusService, type FocusService } from './focusService';
 import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
@@ -40,6 +41,7 @@ let eventReminders: ReminderScheduler | null = null;
 let calendar: CalendarService | null = null;
 let notes: NotesService | null = null;
 let assistant: AssistantService | null = null;
+let dataService: DataService | null = null;
 let focusLog: FocusLog | null = null;
 /** Eventos da agenda e quais já viraram tarefa: o lembrete passa a ser o da tarefa (sem aviso duplo). */
 let agendaEvents: CalendarEvent[] = [];
@@ -407,6 +409,8 @@ if (!app.requestSingleInstanceLock()) {
       },
     });
 
+    dataService = startDataService({ database: () => tasks?.database() ?? null, isAppUrl });
+
     // Assistente: janela de conversa, voz (Windows) e conhecimento opcional (Wikipédia / IA local).
     assistant = startAssistantService({
       isAppUrl,
@@ -452,6 +456,7 @@ if (!app.requestSingleInstanceLock()) {
     calendar?.close();
     notes?.close();
     assistant?.close();
+    dataService?.close();
     tasks?.close();
     tray?.destroy();
   });

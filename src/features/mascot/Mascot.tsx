@@ -4,6 +4,7 @@ import type { CharacterId, MochiColor } from '../../../shared/settings';
 import { characterArt } from './characterArt';
 import { characterInfo } from './characters';
 import './mascot.css';
+import './characters.css';
 
 interface MascotProps {
   state: MascotState;

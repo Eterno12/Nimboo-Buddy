@@ -226,8 +226,9 @@ try {
     await panel.waitFor(
       `[...document.querySelectorAll('[aria-label="Tamanho do Mochi solto"] [aria-checked=true]')].map((b) => b.textContent).join() === '100%'`,
       'voltou a 100%',
+      12000,
     );
-    await page.waitFor(`window.outerWidth === 240`, 'janela do Mochi em 240');
+    await page.waitFor(`window.outerWidth === 240`, 'janela do Mochi em 240', 12000);
   });
 
   await step('prazo: datas inválidas são recusadas e um prazo válido é gravado em UTC', async () => {

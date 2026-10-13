@@ -91,6 +91,10 @@ const api: MochiApi = {
     update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
     onChange: (listener) => listen<[SettingsSnapshot]>(IPC.settingsChanged, (s) => listener(s)),
   },
+  data: {
+    export: () => ipcRenderer.invoke(IPC.dataExport),
+    import: () => ipcRenderer.invoke(IPC.dataImport),
+  },
   assistant: {
     open: () => ipcRenderer.send(IPC.assistantOpen),
     listen: () => ipcRenderer.invoke(IPC.assistantListen),
