@@ -1,8 +1,9 @@
 {
   "name": "mochi-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Mochi Desktop - bichinho virtual para a área de trabalho",
+  "author": "Mochi",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
@@ -14,11 +15,9 @@
     "test:tasks": "node --test tests/tasks.test.ts tests/removal.test.ts tests/durability.test.ts",
     "test:e2e": "npm run build && node tests/e2e/tasks-ui.e2e.mjs",
     "test:e2e:focus": "npm run build && node tests/e2e/focus-ui.e2e.mjs",
-    "test:e2e:settings": "npm run build && node tests/e2e/settings-ui.e2e.mjs"
-  },
-  "dependencies": {
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "test:e2e:settings": "npm run build && node tests/e2e/settings-ui.e2e.mjs",
+    "pack": "npm run build && electron-builder --win dir",
+    "dist": "npm run build && electron-builder --win nsis"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
@@ -26,8 +25,47 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.4"
+  },
+  "build": {
+    "appId": "com.mochi.desktop",
+    "productName": "Mochi",
+    "copyright": "Mochi",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Mochi",
+      "deleteAppDataOnUninstall": false
+    }
   }
 }
