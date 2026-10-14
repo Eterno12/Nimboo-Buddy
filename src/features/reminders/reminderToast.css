@@ -1,0 +1,87 @@
+.rem-host {
+  --c-panel: #fdf8f3;
+  --c-text: #3b3040;
+  --c-muted: #6f6478;
+  --c-border: #cfc5d6;
+  --c-accent: #25754a;
+  box-sizing: border-box;
+  height: 100vh;
+  padding: 8px;
+  background: transparent;
+  font: 14px/1.4 'Segoe UI', system-ui, sans-serif;
+}
+
+.rem-host[data-theme='dark'] {
+  --c-panel: #2b2335;
+  --c-text: #f1ecf6;
+  --c-muted: #b7aec2;
+  --c-border: #5d5169;
+  --c-accent: #8fd9a8;
+}
+
+.rem-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 14px;
+  background: var(--c-panel);
+  color: var(--c-text);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  animation: rem-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes rem-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.rem-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--c-muted);
+}
+
+.rem-title {
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rem-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.rem-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--c-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rem-btn[data-primary='true'] {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: var(--c-panel);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rem-card {
+    animation: none;
+  }
+}

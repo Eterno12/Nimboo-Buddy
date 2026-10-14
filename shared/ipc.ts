@@ -8,6 +8,7 @@ import type { MediaCommand, MediaState } from './media';
 import type { FocusApi } from './focus';
 import type { Settings } from './settings';
 import type { CalendarResult, CalendarState } from './calendar';
+import type { ReminderToastAction, ReminderToastInfo } from './reminderToast';
 
 /** Preferências + o que só o processo principal sabe (para a tela de configurações). */
 export interface SettingsSnapshot {
@@ -116,9 +117,12 @@ export const IPC = {
   /** main -> renderer: pedido de alternar a ilha vindo do menu (alternativa ao clique). */
   islandToggle: 'island:toggle',
   /** Agenda (iCal): estado, endereço (só entra, nunca sai), remoção e atualização. */
+  reminderGet: 'reminder:get',
+  reminderAct: 'reminder:act',
   calendarGet: 'calendar:get',
   calendarSetUrl: 'calendar:set-url',
   calendarClear: 'calendar:clear',
+  calendarRemove: 'calendar:remove',
   calendarRefresh: 'calendar:refresh',
   calendarChanged: 'calendar:changed',
   /** renderer -> main: há (ou não) um balão de fala visível; a forma da janela acompanha. */
@@ -219,11 +223,20 @@ export interface MochiApi {
     update(patch: Partial<Omit<Settings, 'version'>>): Promise<SettingsSnapshot>;
     onChange(listener: (snapshot: SettingsSnapshot) => void): () => void;
   };
+  /** Aviso de lembrete com botões (janela própria no canto da tela). */
+  reminder: {
+    get(token: string): Promise<ReminderToastInfo | null>;
+    act(token: string, action: ReminderToastAction): void;
+  };
   /** Agenda por endereço iCal (somente leitura). O endereço nunca volta para a interface. */
   calendar: {
     get(): Promise<CalendarState>;
+    /** Conecta mais uma agenda (até 5). */
     setUrl(url: string): Promise<CalendarResult<CalendarState>>;
+    /** Desconecta todas as agendas. */
     clear(): Promise<CalendarState>;
+    /** Desconecta uma agenda (pelo `slot` de `sources`). */
+    remove(slot: number): Promise<CalendarState>;
     refresh(): Promise<CalendarState>;
     onChange(listener: (state: CalendarState) => void): () => void;
   };

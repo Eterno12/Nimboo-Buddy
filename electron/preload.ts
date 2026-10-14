@@ -163,10 +163,15 @@ const api: MochiApi = {
       }),
     onOpen: (listener) => listen<[unknown]>(IPC.notesOpen, (id) => listener(typeof id === 'string' ? id : null)),
   },
+  reminder: {
+    get: (token) => ipcRenderer.invoke(IPC.reminderGet, token),
+    act: (token, action) => ipcRenderer.send(IPC.reminderAct, token, action),
+  },
   calendar: {
     get: async () => (await ipcRenderer.invoke(IPC.calendarGet)) ?? EMPTY_CALENDAR,
     setUrl: (url) => ipcRenderer.invoke(IPC.calendarSetUrl, url),
     clear: async () => (await ipcRenderer.invoke(IPC.calendarClear)) ?? EMPTY_CALENDAR,
+    remove: async (slot) => (await ipcRenderer.invoke(IPC.calendarRemove, slot)) ?? EMPTY_CALENDAR,
     refresh: async () => (await ipcRenderer.invoke(IPC.calendarRefresh)) ?? EMPTY_CALENDAR,
     onChange: (listener) => listen<[CalendarState]>(IPC.calendarChanged, (s) => listener(s)),
   },

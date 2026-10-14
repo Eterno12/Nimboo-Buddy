@@ -31,6 +31,7 @@ import { startFocusService, type FocusService } from './focusService';
 import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
 import { ReminderScheduler, type Reminder } from './reminders';
+import { startReminderToasts, type ReminderSource, type ReminderToasts } from './reminderToast';
 import { FocusLog } from './focus/focusLog';
 import { startCalendarService, type CalendarService } from './calendarService';
 import type { FocusConfig } from '../shared/focus';
@@ -43,6 +44,7 @@ let focus: FocusService | null = null;
 let settingsStore: SettingsStore | null = null;
 let settingsService: SettingsService | null = null;
 let reminders: ReminderScheduler | null = null;
+let reminderToasts: ReminderToasts | null = null;
 let eventReminders: ReminderScheduler | null = null;
 let calendar: CalendarService | null = null;
 let notes: NotesService | null = null;
@@ -211,8 +213,11 @@ const focusConfigOf = (s: Settings): FocusConfig => ({
   autoAdvance: s.pomodoroAuto,
 });
 
-/** Lembrete de prazo: o renderer mostra o balão e toca o som; sem mascote visível, vira notificação. */
-function deliverReminder(reminder: Reminder): void {
+/**
+ * Lembrete: o renderer mostra o balão e toca o som; além disso aparece um aviso no canto da tela com os
+ * botões Concluir / Adiar / Dispensar (o Electron não suporta botões nas notificações nativas do Windows).
+ */
+function deliverReminder(reminder: Reminder, source: ReminderSource): void {
   for (const win of BrowserWindow.getAllWindows()) {
     if (win.isDestroyed()) continue;
     try {
@@ -221,15 +226,7 @@ function deliverReminder(reminder: Reminder): void {
       console.error('Falha ao entregar o lembrete a uma janela:', error);
     }
   }
-  const visible = !!mascot && !mascot.isDestroyed() && mascot.isVisible();
-  if (!visible && Notification.isSupported()) {
-    const title = reminder.title.length > 80 ? `${reminder.title.slice(0, 77)}...` : reminder.title;
-    new Notification({
-      title: reminder.kind === 'due' ? 'Chegou a hora' : `Em ${reminder.minutes} minutos`,
-      body: title,
-      silent: true,
-    }).show();
-  }
+  reminderToasts?.show(reminder, source);
 }
 
 /** Efeitos de uma mudança de preferências que vão além de redesenhar as janelas. */
@@ -401,12 +398,12 @@ if (!app.requestSingleInstanceLock()) {
     const startup = settings.get();
     reminders = new ReminderScheduler({
       config: { enabled: startup.remindersEnabled, leadMinutes: startup.reminderLeadMin },
-      onReminder: deliverReminder,
+      onReminder: (r) => deliverReminder(r, 'task'),
     });
     // Lembretes dos eventos da agenda (mesmo agendador dos prazos de tarefas, instância própria).
     eventReminders = new ReminderScheduler({
       config: { enabled: startup.remindersEnabled, leadMinutes: startup.reminderLeadMin },
-      onReminder: deliverReminder,
+      onReminder: (r) => deliverReminder(r, 'event'),
     });
     // O banco fica em userData/data; só o processo principal o abre.
     tasks = startTasksService({
@@ -421,6 +418,11 @@ if (!app.requestSingleInstanceLock()) {
         if (change.type === 'created') bond?.record({ type: 'task_created' });
         else if (change.type === 'completed') bond?.record({ type: 'task_completed' });
       },
+    });
+    reminderToasts = startReminderToasts({
+      isAppUrl,
+      canShow: () => !hiddenByFullscreen,
+      completeTask: async (id) => (await tasks?.complete(id)) ?? false,
     });
     const database = tasks.database();
     if (database) {
@@ -552,6 +554,7 @@ if (!app.requestSingleInstanceLock()) {
     focus?.close();
     reminders?.dispose();
     eventReminders?.dispose();
+    reminderToasts?.close();
     calendar?.close();
     notes?.close();
     assistant?.close();

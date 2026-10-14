@@ -24,6 +24,7 @@ import {
 import { WELLNESS_INTERVALS, WELLNESS_LABEL } from '../../../shared/wellness';
 import type { GeminiStatus } from '../../../shared/assistantApi';
 import { configureSound, playSound } from '../audio/soundEngine';
+import { CALENDAR_MAX_SOURCES } from '../../../shared/calendar';
 import { useCalendar } from '../calendar/useCalendar';
 import { useSettings } from './useSettings';
 import './settings.css';
@@ -103,7 +104,7 @@ const syncTime = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-
 
 /** Google Agenda por endereço iCal (somente leitura). O endereço é um segredo: nunca é exibido de volta. */
 function CalendarSettings({ hidden }: { hidden: boolean }) {
-  const { state, busy, setUrl, clear, refresh } = useCalendar();
+  const { state, busy, setUrl, remove, refresh } = useCalendar();
   const [text, setText] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -116,25 +117,32 @@ function CalendarSettings({ hidden }: { hidden: boolean }) {
 
   return (
     <fieldset className="settings-group" hidden={hidden}>
-      <legend>Google Agenda</legend>
-      {state.configured ? (
+      <legend>Agendas (Google Agenda)</legend>
+      {state.sources.length > 0 && (
         <>
-          <p className="settings-hint" data-tone={state.error ? 'warn' : 'ok'} role="status">
-            {state.error
-              ? state.error
-              : `Conectada (${state.host ?? 'agenda'})${state.lastSync ? ` · atualizada às ${syncTime.format(new Date(state.lastSync))}` : ''}.`}
-          </p>
+          <ul className="settings-sources">
+            {state.sources.map((src) => (
+              <li key={src.slot} data-testid="calendar-source">
+                <span className="settings-hint" data-tone={src.error ? 'warn' : 'ok'} role="status">
+                  {src.error
+                    ? src.error
+                    : `${src.host ?? 'agenda'}${src.lastSync ? ` · atualizada às ${syncTime.format(new Date(src.lastSync))}` : ''}`}
+                </span>
+                <button type="button" className="settings-small" disabled={busy} onClick={() => void remove(src.slot)}>
+                  Remover
+                </button>
+              </li>
+            ))}
+          </ul>
           <div className="settings-inline">
             <button type="button" className="settings-small" disabled={busy} onClick={() => void refresh()}>
               {busy ? 'Atualizando…' : 'Atualizar agora'}
             </button>
-            <button type="button" className="settings-small" disabled={busy} onClick={() => void clear()}>
-              Remover agenda
-            </button>
           </div>
           <p className="settings-hint">Só leitura: o Nimboo mostra os eventos de hoje nas tarefas e avisa antes.</p>
         </>
-      ) : (
+      )}
+      {state.sources.length < CALENDAR_MAX_SOURCES ? (
         <>
           <label className="settings-stack">
             <span>Endereço secreto no formato iCal</span>
@@ -159,7 +167,7 @@ function CalendarSettings({ hidden }: { hidden: boolean }) {
               disabled={!state.canStore || busy || text.trim() === ''}
               onClick={() => void connect()}
             >
-              {busy ? 'Conectando…' : 'Conectar'}
+              {busy ? 'Conectando…' : state.sources.length > 0 ? 'Conectar outra' : 'Conectar'}
             </button>
           </div>
           {message && (
@@ -182,6 +190,8 @@ function CalendarSettings({ hidden }: { hidden: boolean }) {
             </ol>
           </details>
         </>
+      ) : (
+        <p className="settings-hint">Limite de {CALENDAR_MAX_SOURCES} agendas conectadas.</p>
       )}
     </fieldset>
   );

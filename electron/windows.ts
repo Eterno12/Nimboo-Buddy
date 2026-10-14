@@ -174,6 +174,40 @@ export function createToastWindow(achievementId: string, workArea: Rect): Browse
   return win;
 }
 
+/**
+ * Aviso de lembrete com botões (Concluir / Adiar / Dispensar), no canto da tela. Não rouba o foco, mas
+ * aceita cliques. Fica acima do aviso de conquista, para os dois não se sobreporem.
+ */
+export function createReminderToastWindow(token: string, workArea: Rect): BrowserWindow {
+  const width = 380;
+  const height = 132;
+  const win = new BrowserWindow({
+    width,
+    height,
+    x: workArea.x + workArea.width - width - 16,
+    y: workArea.y + workArea.height - height - 16 - 112,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    focusable: false,
+    alwaysOnTop: true,
+    show: false,
+    webPreferences: secureWebPreferences(),
+  });
+  win.setAlwaysOnTop(true, 'screen-saver');
+  lockNavigation(win);
+  loadRenderer(win, `reminder=${token}`);
+  win.once('ready-to-show', () => win.showInactive());
+  return win;
+}
+
 /** Cor de fundo das janelas de nota (igual à do papel em notes.css; a janela nasce já pintada). */
 const NOTE_PAPER: Record<string, string> = {
   yellow: '#fff3a8',

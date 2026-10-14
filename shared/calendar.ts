@@ -17,7 +17,20 @@ export interface CalendarEvent {
   location: string | null;
 }
 
+/** Uma agenda conectada (o endereço nunca sai do processo principal). */
+export interface CalendarSource {
+  slot: number;
+  host: string | null;
+  lastSync: string | null;
+  error: string | null;
+}
+
+/** Quantas agendas podem ficar conectadas ao mesmo tempo. */
+export const CALENDAR_MAX_SOURCES = 5;
+
 export interface CalendarState {
+  /** Agendas conectadas (vazio = nenhuma). `configured`/`host`/`error`/`lastSync` resumem todas. */
+  sources: CalendarSource[];
   /** Há um endereço salvo (o endereço em si nunca vai para a interface). */
   configured: boolean;
   /** Só o domínio, para a pessoa reconhecer (ex.: `calendar.google.com`). */
@@ -33,6 +46,7 @@ export interface CalendarState {
 }
 
 export const EMPTY_CALENDAR: CalendarState = Object.freeze({
+  sources: [],
   configured: false,
   host: null,
   lastSync: null,

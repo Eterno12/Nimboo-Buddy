@@ -164,6 +164,26 @@ try {
     assert.ok(!dump.includes('segredo9876'), 'o segredo vazou para a interface');
   });
 
+  await step('várias agendas: até 5, eventos repetidos aparecem uma vez, a 6ª é recusada e remover uma não afeta as outras', async () => {
+    for (let i = 0; i < 4; i++) {
+      const r = await page.ev(`window.mochi.calendar.setUrl(${JSON.stringify(SECRET_URL + i)})`);
+      assert.equal(r.ok, true, `agenda ${i + 2}`);
+    }
+    let s = await page.ev(`window.mochi.calendar.get()`);
+    assert.equal(s.sources.length, 5);
+    const titles = s.events.map((e) => e.title);
+    assert.equal(new Set(titles).size, titles.length, 'sem eventos duplicados');
+    const sixth = await page.ev(`window.mochi.calendar.setUrl(${JSON.stringify(SECRET_URL + 'x')})`);
+    assert.equal(sixth.ok, false);
+    assert.match(sixth.message, /Limite/);
+    s = await page.ev(`window.mochi.calendar.remove(3)`);
+    assert.deepEqual(s.sources.map((x) => x.slot), [0, 1, 2, 4]);
+    for (const slot of [1, 2, 4]) await page.ev(`window.mochi.calendar.remove(${slot})`);
+    s = await page.ev(`window.mochi.calendar.get()`);
+    assert.deepEqual(s.sources.map((x) => x.slot), [0]);
+    assert.ok(s.events.length >= 3);
+  });
+
   await step('o endereço é guardado criptografado em disco (não aparece em texto puro)', async () => {
     const bin = fs.readFileSync(path.join(userData, 'calendar-url.bin'));
     assert.ok(bin.length > 20);

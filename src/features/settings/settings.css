@@ -384,3 +384,24 @@ textarea.settings-text {
   align-items: stretch;
   gap: 6px;
 }
+.settings-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-sources li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-sources .settings-hint {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

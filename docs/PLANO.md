@@ -17,7 +17,7 @@ M (1–2), G (2+).
 | 8 ✅ | **Assistente+:** mais comandos (adiar, fixar nota, "o que tenho amanhã?"), histórico local apagável, atalho global para falar | M | 1–2 | feito (histórico visível e apagável, ligado por padrão; atalho opcional Ctrl+Alt+V/A ou Ctrl+Shift+V, desligado por padrão) |
 | 9 ✅ | **Voz:** resposta falada (TTS do Windows) por personagem; **reconhecimento offline** (Whisper local) | G | 8 | encerrada por decisão sua: o personagem **não fala**; fica só com os sons e balões que já existem (sem TTS, sem Whisper, sem download) |
 | 10 ✅ | **IA com ações:** o Ollama propõe ações e você confirma por cartão | M | 8 | refeita por decisão sua: **Gemini (Google) com sua chave grátis**, conversa com identidade por personagem, streaming e cartões de ação (Aceitar/Ignorar); Ollama segue como opção antiga |
-| 11 | **Agenda:** várias agendas iCal; notificações do Windows com botões (Concluir / Adiar) | M | 1 | Quantas agendas? (sugiro até 5) |
+| 11 ✅ | **Agenda:** várias agendas iCal; notificações com botões (Concluir / Adiar) | M | 1 | feito (até 5 agendas; aviso próprio no canto da tela, porque o Electron não suporta botões nas notificações nativas do Windows) |
 | 12 ✅ | **Primeira execução guiada** (personagem, agenda, voz/IA) | M | 4, 9 | — |
 | 13 | **Acessibilidade e multi-monitor:** teclado na ilha, leitor de tela, DPI 125/150 %, 2º monitor | M | — | Você testa em outro monitor comigo? |
 | 14 | **Distribuição:** assinatura de código, atualização automática, log de erros local | G | todas | Você tem/quer certificado de código? |

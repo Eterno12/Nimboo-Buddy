@@ -45,6 +45,15 @@ export function useCalendar() {
     }
   }, []);
 
+  const remove = useCallback(async (slot: number) => {
+    setBusy(true);
+    try {
+      setState(await window.mochi.calendar.remove(slot));
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
     setBusy(true);
     try {
@@ -54,5 +63,5 @@ export function useCalendar() {
     }
   }, []);
 
-  return { state, busy, setUrl, clear, refresh };
+  return { state, busy, setUrl, clear, remove, refresh };
 }

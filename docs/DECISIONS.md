@@ -574,3 +574,12 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Interface:** aba "Acessórios" na janela de conquistas, com prévia viva, preço e Comprar/Usar/Tirar.
 - **Limite:** o main não confere posse ao receber `skin` pelas preferências (só a interface oferece itens
   comprados); impacto é só visual e local.
+
+## D53 — Várias agendas e aviso de lembrete com botões
+- **Agendas:** até 5 endereços iCal (`CALENDAR_MAX_SOURCES`), cada um uma `CalendarSync` com arquivos próprios
+  (`calendar-url[-n].bin`, `calendar-cache[-n].json`; o 1º mantém os nomes antigos, sem migração). A interface
+  recebe o resumo (`sources`, eventos mesclados, sem duplicar o mesmo `id`); os endereços nunca saem do main.
+- **Aviso de lembrete:** janela própria no canto (`#reminder=<token>`) com Concluir (só tarefas), Adiar 10 min e
+  Dispensar; some em 30 s. Substitui a notificação nativa, que no Windows não aceita botões pelo Electron.
+  "Adiar" reapresenta o aviso depois; o prazo da tarefa não muda. Respeita app em tela cheia.
+- **Limite:** o aviso aparece mesmo com o mascote visível (além do balão).
