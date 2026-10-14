@@ -42,6 +42,10 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'wellnessStretch',
   'assistantHistory',
   'assistantShortcut',
+  'assistantGemini',
+  'geminiModel',
+  'assistantPersona',
+  'assistantContext',
 ];
 
 export interface SettingsService {

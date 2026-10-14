@@ -111,6 +111,17 @@ const api: MochiApi = {
   },
   assistant: {
     open: () => ipcRenderer.send(IPC.assistantOpen),
+    gemini: {
+      status: () => ipcRenderer.invoke(IPC.geminiStatus),
+      setKey: (key) => ipcRenderer.invoke(IPC.geminiSetKey, key),
+      clearKey: () => ipcRenderer.invoke(IPC.geminiClearKey),
+      test: () => ipcRenderer.invoke(IPC.geminiTest),
+      openKeyPage: () => ipcRenderer.send(IPC.geminiOpenKeyPage),
+      chat: (requestId, request) => ipcRenderer.invoke(IPC.geminiChat, requestId, request),
+      cancelChat: (requestId) => ipcRenderer.send(IPC.geminiChatCancel, requestId),
+      onChatDelta: (listener) =>
+        listen<[{ requestId: number; delta: string }]>(IPC.geminiChatDelta, (p) => listener(p.requestId, p.delta)),
+    },
     history: {
       list: () => ipcRenderer.invoke(IPC.assistantHistoryList),
       add: (entries) => ipcRenderer.send(IPC.assistantHistoryAdd, entries),

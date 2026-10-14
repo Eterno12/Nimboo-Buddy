@@ -15,6 +15,16 @@ import {
 } from './assistantAi';
 import { createAssistantWindow } from './windows';
 import type { AssistantHistory } from './assistant/historyStore';
+import type { GeminiKeyStore } from './geminiKey';
+import type { GeminiChatOutcome, GeminiStatus } from '../shared/assistantApi';
+import { buildSystemPrompt } from '../shared/persona';
+import {
+  streamGemini,
+  type GeminiFetch,
+  type GeminiFetchResponse,
+  type GeminiResult,
+  type GeminiTurn,
+} from './gemini';
 
 export interface AssistantService {
   /** `listen`: abre já ouvindo o microfone (atalho global). */
@@ -28,6 +38,31 @@ interface AssistantServiceOptions {
   isDark(): boolean;
   /** Histórico da conversa (ausente se o banco não abriu). */
   getHistory?(): AssistantHistory | null;
+  /** Guarda da chave do Gemini (cifrada pelo Windows). */
+  keyStore?: GeminiKeyStore;
+}
+
+const GEMINI_KEY_PAGE = 'https://aistudio.google.com/apikey';
+
+/**
+ * Só para testes e2e (app NÃO empacotado): MOCHI_E2E_GEMINI_FIXTURE aponta um JSON { chunks: string[],
+ * status?: number }; a "resposta" do Gemini é montada localmente. Nada vai para a rede.
+ */
+function fixtureGemini(file: string): GeminiFetch {
+  const data = JSON.parse(fs.readFileSync(file, 'utf8')) as { chunks?: unknown; status?: unknown; error?: unknown };
+  return async () => {
+    const status = typeof data.status === 'number' ? data.status : 200;
+    if (status !== 200) {
+      const body = JSON.stringify({ error: { message: typeof data.error === 'string' ? data.error : 'erro' } });
+      return { ok: false, status, body: null, text: async () => body };
+    }
+    const chunks = Array.isArray(data.chunks) ? data.chunks.filter((c): c is string => typeof c === 'string') : [];
+    const sse = chunks
+      .map((text) => `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] })}\n\n`)
+      .join('');
+    const res = new Response(sse);
+    return { ok: true, status: 200, body: res.body, text: async () => sse };
+  };
 }
 
 const MAX_QUESTION = 1000;
@@ -54,7 +89,12 @@ function fixtureFetch(file: string): FetchLike {
  * Assistente: janela de conversa, voz (Windows) e conhecimento opcional (Wikipédia / IA local). A rede é
  * usada só aqui no processo principal e só quando a pessoa liga a opção correspondente.
  */
-export function startAssistantService({ isAppUrl, settings, isDark, getHistory }: AssistantServiceOptions): AssistantService {
+export function startAssistantService({ isAppUrl, settings, isDark, getHistory, keyStore }: AssistantServiceOptions): AssistantService {
+  const geminiFixture = !app.isPackaged ? process.env.MOCHI_E2E_GEMINI_FIXTURE : undefined;
+  const geminiFetch: GeminiFetch = geminiFixture
+    ? fixtureGemini(geminiFixture)
+    : (url, init) => net.fetch(url, init as RequestInit) as unknown as Promise<GeminiFetchResponse>;
+  const chats = new Map<number, AbortController>();
   const fixtureFile = !app.isPackaged ? process.env.MOCHI_E2E_AI_FIXTURE : undefined;
   const fetcher: FetchLike = fixtureFile ? fixtureFetch(fixtureFile) : electronFetch;
   let win: BrowserWindow | null = null;
@@ -83,6 +123,7 @@ export function startAssistantService({ isAppUrl, settings, isDark, getHistory }
     win = createAssistantWindow(isDark());
     win.on('closed', () => {
       listener.cancel();
+      for (const c of chats.values()) c.abort();
       pendingListen = false;
       win = null;
     });
@@ -90,6 +131,98 @@ export function startAssistantService({ isAppUrl, settings, isDark, getHistory }
 
   ipcMain.on(IPC.assistantOpen, (event) => {
     if (trusted(event)) openWindow();
+  });
+
+  // ---- Gemini (Google): chave guardada cifrada, conversa com identidade e streaming ----
+  ipcMain.handle(IPC.geminiStatus, (event): GeminiStatus => {
+    if (!trusted(event) || !keyStore) return { hasKey: false, encryptionAvailable: false };
+    return { hasKey: keyStore.has(), encryptionAvailable: keyStore.encryptionAvailable() };
+  });
+  ipcMain.handle(IPC.geminiSetKey, (event, key: unknown): { ok: boolean; message: string } => {
+    if (!trusted(event) || !keyStore) return { ok: false, message: 'Não foi possível guardar a chave.' };
+    const r = keyStore.set(key);
+    return r.ok ? { ok: true, message: 'Chave guardada com segurança neste computador.' } : { ok: false, message: r.message };
+  });
+  ipcMain.handle(IPC.geminiClearKey, (event) => {
+    if (trusted(event)) keyStore?.clear();
+  });
+  ipcMain.on(IPC.geminiOpenKeyPage, (event) => {
+    if (trusted(event)) void shell.openExternal(GEMINI_KEY_PAGE);
+  });
+
+  const runGemini = async (
+    turns: GeminiTurn[],
+    context: string | null,
+    onDelta: (d: string) => void,
+    signal?: AbortSignal,
+    system?: string,
+  ): Promise<GeminiResult> => {
+    const key = keyStore?.get() ?? null;
+    if (!key) return { ok: false, code: 'no_key', message: 'Falta a chave do Gemini. Cole a chave em Configurações > Assistente.' };
+    const s = settings();
+    const prompt =
+      system ??
+      buildSystemPrompt({
+        character: s.character,
+        name: s.mascotName,
+        userNotes: s.assistantPersona,
+        now: new Date(),
+        context: s.assistantContext ? context : null,
+      });
+    return streamGemini({ key, model: s.geminiModel, system: prompt, turns, onDelta, fetchImpl: geminiFetch, signal });
+  };
+
+  ipcMain.handle(IPC.geminiTest, async (event): Promise<{ ok: boolean; message: string }> => {
+    if (!trusted(event)) return { ok: false, message: 'Remetente não autorizado.' };
+    const r = await runGemini(
+      [{ role: 'user', text: 'Responda apenas: ok' }],
+      null,
+      () => undefined,
+      undefined,
+      'Responda em no máximo duas palavras.',
+    );
+    return r.ok ? { ok: true, message: 'Conexão funcionando!' } : { ok: false, message: r.message };
+  });
+
+  ipcMain.handle(IPC.geminiChat, async (event, requestId: unknown, request: unknown): Promise<GeminiChatOutcome> => {
+    const denied = (message: string): GeminiChatOutcome => ({ ok: false, code: 'error', message });
+    if (!trusted(event)) return denied('Remetente não autorizado.');
+    if (!settings().assistantGemini) {
+      return { ok: false, code: 'disabled', message: 'O Gemini está desligado. Ative em Configurações > Assistente.' };
+    }
+    if (typeof requestId !== 'number' || typeof request !== 'object' || request === null) return denied('Pedido inválido.');
+    const req = request as { turns?: unknown; context?: unknown };
+    const turns: GeminiTurn[] = Array.isArray(req.turns)
+      ? req.turns.flatMap((t: unknown) => {
+          if (typeof t !== 'object' || t === null) return [];
+          const o = t as { role?: unknown; text?: unknown };
+          if ((o.role !== 'user' && o.role !== 'model') || typeof o.text !== 'string') return [];
+          return [{ role: o.role, text: o.text }];
+        })
+      : [];
+    if (turns.length === 0 || turns[turns.length - 1].role !== 'user') return denied('Pedido inválido.');
+    const context = typeof req.context === 'string' ? req.context.slice(0, 1500) : null;
+    const controller = new AbortController();
+    chats.get(requestId)?.abort();
+    chats.set(requestId, controller);
+    const sender = event.sender;
+    try {
+      const r = await runGemini(
+        turns,
+        context,
+        (delta) => {
+          if (!sender.isDestroyed()) sender.send(IPC.geminiChatDelta, { requestId, delta });
+        },
+        controller.signal,
+      );
+      return r.ok ? { ok: true, text: r.text } : { ok: false, code: r.code, message: r.message, partial: r.partial };
+    } finally {
+      chats.delete(requestId);
+    }
+  });
+  ipcMain.on(IPC.geminiChatCancel, (event, requestId: unknown) => {
+    if (!trusted(event) || typeof requestId !== 'number') return;
+    chats.get(requestId)?.abort();
   });
 
   ipcMain.handle(IPC.assistantTakePendingListen, (event): boolean => {
@@ -206,6 +339,12 @@ export function startAssistantService({ isAppUrl, settings, isDark, getHistory }
       listener.cancel();
       ipcMain.removeAllListeners(IPC.assistantOpen);
       ipcMain.removeAllListeners(IPC.assistantHistoryAdd);
+      ipcMain.removeAllListeners(IPC.geminiOpenKeyPage);
+      ipcMain.removeAllListeners(IPC.geminiChatCancel);
+      for (const c of chats.values()) c.abort();
+      for (const channel of [IPC.geminiStatus, IPC.geminiSetKey, IPC.geminiClearKey, IPC.geminiTest, IPC.geminiChat]) {
+        ipcMain.removeHandler(channel);
+      }
       ipcMain.removeAllListeners(IPC.assistantListenCancel);
       ipcMain.removeAllListeners(IPC.assistantOpenSpeechSettings);
       for (const channel of [

@@ -104,6 +104,10 @@ Além de criar, concluir e excluir (com *Desfazer*): **duplo clique no título p
 
 No primeiro uso da manhã o Mochi mostra um **resumo** (tarefas que pedem atenção, atrasadas, eventos e o próximo) — um cartão no topo das tarefas e uma fala curta. No fim do dia (padrão 18h) vem o **fechamento**: o que você concluiu, o foco do dia e o que ficou pendente. Cada um aparece uma vez por dia e dá para dispensar; ligue/desligue e escolha a hora em *Configurações > Rotina do dia*. Também dá para perguntar ao assistente: *"resumo do dia"*.
 
+### Conversa com IA (Gemini)
+
+Opcional e **desligado por padrão**: o Mochi conversa de verdade (como num chat), com a personalidade do personagem que você escolheu e o nome que você deu a ele. Para ligar, em *Configurações > IA online (Gemini)*: crie uma chave grátis no Google AI Studio (o app mostra o passo a passo), cole e guarde (fica cifrada pelo Windows), marque que entende que **as mensagens vão para o Google** e ative. Ele pode propor **ações** (criar tarefa com prazo, nota ou iniciar foco) em cartões: nada acontece até você tocar em *Aceitar*. Em *Deixar o Gemini ver minhas tarefas e agenda* você decide se os títulos do dia vão junto. Comandos como "crie uma tarefa…" continuam locais, instantâneos e sem internet. O plano gratuito do Google tem limites e termos próprios.
+
 ### Assistente: histórico e atalho
 
 A conversa com o assistente fica **guardada só no seu computador** (até 200 mensagens) e aparece quando você reabre a janela, com o separador *Conversa de agora*. Para apagar: botão **Apagar histórico** na janela (pede confirmação), o comando *"apagar histórico"* ou o botão em *Configurações > Assistente*; também dá para desligar o histórico lá. Novos comandos: *"adiar enviar relatório para amanhã às 10h"* / *"…em 2 horas"*, *"fixar a nota lista de compras"* / *"soltar a nota …"*, *"o que tenho amanhã?"*. Opcional: um **atalho global** (Ctrl+Alt+V, Ctrl+Alt+A ou Ctrl+Shift+V) abre o assistente já ouvindo.

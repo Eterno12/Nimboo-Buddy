@@ -1,6 +1,8 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import { parseAssistantCommand } from '../../../shared/assistant';
+import { parseAssistantCommand, type AssistantCommand } from '../../../shared/assistant';
 import type { AssistantAiAnswer, AssistantAiStatus, AssistantChatTurn } from '../../../shared/assistantApi';
+import { buildContext, hideActionFence, parseActions, type ProposedAction } from '../../../shared/persona';
+import { eventTimeLabel, todaysAgenda } from '../../../shared/calendar';
 import { Mascot } from '../mascot/Mascot';
 import type { MascotState } from '../mascot/mascotStates';
 import { useSettings } from '../settings/useSettings';
@@ -22,7 +24,33 @@ interface Message {
   buttons?: { id: string; label: string }[];
   /** Veio do histórico guardado (conversas anteriores). */
   fromHistory?: boolean;
+  /** A resposta do Gemini ainda está chegando. */
+  streaming?: boolean;
+  /** Ações propostas pela IA, cada uma aguardando "Aceitar" ou "Ignorar". */
+  actions?: ActionItem[];
 }
+
+interface ActionItem {
+  action: ProposedAction;
+  state: 'pending' | 'done' | 'ignored';
+  /** Resposta da execução (ou do erro). */
+  result?: string;
+  undo?: () => Promise<void>;
+}
+
+/** Ação proposta → o mesmo comando local que a interface já executa (nada de caminho paralelo). */
+function commandOf(a: ProposedAction): AssistantCommand {
+  if (a.type === 'task') return { kind: 'task.create', title: a.title, dueAt: a.dueAt, whenLabel: a.whenLabel };
+  if (a.type === 'note') return { kind: 'note.create', text: a.text };
+  return { kind: 'focus.start', minutes: a.minutes };
+}
+
+const actionLabel = (a: ProposedAction): string =>
+  a.type === 'task'
+    ? `Criar tarefa: ${a.title}${a.whenLabel ? ` (${a.whenLabel})` : ''}`
+    : a.type === 'note'
+      ? `Criar nota: ${a.text.length > 70 ? `${a.text.slice(0, 69)}…` : a.text}`
+      : `Iniciar foco de ${a.minutes} min`;
 
 const SUGGESTIONS = [
   'Crie uma nota escrito comprar pão',
@@ -81,6 +109,11 @@ export function AssistantView() {
           fromHistory: true,
         }));
         setMessages((cur) => [...old, ...cur]);
+        // A memória da conversa continua de onde parou (as últimas mensagens guardadas).
+        history.current = [
+          ...list.slice(-12).map((e) => ({ role: e.role, content: e.text }) as AssistantChatTurn),
+          ...history.current,
+        ];
       })
       .catch(() => undefined);
     return () => {
@@ -146,6 +179,150 @@ export function AssistantView() {
     [],
   );
 
+  // ---- Gemini: conversa com streaming, identidade do personagem e ações propostas ----
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const chatSeq = useRef(0);
+  const activeChat = useRef<{ requestId: number; messageId: number; raw: string } | null>(null);
+
+  useEffect(
+    () =>
+      window.mochi.assistant.gemini.onChatDelta((requestId, delta) => {
+        const a = activeChat.current;
+        if (!a || a.requestId !== requestId) return;
+        a.raw += delta;
+        const shown = hideActionFence(a.raw);
+        setMessages((list) => list.map((m) => (m.id === a.messageId ? { ...m, text: shown } : m)));
+      }),
+    [],
+  );
+
+  const askGemini = useCallback(
+    async (question: string) => {
+      const s = settingsRef.current;
+      let context: string | null = null;
+      if (s.assistantContext) {
+        try {
+          const [tasks, cal] = await Promise.all([window.mochi.tasks.list(), window.mochi.calendar.get()]);
+          const now = new Date();
+          context = buildContext({
+            now,
+            tasks: tasks.ok ? tasks.value.active.map((t) => ({ title: t.title, dueAt: t.dueAt })) : [],
+            events: cal.configured
+              ? todaysAgenda(cal.events, now).map((e) => ({ time: eventTimeLabel(e), title: e.title }))
+              : [],
+          });
+        } catch {
+          context = null;
+        }
+      }
+      const requestId = ++chatSeq.current;
+      const messageId = nextId++;
+      activeChat.current = { requestId, messageId, raw: '' };
+      setMessages((list) => [...list, { id: messageId, role: 'assistant', text: '', streaming: true }]);
+      const turns = history.current
+        .slice(-13)
+        .map((t) => ({ role: t.role === 'user' ? ('user' as const) : ('model' as const), text: t.content }));
+      if (turns.length === 0 || turns[turns.length - 1].role !== 'user') turns.push({ role: 'user', text: question });
+      const r = await window.mochi.assistant.gemini.chat(requestId, { turns, context });
+      activeChat.current = null;
+      if (r.ok) {
+        const parsed = parseActions(r.text);
+        const text = parsed.text || 'Pronto!';
+        setMessages((list) =>
+          list.map((m) =>
+            m.id === messageId
+              ? {
+                  ...m,
+                  text,
+                  streaming: false,
+                  source: { label: `Gemini (${s.geminiModel})` },
+                  actions: parsed.actions.map((action) => ({ action, state: 'pending' as const })),
+                }
+              : m,
+          ),
+        );
+        history.current.push({ role: 'assistant', content: text });
+        if (historyOn.current) window.mochi.assistant.history.add([{ role: 'assistant', text }]);
+        react('happy');
+        return;
+      }
+      const noKey = r.code === 'no_key' || r.code === 'invalid_key';
+      const partial = r.code === 'canceled' && r.partial ? hideActionFence(r.partial) : '';
+      const text = r.code === 'canceled' ? (partial ? `${partial}\n(Parei por aqui.)` : 'Tudo bem, parei.') : r.message;
+      setMessages((list) =>
+        list.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                text,
+                streaming: false,
+                buttons: noKey || r.code === 'disabled' || r.code === 'model' ? [{ id: 'open-settings', label: 'Abrir configurações' }] : undefined,
+              }
+            : m,
+        ),
+      );
+      react('idle');
+    },
+    [react],
+  );
+
+  const stopChat = () => {
+    const a = activeChat.current;
+    if (a) window.mochi.assistant.gemini.cancelChat(a.requestId);
+  };
+
+  /** Executa uma ação proposta pela IA com as mesmas APIs dos comandos locais. */
+  const runAction = async (messageId: number, index: number) => {
+    const msg = messages.find((m) => m.id === messageId);
+    const item = msg?.actions?.[index];
+    if (!item || item.state !== 'pending') return;
+    const patch = (next: Partial<ActionItem>) =>
+      setMessages((list) =>
+        list.map((m) =>
+          m.id === messageId && m.actions
+            ? { ...m, actions: m.actions.map((a, i) => (i === index ? { ...a, ...next } : a)) }
+            : m,
+        ),
+      );
+    patch({ state: 'done', result: '…' });
+    try {
+      const reply = await runAssistantCommand(commandOf(item.action));
+      window.mochi.bond.event('assistant');
+      patch({ state: 'done', result: reply.text, undo: reply.undo });
+    } catch {
+      patch({ state: 'pending', result: 'Não consegui fazer isso agora.' });
+    }
+  };
+
+  const ignoreAction = (messageId: number, index: number) =>
+    setMessages((list) =>
+      list.map((m) =>
+        m.id === messageId && m.actions
+          ? { ...m, actions: m.actions.map((a, i) => (i === index && a.state === 'pending' ? { ...a, state: 'ignored' as const } : a)) }
+          : m,
+      ),
+    );
+
+  const acceptAll = async (messageId: number) => {
+    const msg = messages.find((m) => m.id === messageId);
+    const total = msg?.actions?.length ?? 0;
+    for (let i = 0; i < total; i++) await runAction(messageId, i);
+  };
+
+  const undoAction = async (messageId: number, index: number) => {
+    const item = messages.find((m) => m.id === messageId)?.actions?.[index];
+    if (!item?.undo) return;
+    await item.undo();
+    setMessages((list) =>
+      list.map((m) =>
+        m.id === messageId && m.actions
+          ? { ...m, actions: m.actions.map((a, i) => (i === index ? { ...a, undo: undefined, result: `${a.result ?? ''}\n(Desfeito.)` } : a)) }
+          : m,
+      ),
+    );
+  };
+
   const send = useCallback(
     async (raw?: string) => {
       const text = (raw ?? input).trim();
@@ -166,7 +343,9 @@ export function AssistantView() {
           await clearHistory();
           return;
         }
-        if (command.kind === 'ask') {
+        if (command.kind === 'ask' && settingsRef.current.assistantGemini) {
+          await askGemini(text);
+        } else if (command.kind === 'ask') {
           const [answer, status] = await Promise.all([
             window.mochi.assistant.ask(text, history.current.slice(0, -1)),
             window.mochi.assistant.status(),
@@ -192,7 +371,7 @@ export function AssistantView() {
         inputRef.current?.focus();
       }
     },
-    [input, busy, awaitingNote, push, react, answerAsk, clearHistory],
+    [input, busy, awaitingNote, push, react, answerAsk, clearHistory, askGemini],
   );
 
   const toggleListen = async () => {
@@ -259,6 +438,8 @@ export function AssistantView() {
       const r = await window.mochi.assistant.pullModel();
       setPull(null);
       push({ role: 'assistant', text: r.message });
+    } else if (id === 'open-settings') {
+      window.mochi.openSettings();
     } else if (id === 'speech-settings') {
       window.mochi.assistant.openSpeechSettings();
     }
@@ -317,7 +498,53 @@ export function AssistantView() {
             </p>
           )}
           <div className="assistant-msg" data-role={m.role} data-history={m.fromHistory ? 'true' : undefined}>
-            <p>{m.text}</p>
+            <p>{m.streaming && m.text === '' ? '…' : m.text}</p>
+            {m.streaming && (
+              <div className="assistant-actions">
+                <button type="button" data-testid="chat-stop" onClick={stopChat}>
+                  Parar
+                </button>
+              </div>
+            )}
+            {m.actions && m.actions.length > 0 && (
+              <div className="assistant-proposals" data-testid="proposals">
+                <p className="assistant-proposals-title">Posso fazer isto por você:</p>
+                {m.actions.map((a, i) => (
+                  <div key={i} className="assistant-proposal" data-state={a.state}>
+                    <span>{actionLabel(a.action)}</span>
+                    {a.state === 'pending' && (
+                      <span className="assistant-proposal-buttons">
+                        <button type="button" className="assistant-primary" data-testid="action-accept" onClick={() => void runAction(m.id, i)}>
+                          Aceitar
+                        </button>
+                        <button type="button" data-testid="action-ignore" onClick={() => ignoreAction(m.id, i)}>
+                          Ignorar
+                        </button>
+                      </span>
+                    )}
+                    {a.state === 'ignored' && <small>Ignorada</small>}
+                    {a.state === 'done' && a.result && (
+                      <small>
+                        {a.result}
+                        {a.undo && (
+                          <>
+                            {' '}
+                            <button type="button" className="assistant-link" onClick={() => void undoAction(m.id, i)}>
+                              Desfazer
+                            </button>
+                          </>
+                        )}
+                      </small>
+                    )}
+                  </div>
+                ))}
+                {m.actions.filter((a) => a.state === 'pending').length >= 2 && (
+                  <button type="button" className="assistant-primary" data-testid="action-accept-all" onClick={() => void acceptAll(m.id)}>
+                    Aceitar tudo
+                  </button>
+                )}
+              </div>
+            )}
             {m.source && (
               <p className="assistant-source">
                 Fonte: {m.source.label}
@@ -353,7 +580,7 @@ export function AssistantView() {
           </div>
           </Fragment>
         ))}
-        {busy && (
+        {busy && !messages.some((m) => m.streaming) && (
           <div className="assistant-msg" data-role="assistant" aria-hidden="true">
             <p className="assistant-typing">…</p>
           </div>

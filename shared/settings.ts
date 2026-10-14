@@ -123,7 +123,20 @@ export interface Settings {
   assistantHistory: boolean;
   /** Atalho global que abre o assistente já ouvindo; `null` = desligado. */
   assistantShortcut: string | null;
+  /** Conversar com o Gemini (Google) usando a chave da pessoa. Desligado por padrão; envia o texto à internet. */
+  assistantGemini: boolean;
+  /** Modelo do Gemini (nome da API). */
+  geminiModel: string;
+  /** Ajustes livres da pessoa para o jeito do personagem (até 400 caracteres). */
+  assistantPersona: string;
+  /** Deixar o Gemini ver os títulos das tarefas pendentes e da agenda de hoje (desligado por padrão). */
+  assistantContext: boolean;
 }
+
+/** Nome de modelo do Gemini aceito (letras minúsculas, números, ponto e hífen). */
+export const GEMINI_MODEL_RE = /^[a-z0-9][a-z0-9.-]{1,60}$/;
+export const GEMINI_MODEL_SUGGESTIONS = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'] as const;
+export const PERSONA_NOTES_LIMIT = 400;
 
 /** Antecedências oferecidas para o lembrete de prazo (minutos). */
 export const REMINDER_LEADS_MIN = [0, 5, 10, 15, 30] as const;
@@ -173,6 +186,10 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   wellnessStretch: false,
   assistantHistory: true,
   assistantShortcut: null,
+  assistantGemini: false,
+  geminiModel: 'gemini-3.5-flash-lite',
+  assistantPersona: '',
+  assistantContext: false,
 });
 
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -253,6 +270,14 @@ export function parseSettings(raw: unknown): Settings {
     if (isFiniteNumber(r.routineEveningHour)) out.routineEveningHour = nearestOf(ROUTINE_EVENING_HOURS, r.routineEveningHour);
     if (typeof r.routineLastMorning === 'string' && DAY_KEY_RE.test(r.routineLastMorning)) out.routineLastMorning = r.routineLastMorning;
     if (typeof r.routineLastEvening === 'string' && DAY_KEY_RE.test(r.routineLastEvening)) out.routineLastEvening = r.routineLastEvening;
+    if (typeof r.assistantGemini === 'boolean') out.assistantGemini = r.assistantGemini;
+    if (typeof r.assistantContext === 'boolean') out.assistantContext = r.assistantContext;
+    if (typeof r.geminiModel === 'string' && GEMINI_MODEL_RE.test(r.geminiModel.trim())) out.geminiModel = r.geminiModel.trim();
+    if (typeof r.assistantPersona === 'string') {
+      // eslint-disable-next-line no-control-regex
+      const persona = r.assistantPersona.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim();
+      out.assistantPersona = [...persona].slice(0, PERSONA_NOTES_LIMIT).join('');
+    }
     if (typeof r.assistantHistory === 'boolean') out.assistantHistory = r.assistantHistory;
     if (r.assistantShortcut === null) out.assistantShortcut = null;
     else if (typeof r.assistantShortcut === 'string' && (ASSISTANT_SHORTCUT_PRESETS as readonly string[]).includes(r.assistantShortcut)) {

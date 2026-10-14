@@ -333,6 +333,11 @@ electron/main.ts            submenu "Personagem" (radio) no menu da bandeja/cont
 - `shared/wellness.ts` (puro, relógio injetável): `dueNudge` (o mais atrasado, intervalo mínimo de 2 min entre lembretes, bloqueio adia sem perder o vencimento), `commitNudge`, `restartKind`, falas em rodízio.
 - `useWellness` (renderer, na janela do mascote): confere a cada 30 s; só confirma o lembrete se o balão foi mostrado. Preferências `wellness*` (padrão desligado). Ver D42.
 
+## 24. IA online (Gemini) e identidade
+
+- `shared/persona.ts` (puro): `buildSystemPrompt`, `parseActions` (valida o bloco de ações), `buildContext`, tons por personagem. `electron/gemini.ts`: requisição, SSE, mapeamento de erros (rede injetável). `electron/geminiKey.ts`: chave cifrada (`safeStorage`).
+- `assistantService`: IPC `gemini*` (status/chave/teste/chat/cancelar + `geminiChatDelta` em streaming); só o main fala com a internet. `AssistantView`: `askGemini`, cartões de ação, botão Parar. Configurações: seção "IA online (Gemini)". Ver D47.
+
 ## 23. Assistente+ (histórico e atalho)
 
 - `shared/assistant.ts`: comandos `task.postpone`, `note.pin`, `list.tomorrow`, `history.clear`; `matchTasks` genérico. Execução em `assistantActions.ts` (mesmas APIs da interface).

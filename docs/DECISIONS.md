@@ -479,3 +479,28 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **O que permanece:** o microfone do assistente usa o reconhecimento de fala do Windows (D37), só para ditar o
   pedido; isso não muda.
 - **Reabrir:** se um dia quiser, a etapa volta como opcional (TTS desligado por padrão).
+
+## D47 — IA online com identidade: Gemini (Google) com a chave da própria pessoa
+- **Decisão (do usuário):** conversa tipo ChatGPT, sem Ollama obrigatório. Provedor único: **Gemini**, por
+  chave de API pessoal (plano gratuito do Google, com limites). Outros provedores (Groq, OpenRouter) ficaram
+  para depois, sem trabalho feito. A conta gratuita do ChatGPT não tem API e não foi usada.
+- **Rede e consentimento:** a única saída é `generativelanguage.googleapis.com`, feita **só no processo
+  principal** (`net.fetch`), **desligada por padrão**. Para ativar: chave guardada + marcar "Entendi que as
+  mensagens vão para o Google" (aviso também diz que o plano gratuito pode usar o conteúdo para melhorar os
+  serviços deles). Contexto do dia (títulos de tarefas e agenda) é uma segunda opção, também desligada.
+- **Chave:** colada pela pessoa, guardada cifrada com `safeStorage` (DPAPI) em `gemini.key`; **recusa guardar
+  em texto simples** se a cifra não existir; nunca é devolvida à interface nem aparece na URL (cabeçalho
+  `x-goog-api-key`) nem nas preferências.
+- **Identidade (`shared/persona.ts`):** instrução do sistema montada a cada conversa: nome dado pela pessoa,
+  tom do personagem (8 tons), regras (pt-BR, curto, honesto, não finge executar, sem senhas/diagnósticos),
+  data/hora, ajustes livres da pessoa (400 caracteres) e, se permitido, o contexto do dia.
+- **Ações com confirmação:** a IA só *propõe* (bloco `acoes` com JSON: tarefa/nota/foco); o app valida
+  (tipos fechados, 5 no máximo, títulos e prazos checados) e mostra cartões **Aceitar / Ignorar / Aceitar tudo**.
+  Executar usa os mesmos comandos locais (com *Desfazer*). Nada acontece sozinho.
+- **Fluxo:** comandos locais continuam primeiro e sem rede; só o que o analisador não entende vai ao Gemini.
+  Resposta em streaming (SSE) com botão Parar; erros viram frases claras (chave, cota, modelo, rede, bloqueio).
+  Memória: últimas mensagens da conversa (e do histórico guardado, D45).
+- **Modelo:** campo editável (padrão `gemini-3.5-flash-lite`, sugestões na lista); os nomes vêm da
+  documentação do Google no dia da implementação e podem mudar — o erro de "modelo não encontrado" orienta a trocar.
+- **Limites:** não testado com a API real (sem chave neste ambiente; o e2e usa uma resposta local de arquivo);
+  a cota e a política do plano gratuito são do Google e mudam.

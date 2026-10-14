@@ -41,9 +41,42 @@ export interface HistoryEntry {
 export const HISTORY_LIMIT = 200;
 export const HISTORY_TEXT_MAX = 2000;
 
+export interface GeminiStatus {
+  /** Há uma chave guardada (o valor nunca chega à interface). */
+  hasKey: boolean;
+  /** O Windows consegue cifrar a chave neste computador. */
+  encryptionAvailable: boolean;
+}
+
+export type GeminiChatOutcome =
+  | { ok: true; text: string }
+  | { ok: false; code: string; message: string; partial?: string };
+
+export interface GeminiChatRequest {
+  /** Conversa até agora, terminando na mensagem nova da pessoa. */
+  turns: { role: 'user' | 'model'; text: string }[];
+  /** Resumo do dia (títulos), só se a pessoa permitiu; `null` caso contrário. */
+  context: string | null;
+}
+
+export interface GeminiApi {
+  status(): Promise<GeminiStatus>;
+  setKey(key: string): Promise<{ ok: boolean; message: string }>;
+  clearKey(): Promise<void>;
+  /** Faz uma chamada mínima para conferir chave e modelo. */
+  test(): Promise<{ ok: boolean; message: string }>;
+  /** Abre a página oficial onde a pessoa cria a chave. */
+  openKeyPage(): void;
+  chat(requestId: number, request: GeminiChatRequest): Promise<GeminiChatOutcome>;
+  cancelChat(requestId: number): void;
+  onChatDelta(listener: (requestId: number, delta: string) => void): () => void;
+}
+
 export interface AssistantApi {
   /** Abre (ou traz à frente) a janela do assistente. */
   open(): void;
+  /** Gemini (Google): conversa com identidade, usando a chave da própria pessoa. */
+  gemini: GeminiApi;
   /** Histórico da conversa neste computador. */
   history: {
     list(): Promise<HistoryEntry[]>;

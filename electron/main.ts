@@ -7,6 +7,7 @@ import {
   Menu,
   nativeTheme,
   Notification,
+  safeStorage,
   screen,
   session,
   type Tray,
@@ -21,6 +22,7 @@ import { startTasksService, type TasksService } from './tasksService';
 import { startNotesService, type NotesService } from './notesService';
 import { startAssistantService, type AssistantService } from './assistantService';
 import { AssistantHistory } from './assistant/historyStore';
+import { GeminiKeyStore } from './geminiKey';
 import { startDataService, type DataService } from './dataService';
 import { startBondService, type BondService } from './bondService';
 import { startFocusService, type FocusService } from './focusService';
@@ -449,6 +451,11 @@ if (!app.requestSingleInstanceLock()) {
     assistant = startAssistantService({
       isAppUrl,
       getHistory: () => assistantHistory,
+      keyStore: new GeminiKeyStore(app.getPath('userData'), {
+        isAvailable: () => safeStorage.isEncryptionAvailable(),
+        encrypt: (plain) => safeStorage.encryptString(plain),
+        decrypt: (data) => safeStorage.decryptString(data),
+      }),
       settings: () => settings.get(),
       isDark: () => {
         const preference = settings.get().theme;

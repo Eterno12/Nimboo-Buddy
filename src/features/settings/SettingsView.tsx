@@ -3,6 +3,9 @@ import { Mascot } from '../mascot/Mascot';
 import { characterInfo } from '../mascot/characters';
 import {
   ASSISTANT_SHORTCUT_PRESETS,
+  GEMINI_MODEL_RE,
+  GEMINI_MODEL_SUGGESTIONS,
+  PERSONA_NOTES_LIMIT,
   CHARACTERS,
   DEFAULT_SETTINGS,
   HIDE_DELAYS_SEC,
@@ -19,6 +22,7 @@ import {
   type Settings,
 } from '../../../shared/settings';
 import { WELLNESS_INTERVALS, WELLNESS_LABEL } from '../../../shared/wellness';
+import type { GeminiStatus } from '../../../shared/assistantApi';
 import { configureSound, playSound } from '../audio/soundEngine';
 import { useCalendar } from '../calendar/useCalendar';
 import { useSettings } from './useSettings';
@@ -216,6 +220,17 @@ export function SettingsView({ onBack }: SettingsViewProps) {
   };
   const [modelDraft, setModelDraft] = useState(settings.assistantModel);
   useEffect(() => setModelDraft(settings.assistantModel), [settings.assistantModel]);
+  const [gem, setGem] = useState<GeminiStatus>({ hasKey: false, encryptionAvailable: true });
+  const [keyDraft, setKeyDraft] = useState('');
+  const [gemMsg, setGemMsg] = useState<string | null>(null);
+  const [geminiConsent, setGeminiConsent] = useState(false);
+  const [geminiModelDraft, setGeminiModelDraft] = useState(settings.geminiModel);
+  useEffect(() => setGeminiModelDraft(settings.geminiModel), [settings.geminiModel]);
+  const [personaDraft, setPersonaDraft] = useState(settings.assistantPersona);
+  useEffect(() => setPersonaDraft(settings.assistantPersona), [settings.assistantPersona]);
+  useEffect(() => {
+    void window.mochi.assistant.gemini.status().then(setGem).catch(() => undefined);
+  }, []);
   const [nameDraft, setNameDraft] = useState(settings.mascotName);
   useEffect(() => setNameDraft(settings.mascotName), [settings.mascotName]);
   const resetAll = () =>
@@ -597,6 +612,163 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           abre o assistente já ouvindo.
         </p>
       </fieldset>
+      <fieldset className="settings-group" data-testid="gemini-group">
+        <legend>IA online (Gemini)</legend>
+        <p className="settings-hint">
+          Conversa de verdade, com a personalidade do seu personagem, usando o Gemini do Google com a sua própria
+          chave (existe plano gratuito, com limites). <strong>O texto das suas mensagens é enviado ao Google</strong>
+          {settings.assistantContext ? ', junto com os títulos das tarefas e da agenda de hoje' : ''}. Confira os
+          termos do plano gratuito do Google: nele, o conteúdo pode ser usado para melhorar os serviços deles.
+        </p>
+        <ol className="settings-steps">
+          <li>
+            Abra a página de chaves do Google AI Studio{' '}
+            <button type="button" className="settings-small" onClick={() => window.mochi.assistant.gemini.openKeyPage()}>
+              Abrir página
+            </button>
+          </li>
+          <li>Entre com sua conta Google e clique em “Criar chave de API”.</li>
+          <li>Copie a chave, cole abaixo e clique em “Guardar chave”.</li>
+        </ol>
+        <div className="settings-row">
+          <span>Chave da API</span>
+          <input
+            className="settings-text"
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            data-testid="gemini-key"
+            placeholder={gem.hasKey ? '•••••••• (guardada)' : 'Cole a chave aqui'}
+            value={keyDraft}
+            onChange={(e) => setKeyDraft(e.target.value)}
+          />
+        </div>
+        <div className="settings-row settings-buttons">
+          <button
+            type="button"
+            className="settings-small"
+            data-testid="gemini-save"
+            disabled={keyDraft.trim() === ''}
+            onClick={async () => {
+              const r = await window.mochi.assistant.gemini.setKey(keyDraft);
+              setGemMsg(r.message);
+              if (r.ok) setKeyDraft('');
+              setGem(await window.mochi.assistant.gemini.status());
+            }}
+          >
+            Guardar chave
+          </button>
+          <button
+            type="button"
+            className="settings-small"
+            disabled={!gem.hasKey || !settings.assistantGemini}
+            onClick={async () => {
+              setGemMsg('Testando…');
+              const r = await window.mochi.assistant.gemini.test();
+              setGemMsg(r.message);
+            }}
+          >
+            Testar conexão
+          </button>
+          <button
+            type="button"
+            className="settings-small"
+            disabled={!gem.hasKey}
+            data-testid="gemini-remove"
+            onClick={async () => {
+              await window.mochi.assistant.gemini.clearKey();
+              await update({ assistantGemini: false });
+              setGem(await window.mochi.assistant.gemini.status());
+              setGemMsg('Chave removida.');
+            }}
+          >
+            Remover chave
+          </button>
+        </div>
+        <p className="settings-hint" role="status" data-testid="gemini-status">
+          {gemMsg ??
+            (gem.hasKey
+              ? 'Chave guardada com segurança (cifrada pelo Windows).'
+              : gem.encryptionAvailable
+                ? 'Nenhuma chave guardada.'
+                : 'Este computador não permite guardar a chave com segurança.')}
+        </p>
+        {!settings.assistantGemini && (
+          <label className="settings-row settings-check">
+            <input
+              type="checkbox"
+              data-testid="gemini-consent"
+              checked={geminiConsent}
+              onChange={(e) => setGeminiConsent(e.target.checked)}
+            />
+            <span>Entendi que as mensagens vão para o Google para gerar as respostas.</span>
+          </label>
+        )}
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            data-testid="gemini-enable"
+            checked={settings.assistantGemini}
+            disabled={!gem.hasKey || (!settings.assistantGemini && !geminiConsent)}
+            onChange={(e) => set({ assistantGemini: e.target.checked })}
+          />
+          <span>
+            Usar o Gemini nas conversas
+            <small>O que os comandos locais não entendem vai para o Gemini. Tarefas e notas continuam locais.</small>
+          </span>
+        </label>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.assistantContext}
+            disabled={!settings.assistantGemini}
+            onChange={(e) => set({ assistantContext: e.target.checked })}
+          />
+          <span>
+            Deixar o Gemini ver minhas tarefas e agenda de hoje
+            <small>Só os títulos (e prazos) vão junto de cada mensagem. Desligado por padrão.</small>
+          </span>
+        </label>
+        <label className="settings-row">
+          <span>Modelo</span>
+          <input
+            className="settings-text"
+            type="text"
+            list="gemini-models"
+            spellCheck={false}
+            value={geminiModelDraft}
+            aria-invalid={!GEMINI_MODEL_RE.test(geminiModelDraft)}
+            onChange={(e) => setGeminiModelDraft(e.target.value)}
+            onBlur={() => {
+              if (GEMINI_MODEL_RE.test(geminiModelDraft)) set({ geminiModel: geminiModelDraft });
+              else setGeminiModelDraft(settings.geminiModel);
+            }}
+          />
+          <datalist id="gemini-models">
+            {GEMINI_MODEL_SUGGESTIONS.map((m) => (
+              <option key={m} value={m} />
+            ))}
+          </datalist>
+        </label>
+        <label className="settings-row settings-column">
+          <span>
+            Jeito do personagem (opcional)
+            <small>Ex.: “fale de forma mais objetiva” ou “me chame de Gu”. Até {PERSONA_NOTES_LIMIT} caracteres.</small>
+          </span>
+          <textarea
+            className="settings-text"
+            rows={3}
+            maxLength={PERSONA_NOTES_LIMIT}
+            data-testid="gemini-persona"
+            value={personaDraft}
+            onChange={(e) => setPersonaDraft(e.target.value)}
+            onBlur={() => {
+              if (personaDraft !== settings.assistantPersona) set({ assistantPersona: personaDraft });
+            }}
+          />
+        </label>
+      </fieldset>
+
       <fieldset className="settings-group">
         <legend>Sons</legend>
         <label className="settings-row settings-check">

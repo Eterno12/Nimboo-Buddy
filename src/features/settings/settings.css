@@ -354,3 +354,33 @@
 .settings-text[aria-invalid='true'] {
   border-color: var(--s-danger);
 }
+
+textarea.settings-text {
+  width: 100%;
+  height: auto;
+  padding: 7px 8px;
+  resize: vertical;
+}
+
+.settings-steps {
+  margin: 6px 0 8px;
+  padding-left: 20px;
+  color: var(--s-muted);
+  font-size: 12.5px;
+}
+
+.settings-steps li {
+  margin: 3px 0;
+}
+
+.settings-buttons {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.settings-column {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
