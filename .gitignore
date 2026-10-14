@@ -80,3 +80,6 @@ release/
 
 # Config local do Claude Code / Headroom (nao versionar)
 .claude/
+
+# Trilha exportada do filme de lançamento (gerada; não versionar)
+launch/*.wav

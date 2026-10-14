@@ -8,10 +8,16 @@
       return;
     }
     NB.mount();
+    NB.audio.init();
     NB.player.fit();
     await Promise.race([document.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, 2500))]);
     NB.player.fit();
     const tl = NB.buildTimeline();
+    try {
+      await NB.audio.render();
+    } catch (error) {
+      console.warn('[nimboo] trilha indisponível:', error);
+    }
     NB.tl = tl;
     NB.player.init(tl);
     document.body.classList.add('ready');

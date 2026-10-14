@@ -143,3 +143,11 @@ body.clean #viewport {
     display: none;
   }
 }
+
+#sndHint {
+  padding: 4px 10px;
+  border: 1px solid #333;
+  border-radius: 999px;
+  color: #d6d6d6;
+  white-space: nowrap;
+}
