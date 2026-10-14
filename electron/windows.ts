@@ -27,6 +27,12 @@ function lockNavigation(win: BrowserWindow): void {
 }
 
 function loadRenderer(win: BrowserWindow, hash: string): void {
+  if (glassSupported() && GLASS_PAGES.has(hash.split('=')[0])) {
+    // A interface desenha a barra de título (a janela não tem moldura do sistema).
+    win.webContents.on('dom-ready', () => {
+      void win.webContents.executeJavaScript("document.documentElement.dataset.frameless = '1'").catch(() => undefined);
+    });
+  }
   if (devServerUrl) {
     void win.loadURL(`${devServerUrl}#${hash}`);
   } else {
@@ -69,12 +75,26 @@ export function createMascotWindow(bounds: Rect, options: MascotWindowOptions): 
  * Vidro escuro: acrílico nativo no Windows 11 22H2+ (a janela fica transparente e o sistema borra o que está
  * atrás); antes disso, um fundo escuro sólido sob as camadas translúcidas do CSS dá quase o mesmo visual.
  */
-function glassOptions(_dark: boolean): { backgroundColor: string; backgroundMaterial?: 'acrylic' } {
-  const build = Number(os.release().split('.')[2] ?? 0);
-  return build >= 22621
-    ? { backgroundColor: '#00000000', backgroundMaterial: 'acrylic' }
+export function glassSupported(): boolean {
+  return process.platform === 'win32' && Number(os.release().split('.')[2] ?? 0) >= 22621;
+}
+
+/**
+ * Só a combinação janela transparente + sem moldura recebe o acrílico de verdade (testado em campo: com a
+ * moldura do sistema o Windows ignora o material). Por isso a barra de título é desenhada pela interface.
+ */
+function glassOptions(_dark: boolean): {
+  backgroundColor: string;
+  backgroundMaterial?: 'acrylic';
+  transparent?: boolean;
+  frame?: boolean;
+} {
+  return glassSupported()
+    ? { backgroundColor: '#00000000', backgroundMaterial: 'acrylic', transparent: true, frame: false }
     : { backgroundColor: '#2b2335' };
 }
+
+const GLASS_PAGES = new Set(['panel', 'assistant', 'achievements', 'welcome', 'notes']);
 
 export function createPanelWindow(dark = false): BrowserWindow {
   const win = new BrowserWindow({

@@ -172,6 +172,7 @@ const api: MochiApi = {
   bubbleVisible: (visible) => ipcRenderer.send(IPC.bubbleVisible, visible === true),
   onSummon: (listener) => listen<[]>(IPC.islandSummon, () => listener()),
   openSettings: () => ipcRenderer.send(IPC.panelOpenSettings),
+  windowControl: (action) => ipcRenderer.send(IPC.windowControl, action),
   panel: {
     initialView: async () => ((await ipcRenderer.invoke(IPC.panelInitialView)) === 'settings' ? 'settings' : 'home'),
     onNavigate: (listener) =>

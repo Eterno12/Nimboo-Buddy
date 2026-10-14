@@ -569,3 +569,9 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Tema:** `useTheme` sempre escuro e sem fundo próprio; a opção de tema saiu das Configurações (a
   preferência `theme` continua válida no arquivo, sem efeito visual).
 - **Não verificado:** o acrílico real neste computador (capturas por CDP não incluem o desfoque do sistema).
+- **Correção (D51b):** o acrílico só entra em janela `transparent: true` + `frame: false` (medido no Windows 11
+  26200: com moldura do sistema, com `titleBarStyle: 'hidden'` ou com `setBackgroundMaterial` depois, o
+  Windows ignora). Por isso as janelas de vidro não têm moldura: a interface desenha a barra de título
+  (`TitleBar`, arrastável, minimizar/maximizar/fechar via IPC `windowControl`), mostrada só quando o main
+  marca `html[data-frameless]`. Windows 10: moldura normal e fundo sólido. O acrílico fica sólido quando a
+  janela perde o foco (comportamento do Windows).
