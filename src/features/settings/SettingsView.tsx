@@ -15,6 +15,8 @@ import {
   MOCHI_SCALES,
   REMINDER_LEADS_MIN,
   ROUTINE_EVENING_HOURS,
+  THEMES,
+  type ThemePreference,
   SHORTCUT_PRESETS,
   type MochiColor,
   type Settings,
@@ -44,6 +46,8 @@ const COLOR_SWATCH: Record<MochiColor, [string, string]> = {
   lemon: ['#fffbd6', '#f5de72'],
   rose: ['#ffe6ee', '#ffa3bb'],
 };
+
+const THEME_LABEL: Record<ThemePreference, string> = { auto: 'Automático', light: 'Claro', dark: 'Escuro' };
 
 const percent = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -375,11 +379,22 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       </fieldset>
 
       <fieldset className="settings-group" hidden={tab !== 'appearance'}>
-        <legend>Visual</legend>
-        <p className="settings-hint">
-          Vidro escuro em todas as telas. No Windows 11 o fundo das janelas borra o que está atrás; em outras
-          versões ele fica translúcido sobre um fundo escuro.
-        </p>
+        <legend>Aparência do painel</legend>
+        <div className="settings-chips" role="radiogroup" aria-label="Tema do painel">
+          {THEMES.map((th) => (
+            <button
+              key={th}
+              type="button"
+              role="radio"
+              aria-checked={settings.theme === th}
+              className="settings-chip settings-chip-wide"
+              onClick={() => set({ theme: th })}
+            >
+              {THEME_LABEL[th]}
+            </button>
+          ))}
+        </div>
+        <p className="settings-hint">Automático segue o tema do Windows. A ilha é sempre escura.</p>
       </fieldset>
 
       <fieldset className="settings-group" hidden={tab !== 'appearance'}>

@@ -555,17 +555,3 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Escolhas** usam as preferências já existentes (personagem, mascotName, bubbles, routine*, mediaPlayer,
   wellness*); nada novo vai para rede. Gemini e agenda ficam em Configurações (exigem chave/endereço).
 - **Limite:** quem já usa o app e não tem `onboardingDone` salvo vê a introdução uma vez.
-
-## D51 — Visual vidro escuro
-- **Decisão:** tema único, vidro escuro, em todas as telas. `src/glass.css` (carregado por último) redefine os
-  tokens de cada tela (`--t-`, `--s-`, `--a-`, `--n-`, `--c-`, `--w-`) e dá a pele de vidro (camadas
-  translúcidas, borda fina, brilho no topo). Os valores antigos dos CSS originais continuam lá (testes de
-  contraste deles seguem valendo); o vidro novo é verificado em `tests/glass.test.ts`.
-- **Vidro real:** painel, assistente, notas, conquistas e boas-vindas usam `backgroundMaterial: 'acrylic'`
-  no Windows 11 22H2+ (janela transparente; o sistema borra o que está atrás). Antes disso, fundo sólido
-  `#2b2335` sob as camadas translúcidas.
-- **Ilha, Nimboo solto e aviso:** janelas transparentes com forma recortada não combinam com o acrílico nativo;
-  usam vidro "falso" (degradê translúcido, borda e brilho). Não borram a área de trabalho.
-- **Tema:** `useTheme` sempre escuro e sem fundo próprio; a opção de tema saiu das Configurações (a
-  preferência `theme` continua válida no arquivo, sem efeito visual).
-- **Não verificado:** o acrílico real neste computador (capturas por CDP não incluem o desfoque do sistema).

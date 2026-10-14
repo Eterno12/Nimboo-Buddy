@@ -26,9 +26,8 @@ export function useTheme(preference: ThemePreference): ResolvedTheme {
   const theme = resolveTheme(preference, systemDark);
 
   useEffect(() => {
-    // Visual vidro escuro: sempre escuro e sem fundo próprio (o vidro vem da janela).
-    document.documentElement.style.colorScheme = 'dark';
-    document.documentElement.style.background = 'transparent';
+    document.documentElement.style.colorScheme = theme;
+    document.documentElement.style.background = theme === 'dark' ? '#342b3f' : '#fdf8f3';
   }, [theme]);
 
   return theme;

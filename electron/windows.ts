@@ -1,4 +1,3 @@
-import os from 'node:os';
 import { BrowserWindow, shell } from 'electron';
 import path from 'node:path';
 import type { Rect } from '../shared/geometry';
@@ -65,17 +64,6 @@ export function createMascotWindow(bounds: Rect, options: MascotWindowOptions): 
   return win;
 }
 
-/**
- * Vidro escuro: acrílico nativo no Windows 11 22H2+ (a janela fica transparente e o sistema borra o que está
- * atrás); antes disso, um fundo escuro sólido sob as camadas translúcidas do CSS dá quase o mesmo visual.
- */
-function glassOptions(_dark: boolean): { backgroundColor: string; backgroundMaterial?: 'acrylic' } {
-  const build = Number(os.release().split('.')[2] ?? 0);
-  return build >= 22621
-    ? { backgroundColor: '#00000000', backgroundMaterial: 'acrylic' }
-    : { backgroundColor: '#2b2335' };
-}
-
 export function createPanelWindow(dark = false): BrowserWindow {
   const win = new BrowserWindow({
     width: 400,
@@ -85,7 +73,7 @@ export function createPanelWindow(dark = false): BrowserWindow {
     title: 'Nimboo',
     autoHideMenuBar: true,
     show: false,
-    ...glassOptions(dark),
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),
   });
   lockNavigation(win);
@@ -103,7 +91,7 @@ export function createAssistantWindow(dark: boolean): BrowserWindow {
     title: 'Assistente — Nimboo',
     autoHideMenuBar: true,
     show: false,
-    ...glassOptions(dark),
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),
   });
   lockNavigation(win);
@@ -123,7 +111,7 @@ export function createWelcomeWindow(dark: boolean): BrowserWindow {
     autoHideMenuBar: true,
     show: false,
     center: true,
-    ...glassOptions(dark),
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),
   });
   lockNavigation(win);
@@ -142,7 +130,7 @@ export function createAchievementsWindow(dark: boolean): BrowserWindow {
     title: 'Conquistas — Nimboo',
     autoHideMenuBar: true,
     show: false,
-    ...glassOptions(dark),
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),
   });
   lockNavigation(win);
@@ -206,7 +194,7 @@ export function createNotesWindow(openId: string | null, dark: boolean): Browser
     title: 'Notas — Nimboo',
     autoHideMenuBar: true,
     show: false,
-    ...glassOptions(dark),
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),
   });
   lockNavigation(win);
