@@ -665,6 +665,30 @@
   box-shadow: 0 -2px 0 0 var(--t-accent);
 }
 
+/*
+ * Linha da tarefa: o título tem um mínimo de largura e os botões ficam num grupo à direita. Quando não
+ * cabe tudo (ilha estreita, várias ações), o grupo desce para uma segunda linha em vez de espremer o
+ * título letra por letra.
+ */
+.task-actions {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.task .task-title {
+  flex: 1 1 128px;
+  min-width: min(128px, 100%);
+}
+
+.task-rename {
+  flex: 1 1 128px;
+}
+
 /* Subtarefas: recuadas, com a mesma linguagem das tarefas */
 .task-subs {
   flex-basis: 100%;

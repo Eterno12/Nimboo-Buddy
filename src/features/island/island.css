@@ -3,12 +3,14 @@
  * nunca é remontado); `data-mode` e `data-open` só mudam as medidas.
  *
  * As medidas da ilha precisam acompanhar `shared/presentation.ts`. A janela é
- * SEMPRE 352x380; a forma da janela (setShape) acompanha a ilha:
+ * SEMPRE 352x440; a forma da janela (setShape) acompanha a ilha:
  *   recolhida        176x58  = pílula 160x48 + folga (8px laterais, 10px embaixo)
  *   expandida, home  352x174 = pílula 336x164 + a mesma folga
- *   expandida, tarefas 352x380 = pílula 336x370 + a mesma folga
+ *   expandida, home c/ player reduzido 352x198 = pílula 336x188 + a mesma folga
+ *   expandida, home c/ música tocando 352x286 = pílula 336x276 + a mesma folga
+ *   expandida, tarefas 352x440 = pílula 336x430 + a mesma folga
  *
- * A ilha é sempre desenhada no tamanho máximo (336x370) e o `clip-path`
+ * A ilha é sempre desenhada no tamanho máximo (336x430) e o `clip-path`
  * revela só a parte necessária. Animar o recorte evita layout a cada quadro.
  * Como a janela é centralizada, o mesmo desenho serve para as duas janelas.
  */
@@ -71,7 +73,7 @@
   top: 0;
   left: 50%;
   width: 336px;
-  height: 370px;
+  height: 430px;
   margin-left: -168px;
   filter: drop-shadow(0 6px 8px rgba(20, 12, 28, 0.38));
   pointer-events: none;
@@ -81,16 +83,16 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, var(--island-ink-raised) 0%, var(--island-ink) 100%);
-  /* Recolhida: pílula 160x48 centralizada, colada ao topo (370 - 48 = 322). */
-  clip-path: inset(0 88px 322px 88px round 0 0 24px 24px);
+  /* Recolhida: pílula 160x48 centralizada, colada ao topo (430 - 48 = 382). */
+  clip-path: inset(0 88px 382px 88px round 0 0 24px 24px);
   /* Fechar é mais rápido que abrir (~70%). */
   transition: clip-path var(--island-close-ms) var(--ease-in-out-cubic);
   pointer-events: auto;
 }
 
-/* Aberta: a altura depende da tela (home 164, tarefas 370). */
+/* Aberta: a altura depende da tela (home 164, 188 com o player reduzido, 276 tocando; tarefas 430). */
 .shell[data-open='true'] .island {
-  clip-path: inset(0 0 206px 0 round 0 0 28px 28px);
+  clip-path: inset(0 0 266px 0 round 0 0 28px 28px);
   transition-duration: var(--island-open-ms);
   transition-timing-function: var(--ease-out-quint);
 }
@@ -109,13 +111,22 @@
   margin-left: -29.5px;
 }
 
+/* Tela inicial com o player: reduzido (430 - 188 = 242) ou aberto, com música tocando (430 - 276 = 154). */
+.shell[data-open='true'][data-view='home'][data-media='mini'] .island {
+  clip-path: inset(0 0 242px 0 round 0 0 28px 28px);
+}
+
+.shell[data-open='true'][data-view='home'][data-media='playing'] .island {
+  clip-path: inset(0 0 154px 0 round 0 0 28px 28px);
+}
+
 .shell[data-open='true'][data-view='tasks'] .island {
   clip-path: inset(0 0 0 0 round 0 0 28px 28px);
 }
 
-/* Tela de foco: pílula 336x252 (370 - 252 = 118). */
+/* Tela de foco: pílula 336x252 (430 - 252 = 178). */
 .shell[data-open='true'][data-view='focus'] .island {
-  clip-path: inset(0 0 118px 0 round 0 0 28px 28px);
+  clip-path: inset(0 0 178px 0 round 0 0 28px 28px);
 }
 
 /* ---------- Conteúdo da ilha expandida ---------- */
@@ -178,10 +189,197 @@
   outline-offset: 2px;
 }
 
-/* Tela de tarefas: ocupa o espaço abaixo do mascote (370 - 52 - 12 = 306px). */
+/* Tela de tarefas: ocupa o espaço abaixo do mascote (430 - 52 - 12 = 366px). */
 .island-tasks {
-  height: 306px;
+  height: 366px;
   animation: island-fade 160ms ease-out;
+}
+
+/* ---------- Player de música (tela inicial) ---------- */
+.island-media {
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--island-text);
+  font: 500 12.5px/1.25 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  animation: island-fade 160ms ease-out;
+}
+
+.island-media[data-layout='mini'] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 6px 0 12px;
+  box-sizing: border-box;
+  color: #cfc6d9;
+}
+
+.island-media[data-layout='playing'] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 132px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+
+.media-note {
+  display: inline-flex;
+  flex: none;
+  color: var(--island-accent);
+}
+
+.media-mini-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-top {
+  display: flex;
+  gap: 10px;
+  min-height: 0;
+}
+
+.media-cover {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--island-accent);
+}
+
+.media-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.media-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.media-title,
+.media-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.media-artist {
+  color: #b9afc4;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.media-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #b9afc4;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.media-time {
+  flex: none;
+  min-width: 30px;
+}
+
+.media-time:last-child {
+  text-align: right;
+}
+
+.media-bar {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.media-bar[data-seekable='true'] {
+  cursor: pointer;
+}
+
+.media-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--island-accent);
+}
+
+.media-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.media-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--island-text);
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+
+.media-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.media-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.media-btn:focus-visible {
+  outline: 2px solid var(--island-accent);
+  outline-offset: 1px;
+}
+
+.island-media[data-layout='playing'] [data-testid='media-toggle'] {
+  background: var(--island-accent);
+  color: #1f1a26;
+}
+
+/* O Nimboo balança no ritmo enquanto a música toca (só o contêiner, sem mexer nas animações do rosto). */
+.shell[data-music='true'] .shell-stage {
+  animation: music-bob 1.1s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+@keyframes music-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg) scale(1, 1);
+  }
+  50% {
+    transform: translateY(-2px) rotate(2deg) scale(1.02, 0.98);
+  }
 }
 
 /* Tela de foco: 252 - 52 - 12 = 188px abaixo do mascote. */

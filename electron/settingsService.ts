@@ -46,6 +46,8 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'geminiModel',
   'assistantPersona',
   'assistantContext',
+  'mediaPlayer',
+  'mediaReact',
 ];
 
 export interface SettingsService {

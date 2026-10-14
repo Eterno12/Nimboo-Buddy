@@ -733,6 +733,7 @@ function TaskRow({
           {task.title}
         </span>
       )}
+      <div className="task-actions">
       {subs.length > 0 && !done && (
         <span className="task-subcount" aria-label={`${doneSubs} de ${subs.length} subtarefas concluídas`}>
           {doneSubs}/{subs.length}
@@ -819,6 +820,7 @@ function TaskRow({
           <path d="M6 6l12 12M18 6L6 18" {...icon} />
         </Icon>
       </button>
+      </div>
 
       {due?.editing && (
         <div className="task-due-editor">

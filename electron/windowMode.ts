@@ -19,6 +19,7 @@ import {
   ISLAND_WINDOW_SIZE,
   islandShapes,
   type Entrance,
+  ISLAND_EXTENTS,
   type IslandExtent,
   type PresentationState,
 } from '../shared/presentation';
@@ -262,9 +263,9 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   /** Ajusta a forma da ilha aberta à tela atual (maior antes de crescer, menor depois de encolher). */
   ipcMain.handle(IPC.islandExtent, (event, extent: unknown) => {
     if (!fromWindow(event)) throw new Error('Remetente não autorizado');
-    if (extent !== 'home' && extent !== 'tasks' && extent !== 'focus') return;
+    if (typeof extent !== 'string' || !(ISLAND_EXTENTS as readonly string[]).includes(extent)) return;
     if (presentationMode() !== 'island' || busy || !islandOpen) return;
-    islandExtent = extent;
+    islandExtent = extent as IslandExtent;
     window.setShape(shapesNow());
   });
   /** Volta à forma compacta depois da animação de recolher e libera o foco. */

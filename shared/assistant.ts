@@ -19,6 +19,7 @@ export type AssistantCommand =
   | { kind: 'note.pin'; query: string; pinned: boolean }
   | { kind: 'list.tomorrow' }
   | { kind: 'history.clear' }
+  | { kind: 'media'; action: 'toggle' | 'play' | 'pause' | 'next' | 'prev' | 'now' }
   | { kind: 'focus.start'; minutes: number | null }
   | { kind: 'focus.pause' }
   | { kind: 'focus.resume' }
@@ -233,6 +234,19 @@ export function parseAssistantCommand(input: string, now: Date = new Date()): As
   if (/^(?:oi|ola|e ai|opa|bom dia|boa tarde|boa noite|hello|hey)[ !.,?]*(?:nimboo|mochi)?[ !.,?]*$/.test(f)) return { kind: 'greeting' };
   if (/^(?:ajuda|help|o que (?:voce|vc) (?:sabe|consegue|pode) fazer|o que (?:voce|vc) faz|como (?:te|lhe) uso|comandos)[ ?!.]*$/.test(fb)) return { kind: 'help' };
 
+  // ---- Música (player da ilha) ----
+  if (/^(?:o que|qual|que)\b.*\b(?:tocando|toca)\b|^(?:o que|qual)\b.*\bmusica\b.*\b(?:agora|tocando)\b|\bque musica (?:e essa|esta tocando|ta tocando)\b/.test(fb)) {
+    return { kind: 'media', action: 'now' };
+  }
+  if (/\b(?:musica|musicas|faixa|player|spotify|youtube|som)\b/.test(fb) && !/\b(?:cri\w*|adicion\w*|anot\w*|lembr\w*|nota|tarefa|foco)\b/.test(fb)) {
+    if (/\b(?:proxim[ao]s?|pular|pule|pula|passa|passar|avancar|avance|skip|next)\b/.test(fb)) return { kind: 'media', action: 'next' };
+    if (/\b(?:anterior|voltar|volte|volta|previous)\b/.test(fb)) return { kind: 'media', action: 'prev' };
+    if (/\b(?:pausar|pause|pausa|parar|pare|para|silenciar|silencie|stop)\b/.test(fb)) return { kind: 'media', action: 'pause' };
+    if (/\b(?:tocar|toque|toca|play|retomar|retome|continuar|continue|colocar|coloque|iniciar|inicie|botar|bota)\b/.test(fb)) {
+      return { kind: 'media', action: 'play' };
+    }
+  }
+
   // ---- Foco ----
   if (/\b(?:pausar|pause|pausa)\b.*\bfoco\b|^(?:pausar|pause)[ .!]*$/.test(fb)) return { kind: 'focus.pause' };
   if (/\b(?:retomar|continuar|voltar)\b.*\bfoco\b|^(?:retomar|retoma)[ .!]*$/.test(fb)) return { kind: 'focus.resume' };
@@ -394,5 +408,6 @@ export const ASSISTANT_HELP = [
   '• “Apagar histórico” (limpa a conversa guardada)',
   '• “Iniciar foco de 25 minutos” / “Pausar foco”',
   '• “Mudar para o cacto”',
+  '• “Pausar a música” / “Próxima música” / “O que está tocando?”',
   'Outras perguntas eu procuro na Wikipédia (se você ativar) ou respondo com a IA local.',
 ].join('\n');

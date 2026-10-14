@@ -523,3 +523,25 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   continuam com tamanho próprio por desenho.
 - **Configurações em abas:** Aparência · Comportamento · Assistente · Foco e agenda · Geral. As seções
   inativas ficam com `hidden` (continuam no DOM), a aba escolhida é lembrada na sessão.
+
+## D49 — Player de música na ilha (SMTC do Windows) e ilha maior
+- **Decisão:** o cartão "Tocando agora" fica na **tela inicial** da ilha, abaixo da fileira de atalhos
+  (Tarefas…Assistente): **reduzido** (uma linha: nota + "Nada tocando agora" / faixa pausada + botão) e, quando
+  algo **toca**, **expande** (capa, título, artista · app, progresso com clique para ir ao ponto, anterior /
+  tocar-pausar / próxima). A ilha cresceu para caber: janela 352×440, pílula máxima 336×430 (tarefas ganham
+  60 px); extensões `home` 164, `home-mini` 188, `home-player` 276.
+- **Fonte:** controle de mídia do Windows (`GlobalSystemMediaTransportControlsSessionManager`) num PowerShell
+  oculto e persistente (`electron/media/mediaSession.ts`): título, artista, álbum, app, estado, posição, capa e
+  comandos pelo próprio Windows (não simula teclas). Funciona com os apps que se anunciam ao Windows (Spotify,
+  navegadores, VLC, Media Player...). Reinicia até 3 vezes por minuto; depois desiste em silêncio.
+- **Privacidade e custo:** 100 % local, sem rede. Só roda com `mediaPlayer` ligado (padrão). O leitor só lê o
+  que o Windows já mostra no controle de volume; capa só como `data:image` validado; comandos só de uma lista
+  fechada. O script não contém rede nem execução de texto (verificado em teste).
+- **Reação:** com `mediaReact` ligado, o Nimboo balança (animação do contêiner, sem tocar nas expressões) enquanto
+  toca; segue a regra D12 (sempre anima).
+- **Assistente:** "pausar a música", "próxima/anterior", "tocar", "o que está tocando?".
+- **Limites:** nem todo app informa tudo (capa, posição ou ir-para podem faltar); com várias mídias vale a que o
+  Windows considera ativa; volume continua nas teclas do Windows. Não foi testado com Spotify real aqui (o e2e
+  usa um arquivo no lugar do Windows).
+- **Também nesta rodada:** a tela de conquistas rola; a linha da tarefa agrupa os botões à direita e o título
+  tem largura mínima (subtarefas não espremem mais o texto; os botões descem para uma segunda linha).

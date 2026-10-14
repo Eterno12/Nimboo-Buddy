@@ -26,6 +26,7 @@ import { AssistantHistory } from './assistant/historyStore';
 import { GeminiKeyStore } from './geminiKey';
 import { startDataService, type DataService } from './dataService';
 import { startBondService, type BondService } from './bondService';
+import { startMediaService, type MediaService } from './mediaService';
 import { startFocusService, type FocusService } from './focusService';
 import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
@@ -48,6 +49,7 @@ let notes: NotesService | null = null;
 let assistant: AssistantService | null = null;
 let dataService: DataService | null = null;
 let bond: BondService | null = null;
+let media: MediaService | null = null;
 let focusLog: FocusLog | null = null;
 /** Eventos da agenda e quais já viraram tarefa: o lembrete passa a ser o da tarefa (sem aviso duplo). */
 let agendaEvents: CalendarEvent[] = [];
@@ -220,6 +222,7 @@ function applySettingsChange(previous: Settings, next: Settings): void {
   if (previous.launchAtLogin !== next.launchAtLogin) applyLaunchAtLogin(next.launchAtLogin);
   if (previous.doNotDisturb !== next.doNotDisturb) applyDoNotDisturb(next.doNotDisturb);
   if (previous.character !== next.character) bond?.record({ type: 'character', id: next.character });
+  if (previous.mediaPlayer !== next.mediaPlayer) media?.setEnabled(next.mediaPlayer);
   focus?.configure(focusConfigOf(next));
   const reminderConfig = { enabled: next.remindersEnabled, leadMinutes: next.reminderLeadMin };
   reminders?.setConfig(reminderConfig);
@@ -470,6 +473,9 @@ if (!app.requestSingleInstanceLock()) {
 
     dataService = startDataService({ database: () => tasks?.database() ?? null, isAppUrl });
 
+    // Player de música: lê o que toca no Windows (só enquanto a preferência estiver ligada).
+    media = startMediaService({ isAppUrl, enabled: initial.mediaPlayer });
+
     // Assistente: janela de conversa, voz (Windows) e conhecimento opcional (Wikipédia / IA local).
     const assistantHistory = database ? new AssistantHistory(database) : null;
     assistant = startAssistantService({
@@ -525,6 +531,7 @@ if (!app.requestSingleInstanceLock()) {
     assistant?.close();
     dataService?.close();
     bond?.close();
+    media?.close();
     tasks?.close();
     tray?.destroy();
   });

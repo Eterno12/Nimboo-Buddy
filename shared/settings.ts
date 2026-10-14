@@ -134,6 +134,10 @@ export interface Settings {
   assistantPersona: string;
   /** Deixar o Gemini ver os títulos das tarefas pendentes e da agenda de hoje (desligado por padrão). */
   assistantContext: boolean;
+  /** Player de música na ilha (lê o que toca no Windows; tudo local). */
+  mediaPlayer: boolean;
+  /** O personagem reage à música (balança) enquanto algo toca. */
+  mediaReact: boolean;
 }
 
 /** Nome de modelo do Gemini aceito (letras minúsculas, números, ponto e hífen). */
@@ -193,6 +197,8 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   geminiModel: 'gemini-3.5-flash-lite',
   assistantPersona: '',
   assistantContext: false,
+  mediaPlayer: true,
+  mediaReact: true,
 });
 
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -273,6 +279,8 @@ export function parseSettings(raw: unknown): Settings {
     if (isFiniteNumber(r.routineEveningHour)) out.routineEveningHour = nearestOf(ROUTINE_EVENING_HOURS, r.routineEveningHour);
     if (typeof r.routineLastMorning === 'string' && DAY_KEY_RE.test(r.routineLastMorning)) out.routineLastMorning = r.routineLastMorning;
     if (typeof r.routineLastEvening === 'string' && DAY_KEY_RE.test(r.routineLastEvening)) out.routineLastEvening = r.routineLastEvening;
+    if (typeof r.mediaPlayer === 'boolean') out.mediaPlayer = r.mediaPlayer;
+    if (typeof r.mediaReact === 'boolean') out.mediaReact = r.mediaReact;
     if (typeof r.assistantGemini === 'boolean') out.assistantGemini = r.assistantGemini;
     if (typeof r.assistantContext === 'boolean') out.assistantContext = r.assistantContext;
     if (typeof r.geminiModel === 'string' && GEMINI_MODEL_RE.test(r.geminiModel.trim())) out.geminiModel = r.geminiModel.trim();

@@ -9,6 +9,7 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -52,8 +53,20 @@ function newUserData(settings) {
   return dir;
 }
 
-function launch(userData) {
-  const port = 9810 + Math.floor(Math.random() * 60);
+/** Uma porta livre de verdade (o sistema escolhe): evita colidir com outro app ainda encerrando. */
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.once('error', reject);
+    srv.listen(0, '127.0.0.1', () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
+  });
+}
+
+async function launch(userData) {
+  const port = await freePort();
   const proc = spawn(electronPath, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${userData}`], {
     stdio: 'ignore',
   });
@@ -125,7 +138,7 @@ async function connect(target) {
 
 /** Abre o app, espera a ilha e devolve a janela do mascote. */
 async function boot(userData) {
-  const { proc, port } = launch(userData);
+  const { proc, port } = await launch(userData);
   const page = await connect(await findTarget(port, 'mascot'));
   await page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'island'`, 'ilha visível');
   await page.waitFor(`document.querySelector('.presence')?.getAnimations().length === 0`, 'entrada concluída');

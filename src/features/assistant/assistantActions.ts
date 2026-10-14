@@ -3,6 +3,7 @@ import { todaysAgenda, eventTimeLabel } from '../../../shared/calendar';
 import { CHARACTER_LABELS } from '../../../shared/settings';
 import { buildRoutine, routineText } from '../../../shared/routine';
 import { formatMinutes } from '../../../shared/stats';
+import { nowPlayingText } from '../../../shared/media';
 import type { NoteDoc } from '../../../shared/notes';
 import type { Task } from '../../../shared/tasks';
 
@@ -98,6 +99,27 @@ export async function runAssistantCommand(cmd: AssistantCommand, now: Date = new
           await api.tasks.reopen(task.id);
         },
       };
+    }
+
+    case 'media': {
+      const state = await api.media.get();
+      if (!state.available) {
+        return { text: 'O player de música está desligado ou indisponível. Ative em Configurações > Comportamento.' };
+      }
+      if (cmd.action === 'now') {
+        return { text: nowPlayingText(state) === 'Nada tocando agora' ? 'Não estou vendo nada tocando agora.' : `Tocando: ${nowPlayingText(state)}${state.app ? ` (${state.app})` : ''}.` };
+      }
+      if (state.status === 'none') return { text: 'Não encontrei nenhum player com música agora. Abra algo para tocar e tente de novo.' };
+      const type = cmd.action;
+      api.media.command({ type });
+      const said: Record<typeof cmd.action, string> = {
+        toggle: 'Feito!',
+        play: 'Tocando! 🎵',
+        pause: 'Pausei a música.',
+        next: 'Pulei para a próxima.',
+        prev: 'Voltei para a anterior.',
+      };
+      return { text: said[cmd.action], happy: cmd.action === 'play' };
     }
 
     case 'task.postpone': {

@@ -136,8 +136,8 @@ test('scaleRect/scaleSize: arredondam para inteiros', () => {
 test('fitScale: limita ao que cabe no monitor e nunca passa de 50% para baixo', () => {
   const area = { x: 0, y: 0, width: 1920, height: 1040 };
   assert.equal(fitScale(1.4, ISLAND_WINDOW_SIZE, area), 1.4);
-  const small = { x: 0, y: 0, width: 800, height: 450 }; // 380 * s <= 450 → 1.18
-  assert.equal(fitScale(1.4, ISLAND_WINDOW_SIZE, small), 1.18);
+  const small = { x: 0, y: 0, width: 800, height: 450 }; // 440 * s <= 450 → 1.02
+  assert.equal(fitScale(1.4, ISLAND_WINDOW_SIZE, small), 1.02);
   assert.equal(fitScale(1, ISLAND_WINDOW_SIZE, { x: 0, y: 0, width: 100, height: 100 }), 0.5);
 });
 
@@ -154,7 +154,7 @@ test('islandShapes: ampliadas, nenhuma forma excede a janela ampliada', () => {
     const w = Math.round(ISLAND_WINDOW_SIZE.width * scale);
     const h = Math.round(ISLAND_WINDOW_SIZE.height * scale);
     for (const open of [false, true]) {
-      for (const extent of ['home', 'tasks', 'focus'] as const) {
+      for (const extent of ['home', 'home-mini', 'home-player', 'tasks', 'focus'] as const) {
         for (const r of islandShapes(open, extent, scale, true)) {
           assert.ok(r.x >= 0 && r.y >= 0 && r.width >= 1 && r.height >= 1);
           assert.ok(r.x + r.width <= w, `largura ${scale}/${open}/${extent}`);

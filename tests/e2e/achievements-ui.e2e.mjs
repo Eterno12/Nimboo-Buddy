@@ -158,6 +158,14 @@ try {
     assert.equal(tile, 'true');
   });
 
+  await step('a tela de conquistas rola (todas as conquistas ficam acessíveis)', async () => {
+    const r = await win.ev(`(() => { const el = document.querySelector('.ach'); el.scrollTop = 400; return { overflow: getComputedStyle(el).overflowY, tall: el.scrollHeight > el.clientHeight, top: el.scrollTop }; })()`);
+    assert.equal(r.overflow, 'auto');
+    assert.equal(r.tall, true);
+    assert.ok(r.top > 0, `não rolou (scrollTop ${r.top})`);
+    await win.ev(`document.querySelector('.ach').scrollTop = 0`);
+  });
+
   await step('"Sua semana" mostra a tarefa concluída hoje, 7 barras e o mesmo número no main', async () => {
     const w = await main.ev(`window.mochi.bond.week()`);
     assert.equal(w.days.length, 7);

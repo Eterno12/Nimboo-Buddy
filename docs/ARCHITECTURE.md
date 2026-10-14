@@ -333,6 +333,11 @@ electron/main.ts            submenu "Personagem" (radio) no menu da bandeja/cont
 - `shared/wellness.ts` (puro, relógio injetável): `dueNudge` (o mais atrasado, intervalo mínimo de 2 min entre lembretes, bloqueio adia sem perder o vencimento), `commitNudge`, `restartKind`, falas em rodízio.
 - `useWellness` (renderer, na janela do mascote): confere a cada 30 s; só confirma o lembrete se o balão foi mostrado. Preferências `wellness*` (padrão desligado). Ver D42.
 
+## 25. Player de música
+
+- `shared/media.ts` (puro): `MediaState`, `sanitizeMedia`, `mediaLayout`, `currentPosition`, comandos validados. `electron/media/mediaSession.ts`: script PowerShell (SMTC), `parseMediaLine`, cliente com reinício e fonte de teste por arquivo (`MOCHI_E2E_MEDIA_FIXTURE`). `electron/mediaService.ts`: IPC `mediaGet/mediaCommand/mediaChanged`, liga/desliga pela preferência.
+- Renderer: `useMedia`, `MediaCard` (reduzido/tocando) em `IslandContent`; `MascotView` envia a extensão da ilha (`home`, `home-mini`, `home-player`) e marca `data-media`/`data-music`. Geometria em `shared/presentation.ts` + `island.css`. Ver D49.
+
 ## 24. IA online (Gemini) e identidade
 
 - `shared/persona.ts` (puro): `buildSystemPrompt`, `parseActions` (valida o bloco de ações), `buildContext`, tons por personagem. `electron/gemini.ts`: requisição, SSE, mapeamento de erros (rede injetável). `electron/geminiKey.ts`: chave cifrada (`safeStorage`).

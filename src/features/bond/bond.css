@@ -30,7 +30,10 @@
 
 .ach {
   box-sizing: border-box;
-  min-height: 100vh;
+  /* A janela é de altura fixa e o documento não rola (styles.css): quem rola é a própria tela. */
+  height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
   padding: 16px;
   background: var(--c-bg);
   color: var(--c-text);

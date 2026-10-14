@@ -16,6 +16,9 @@ import { useSpeech } from '../personality/useSpeech';
 import { reminderText, type SpeechEvent } from '../personality/personality';
 import { STRETCH_TEXT } from '../../../shared/wellness';
 import { HARD_TEXT } from '../../../shared/celebration';
+import { mediaLayout } from '../../../shared/media';
+import type { IslandExtent } from '../../../shared/presentation';
+import { useMedia } from '../media/useMedia';
 import { useWellness } from '../wellness/useWellness';
 import { SpeechBubble } from '../personality/SpeechBubble';
 import { useRoutine } from '../routine/useRoutine';
@@ -131,6 +134,34 @@ export function MascotView() {
   // Tela da ilha expandida. A forma da janela cresce ANTES da animação e só
   // encolhe DEPOIS dela (	ransitionend), como na abertura e no recolhimento.
   const [view, setView] = useState<IslandView>('home');
+
+  // Player de música: o que toca no Windows decide quanto a tela inicial da ilha ocupa.
+  const media = useMedia();
+  const layout = mediaLayout(settings.mediaPlayer, media);
+  const homeExtent: IslandExtent = layout === 'playing' ? 'home-player' : layout === 'mini' ? 'home-mini' : 'home';
+  const homeExtentRef = useRef(homeExtent);
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const islandOpenRef = useRef(false);
+  islandOpenRef.current = inIsland && island.open;
+  const EXTENT_ORDER: Record<string, number> = { home: 0, 'home-mini': 1, 'home-player': 2 };
+  // A forma da janela cresce antes da animação e só encolhe depois dela (mesma regra das telas).
+  useEffect(() => {
+    const previous = homeExtentRef.current;
+    homeExtentRef.current = homeExtent;
+    if (viewRef.current !== 'home' || !islandOpenRef.current) return;
+    if (EXTENT_ORDER[homeExtent] >= EXTENT_ORDER[previous]) {
+      void window.mochi.islandExtent(homeExtent);
+      return;
+    }
+    const timer = window.setTimeout(() => void window.mochi.islandExtent(homeExtentRef.current), 360);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeExtent]);
+  // Ao abrir a ilha o main começa na forma simples: ajusta ao player já na abertura.
+  useEffect(() => {
+    if (inIsland && island.open && viewRef.current === 'home') void window.mochi.islandExtent(homeExtentRef.current);
+  }, [inIsland, island.open]);
   const openTasks = async () => {
     await window.mochi.islandExtent('tasks');
     setView('tasks');
@@ -411,6 +442,8 @@ export function MascotView() {
       data-mode={mode}
       data-open={inIsland && island.open ? 'true' : 'false'}
       data-view={view}
+      data-media={layout}
+      data-music={settings.mediaReact && settings.mediaPlayer && media.status === 'playing' ? 'true' : 'false'}
       style={{ '--ui-scale': scale } as CSSProperties}
       onPointerEnter={() => island.setHover(true)}
       onPointerLeave={() => island.setHover(false)}
@@ -435,7 +468,7 @@ export function MascotView() {
                 island.transitionEnded();
                 setView('home');
               } else if (view === 'home') {
-                void window.mochi.islandExtent('home'); // voltou à tela inicial: encolhe a forma
+                void window.mochi.islandExtent(homeExtentRef.current); // voltou à tela inicial: ajusta a forma
               }
             }}
           >
@@ -449,6 +482,9 @@ export function MascotView() {
               onOpenAssistant={() => window.mochi.assistant.open()}
               onOpenSettings={() => window.mochi.openSettings()}
               onBack={() => setView('home')}
+              media={media}
+              mediaLayout={layout}
+              onMediaCommand={(cmd) => window.mochi.media.command(cmd)}
             />
             {inIsland && <FocusBadge state={focus.state} />}
           </div>

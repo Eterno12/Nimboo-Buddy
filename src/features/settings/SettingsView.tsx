@@ -495,6 +495,34 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           </span>
         </label>
         <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            data-testid="media-player"
+            checked={settings.mediaPlayer}
+            onChange={(e) => set({ mediaPlayer: e.target.checked })}
+          />
+          <span>
+            Player de música na ilha
+            <small>
+              Mostra o que está tocando no Windows (Spotify, navegador, etc.) e deixa pausar ou pular. Tudo local,
+              sem internet.
+            </small>
+          </span>
+        </label>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            data-testid="media-react"
+            checked={settings.mediaReact}
+            disabled={!settings.mediaPlayer}
+            onChange={(e) => set({ mediaReact: e.target.checked })}
+          />
+          <span>
+            O Nimboo balança com a música
+            <small>Só enquanto algo estiver tocando.</small>
+          </span>
+        </label>
+        <label className="settings-row settings-check">
           <input type="checkbox" checked={settings.bubbles} onChange={(e) => set({ bubbles: e.target.checked })} />
           <span>
             Balões de fala

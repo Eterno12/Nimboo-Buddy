@@ -9,17 +9,25 @@ import type { PresentationMode } from './settings';
  * Precisa acompanhar `src/features/island/island.css` (folga de 8px nas
  * laterais e 10px embaixo ao redor da pílula):
  *  - recolhida: pílula 160x48;
- *  - expandida, tela inicial ("home"): pílula 336x164;
- *  - expandida, tela de tarefas: pílula 336x370.
+ *  - expandida, tela inicial ("home"): pílula 336x164 (sem player), 336x188 (player reduzido) ou
+ *    336x276 (música tocando, player aberto);
+ *  - expandida, tela de tarefas: pílula 336x430.
  */
-export const ISLAND_WINDOW_SIZE: Size = { width: 352, height: 380 };
+export const ISLAND_WINDOW_SIZE: Size = { width: 352, height: 440 };
 export const ISLAND_COMPACT_SIZE: Size = { width: 176, height: 58 };
 export const ISLAND_HOME_HEIGHT = 174;
+/** Tela inicial com o player reduzido (uma linha abaixo dos atalhos): pílula 336x188 + folga. */
+export const ISLAND_HOME_MINI_HEIGHT = 198;
+/** Tela inicial com música tocando (player aberto): pílula 336x276 + folga. */
+export const ISLAND_HOME_PLAYER_HEIGHT = 286;
 /** Tela do modo foco: pílula 336x252 + folga (precisa acompanhar `island.css`). */
 export const ISLAND_FOCUS_HEIGHT = 262;
 
 /** Tela mostrada pela ilha expandida (define até onde a forma se estende). */
-export type IslandExtent = 'home' | 'tasks' | 'focus';
+export type IslandExtent = 'home' | 'home-mini' | 'home-player' | 'tasks' | 'focus';
+
+/** Todas as extensões válidas (validação no main). */
+export const ISLAND_EXTENTS: readonly IslandExtent[] = ['home', 'home-mini', 'home-player', 'tasks', 'focus'];
 
 /** Forma (em coordenadas da janela) da ilha recolhida ou expandida em cada tela. */
 export function islandShape(open: boolean, extent: IslandExtent = 'home'): Rect {
@@ -39,7 +47,11 @@ export function islandShape(open: boolean, extent: IslandExtent = 'home'): Rect 
         ? ISLAND_WINDOW_SIZE.height
         : extent === 'focus'
           ? ISLAND_FOCUS_HEIGHT
-          : ISLAND_HOME_HEIGHT,
+          : extent === 'home-player'
+            ? ISLAND_HOME_PLAYER_HEIGHT
+            : extent === 'home-mini'
+              ? ISLAND_HOME_MINI_HEIGHT
+              : ISLAND_HOME_HEIGHT,
   };
 }
 

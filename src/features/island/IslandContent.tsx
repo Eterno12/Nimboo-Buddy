@@ -3,6 +3,8 @@ import { TasksView } from '../tasks/TasksView';
 import { FocusClock, FocusView } from '../focus/FocusView';
 import type { FocusController } from '../focus/useFocus';
 import type { FocusState } from '../../../shared/focus';
+import type { MediaCommand, MediaLayout, MediaState } from '../../../shared/media';
+import { MediaCard } from '../media/MediaCard';
 
 /** Texto do atalho de foco: tempo restante (ou "ok") enquanto há uma sessão. */
 function FocusBadgeText({ state }: { state: FocusState }) {
@@ -67,6 +69,10 @@ interface IslandContentProps {
   /** Abre o painel nas configurações. */
   onOpenSettings: () => void;
   onBack: () => void;
+  /** Player de música: estado, como ocupa a tela inicial e o envio de comandos. */
+  media: MediaState;
+  mediaLayout: MediaLayout;
+  onMediaCommand: (cmd: MediaCommand) => void;
 }
 
 /**
@@ -84,6 +90,9 @@ export function IslandContent({
   onOpenAssistant,
   onOpenSettings,
   onBack,
+  media,
+  mediaLayout,
+  onMediaCommand,
 }: IslandContentProps) {
   const tasksShortcut = useRef<HTMLButtonElement | null>(null);
   const timerShortcut = useRef<HTMLButtonElement | null>(null);
@@ -111,6 +120,7 @@ export function IslandContent({
           <FocusView variant="island" focus={focus} onBack={onBack} />
         </div>
       ) : (
+        <>
         <ul className="island-shortcuts" aria-label="Atalhos">
           {SHORTCUTS.map((s) => {
             const enabled = s.id === 'tasks' || s.id === 'timer' || s.id === 'notes' || s.id === 'assistant';
@@ -149,6 +159,10 @@ export function IslandContent({
             );
           })}
         </ul>
+        {mediaLayout !== 'off' && (
+          <MediaCard state={media} layout={mediaLayout} active={open} onCommand={onMediaCommand} />
+        )}
+        </>
       )}
       {view === 'home' && (
         <button

@@ -112,6 +112,10 @@ Opcional e **desligado por padrão**: o Nimboo conversa de verdade (como num cha
 
 A conversa com o assistente fica **guardada só no seu computador** (até 200 mensagens) e aparece quando você reabre a janela, com o separador *Conversa de agora*. Para apagar: botão **Apagar histórico** na janela (pede confirmação), o comando *"apagar histórico"* ou o botão em *Configurações > Assistente*; também dá para desligar o histórico lá. Novos comandos: *"adiar enviar relatório para amanhã às 10h"* / *"…em 2 horas"*, *"fixar a nota lista de compras"* / *"soltar a nota …"*, *"o que tenho amanhã?"*. Opcional: um **atalho global** (Ctrl+Alt+V, Ctrl+Alt+A ou Ctrl+Shift+V) abre o assistente já ouvindo.
 
+### Player de música
+
+Na tela inicial da ilha, abaixo dos atalhos, o Nimboo mostra o que está tocando no Windows (Spotify, YouTube no navegador, VLC, Media Player…). Sem música, o player fica **reduzido** em uma linha; quando algo toca, ele **expande** com capa, título, artista, progresso (clique na barra para ir a um ponto) e os botões anterior, tocar/pausar e próxima. O Nimboo **balança** enquanto a música toca. Também dá para pedir ao assistente: *"pausar a música"*, *"próxima música"*, *"o que está tocando?"*. É tudo local e dá para desligar em *Configurações > Comportamento*.
+
 ### Sua semana
 
 Na janela de conquistas, *Sua semana* mostra tarefas concluídas, tempo de foco, sessões e a sequência de dias, com barras de foco por dia. Pergunte ao assistente: *"minha semana"*.

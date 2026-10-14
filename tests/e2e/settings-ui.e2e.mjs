@@ -140,7 +140,7 @@ try {
     const s = await update({ islandScale: 1.25 });
     assert.equal(s.settings.islandScale, 1.25);
     assert.equal(s.effective.islandScale, 1.25);
-    await page.waitFor(`window.outerWidth === 440 && window.outerHeight === 475`, 'janela ampliada');
+    await page.waitFor(`window.outerWidth === 440 && window.outerHeight === 550`, 'janela ampliada');
     const w = await page.ev(`Math.round(document.querySelector('.island-shadow').getBoundingClientRect().width)`);
     assert.equal(w, 420, 'a pílula 336 × 1,25');
     assert.equal(await page.ev(`getComputedStyle(document.querySelector('.shell')).getPropertyValue('--ui-scale').trim()`), '1.25');

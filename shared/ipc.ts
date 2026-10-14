@@ -4,6 +4,7 @@ import type { NotesApi } from './notes';
 import type { AssistantApi } from './assistantApi';
 import type { BondSnapshot } from './achievements';
 import type { WeekStats } from './stats';
+import type { MediaCommand, MediaState } from './media';
 import type { FocusApi } from './focus';
 import type { Settings } from './settings';
 import type { CalendarResult, CalendarState } from './calendar';
@@ -53,6 +54,10 @@ export const IPC = {
   assistantHistoryClear: 'assistant:history-clear',
   assistantStartListen: 'assistant:start-listen',
   assistantTakePendingListen: 'assistant:take-pending-listen',
+  mediaGet: 'media:get',
+  mediaCommand: 'media:command',
+  /** main -> renderer: o que está tocando mudou (MediaState). */
+  mediaChanged: 'media:changed',
   geminiStatus: 'gemini:status',
   geminiSetKey: 'gemini:set-key',
   geminiClearKey: 'gemini:clear-key',
@@ -180,6 +185,12 @@ export interface MochiApi {
   tasks: TasksApi;
   notes: NotesApi;
   assistant: AssistantApi;
+  /** Player de música: o que toca no Windows e os controles (tocar/pausar, próxima, anterior). */
+  media: {
+    get(): Promise<MediaState>;
+    command(cmd: MediaCommand): void;
+    onChange(listener: (state: MediaState) => void): () => void;
+  };
   /** Vinculo com o Nimboo: conquistas, dias juntos e afeto. */
   bond: {
     get(): Promise<BondSnapshot>;
