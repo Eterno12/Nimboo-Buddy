@@ -12,7 +12,7 @@ M (1–2), G (2+).
 | 3 ✅ | **Rotina do dia:** resumo ao abrir e fechamento à noite (tarefas, eventos, atrasadas) | M | 1 | feito (resumo no 1º uso do dia; fechamento às 18h por padrão, 17–21h; desligáveis) |
 | 4 ✅ | **Vínculo e memória:** afeto/humor persistentes, dias de convivência, conquistas, nome do personagem | M | — | feito (conquistas como troféus com aviso e tela própria; afeto persistente; nome do personagem) |
 | 5 ✅ | **Bem-estar:** água, postura, descanso dos olhos, alongar na pausa longa (liga com o foco) | P | 4 | feito (tudo desligado por padrão; água 60, postura 45, olhos 20 min; alongar depois do foco) |
-| 6 | **Estatísticas:** semana de foco, tarefas concluídas, sequência | P | 1, 4 | — |
+| 6 ✅ | **Estatísticas:** semana de foco, tarefas concluídas, sequência | P | 1, 4 | feito (seção "Sua semana" na janela de conquistas: cartões + barras; "minha semana" no assistente) |
 | 7 | **Contexto:** reações a hora/dia (madrugada, fim de semana), comemoração ao concluir tarefa difícil | P | 4 | — |
 | 8 | **Assistente+:** mais comandos (adiar, fixar nota, "o que tenho amanhã?"), histórico local apagável, atalho global para falar | M | 1–2 | Atalho global (padrão Ctrl+Alt+Espaço conflita; sugiro Ctrl+Alt+V) |
 | 9 | **Voz:** resposta falada (TTS do Windows) por personagem; **reconhecimento offline** (Whisper local) | G | 8 | Aceita baixar um modelo (75–500 MB) por escolha sua dentro do app? |

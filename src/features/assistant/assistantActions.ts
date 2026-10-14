@@ -2,6 +2,7 @@ import { ASSISTANT_HELP, fold, type AssistantCommand } from '../../../shared/ass
 import { todaysAgenda, eventTimeLabel } from '../../../shared/calendar';
 import { CHARACTER_LABELS } from '../../../shared/settings';
 import { buildRoutine, routineText } from '../../../shared/routine';
+import { formatMinutes } from '../../../shared/stats';
 import type { NoteDoc } from '../../../shared/notes';
 import type { Task } from '../../../shared/tasks';
 
@@ -145,6 +146,18 @@ export async function runAssistantCommand(cmd: AssistantCommand, now: Date = new
       if (r.value.length === 0) return { text: 'Você ainda não tem notas. Diga “crie uma nota …”.' };
       const lines = r.value.slice(0, 6).map((n) => `• ${n.title}`);
       return { text: `Suas notas mais recentes:\n${lines.join('\n')}`, openNoteId: r.value[0].id };
+    }
+
+    case 'stats': {
+      const w = await api.bond.week();
+      if (!w) return { text: SORRY };
+      if (w.activeDays === 0) return { text: 'Nesta semana ainda não tem nada por aqui. Uma sessão de foco para começar?' };
+      const t = w.totals;
+      const parts = [
+        `${t.tasksCompleted} ${t.tasksCompleted === 1 ? 'tarefa concluída' : 'tarefas concluídas'}`,
+        `${formatMinutes(t.focusMinutes)} de foco em ${t.focusSessions} ${t.focusSessions === 1 ? 'sessão' : 'sessões'}`,
+      ];
+      return { text: `Sua semana (7 dias): ${parts.join(', ')}. Foram ${w.activeDays} de 7 dias ativos.`, happy: true };
     }
 
     case 'achievements': {

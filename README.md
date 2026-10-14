@@ -104,6 +104,10 @@ Além de criar, concluir e excluir (com *Desfazer*): **duplo clique no título p
 
 No primeiro uso da manhã o Mochi mostra um **resumo** (tarefas que pedem atenção, atrasadas, eventos e o próximo) — um cartão no topo das tarefas e uma fala curta. No fim do dia (padrão 18h) vem o **fechamento**: o que você concluiu, o foco do dia e o que ficou pendente. Cada um aparece uma vez por dia e dá para dispensar; ligue/desligue e escolha a hora em *Configurações > Rotina do dia*. Também dá para perguntar ao assistente: *"resumo do dia"*.
 
+### Sua semana
+
+Na janela de conquistas, *Sua semana* mostra tarefas concluídas, tempo de foco, sessões e a sequência de dias, com barras de foco por dia. Pergunte ao assistente: *"minha semana"*.
+
 ### Bem-estar
 
 Lembretes gentis para **beber água**, **ajeitar a postura** e **descansar os olhos**, com o intervalo que você escolher (padrão 60/45/20 min), mais uma sugestão de **alongar depois de cada sessão de foco**. Tudo vem desligado: ative em *Configurações > Bem-estar*. Os lembretes aparecem como um balão curto (precisam dos balões ligados) e ficam quietos durante o foco.

@@ -436,3 +436,12 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Forma:** balão de fala curto (≤ 56 caracteres) + som suave; sem notificação do Windows e sem rede. Com os
   balões desligados nada aparece (e nada é consumido).
 - **Limite:** os temporizadores vivem na janela do mascote (30 s de resolução); fechar o app zera a contagem.
+
+## D43 — Estatísticas da semana na janela de conquistas
+- **Decisão:** sem janela nova: a janela de conquistas ganha "Sua semana" (tarefas concluídas, foco total e
+  sessões, sequência, barras de foco por dia, dia de mais foco, média). Cartões e mini-barras, sem biblioteca de
+  gráficos.
+- **Dados:** `statsWeek` (IPC, só o main lê o SQLite) agrupa `focus_sessions` (só `kind='focus'`) e `tasks`
+  concluídas por dia **local**; o agrupamento é puro (`shared/stats.ts`, testado, inclui virada de mês).
+- **Limite:** tarefas concluídas somem 30 dias depois (D8), então a semana é sempre confiável; histórico longo
+  de tarefas não existe (o total acumulado está nas conquistas).

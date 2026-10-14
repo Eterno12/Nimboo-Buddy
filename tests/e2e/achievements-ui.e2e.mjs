@@ -158,6 +158,16 @@ try {
     assert.equal(tile, 'true');
   });
 
+  await step('"Sua semana" mostra a tarefa concluída hoje, 7 barras e o mesmo número no main', async () => {
+    const w = await main.ev(`window.mochi.bond.week()`);
+    assert.equal(w.days.length, 7);
+    assert.equal(w.totals.tasksCompleted, 1);
+    assert.equal(w.days[6].tasksCompleted, 1);
+    await win.waitFor(`document.querySelector('[data-testid="week-tasks"]')?.textContent === '1'`, 'cartão da semana');
+    const bars = await win.ev(`document.querySelectorAll('.week-bar').length`);
+    assert.equal(bars, 7);
+  });
+
   await step('filtros: "Conquistadas" só mostra as liberadas e "Bloqueadas" só as demais', async () => {
     await win.ev(`[...document.querySelectorAll('.ach-filter')].find((b) => b.textContent === 'Conquistadas').click()`);
     await sleep(150);

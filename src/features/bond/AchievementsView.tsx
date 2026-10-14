@@ -5,6 +5,7 @@ import { useSettings } from '../settings/useSettings';
 import { useTheme } from '../settings/useTheme';
 import { AchievementIcon } from './AchievementIcon';
 import { useBond } from './useBond';
+import { WeekSection } from './WeekSection';
 import './bond.css';
 
 type Filter = 'all' | 'unlocked' | 'locked';
@@ -119,6 +120,11 @@ export function AchievementsView() {
           {bond.unlockedCount} de {bond.total} conquistas · {totalPct}%
         </p>
       </section>
+
+      <WeekSection
+        streak={streak}
+        refreshKey={(bond.stats.tasks_completed ?? 0) * 1000 + (bond.stats.focus_sessions ?? 0)}
+      />
 
       <div className="ach-filters" role="tablist" aria-label="Filtro">
         {FILTERS.map((f) => (

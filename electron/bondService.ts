@@ -4,6 +4,7 @@ import { IPC } from '../shared/ipc';
 import { ALL_ACHIEVEMENTS, type BondEvent, type BondSnapshot } from '../shared/achievements';
 import { BondEngine } from './bond/bondEngine';
 import { SqliteBondStore } from './bond/bondStore';
+import { queryWeek } from './stats/statsQuery';
 import { createAchievementsWindow, createToastWindow } from './windows';
 
 export interface BondService {
@@ -26,7 +27,7 @@ const TOAST_MS = 5600;
 /** Entre um aviso e o próximo (a animação de saída termina antes de o seguinte entrar). */
 const TOAST_GAP_MS = 500;
 /** Afeto salvo no máximo uma vez a cada tanto (a interface manda a cada minuto). */
-const CHANNELS = [IPC.bondGet];
+const CHANNELS = [IPC.bondGet, IPC.statsWeek];
 
 export function startBondService({ db, isAppUrl, isDark, canToast }: BondServiceOptions): BondService {
   let win: BrowserWindow | null = null;
@@ -84,6 +85,15 @@ export function startBondService({ db, isAppUrl, isDark, canToast }: BondService
   };
 
   ipcMain.handle(IPC.bondGet, (event) => (trusted(event) ? engine.snapshot() : null));
+  ipcMain.handle(IPC.statsWeek, (event) => {
+    if (!trusted(event)) return null;
+    try {
+      return queryWeek(db);
+    } catch (error) {
+      console.error('Falha ao ler as estatísticas da semana:', error);
+      return null;
+    }
+  });
   const onEvent = (event: IpcMainEvent, raw: unknown) => {
     if (trusted(event)) engine.handleFromRenderer(raw);
   };

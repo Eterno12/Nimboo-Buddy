@@ -3,6 +3,7 @@ import type { TasksApi } from './tasks';
 import type { NotesApi } from './notes';
 import type { AssistantApi } from './assistantApi';
 import type { BondSnapshot } from './achievements';
+import type { WeekStats } from './stats';
 import type { FocusApi } from './focus';
 import type { Settings } from './settings';
 import type { CalendarResult, CalendarState } from './calendar';
@@ -40,6 +41,8 @@ export const IPC = {
   bondEvent: 'bond:event',
   bondSaveAffection: 'bond:save-affection',
   bondOpen: 'bond:open',
+  /** renderer -> main (invoke): estatísticas da semana (foco e tarefas por dia). */
+  statsWeek: 'stats:week',
   /** main -> renderer: o vinculo/conquistas mudou (snapshot). */
   bondChanged: 'bond:changed',
   dataExport: 'data:export',
@@ -166,6 +169,8 @@ export interface MochiApi {
   /** Vinculo com o Mochi: conquistas, dias juntos e afeto. */
   bond: {
     get(): Promise<BondSnapshot>;
+    /** Foco e tarefas concluídas nos últimos 7 dias. */
+    week(): Promise<WeekStats | null>;
     /** Eventos da interface (carinho, assistente, voz, evento->tarefa, subtarefa). */
     event(type: 'pet' | 'assistant' | 'voice' | 'event_task' | 'subtask'): void;
     saveAffection(value: number): void;

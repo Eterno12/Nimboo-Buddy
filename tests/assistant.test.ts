@@ -136,6 +136,13 @@ test('robustez: entradas estranhas nunca lançam e comandos vazios viram pergunt
 });
 
 
+test('estatísticas da semana: formas de pedir e sem confundir com criar algo', () => {
+  for (const s of ['minha semana', 'estatísticas', 'como foi minha semana?', 'mostrar estatísticas', 'desempenho']) {
+    assert.deepEqual(parse(s), { kind: 'stats' }, s);
+  }
+  assert.equal(parse('crie uma tarefa revisar a semana').kind, 'task.create');
+});
+
 test('conquistas: formas de pedir e sem confundir com criar algo', () => {
   for (const s of ['minhas conquistas', 'conquistas', 'mostrar conquistas', 'ver meus troféus', 'quais são minhas conquistas?']) {
     assert.deepEqual(parse(s), { kind: 'achievements' }, s);

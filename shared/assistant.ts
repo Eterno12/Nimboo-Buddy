@@ -14,6 +14,7 @@ export type AssistantCommand =
   | { kind: 'list.notes' }
   | { kind: 'summary' }
   | { kind: 'achievements' }
+  | { kind: 'stats' }
   | { kind: 'focus.start'; minutes: number | null }
   | { kind: 'focus.pause' }
   | { kind: 'focus.resume' }
@@ -259,6 +260,9 @@ export function parseAssistantCommand(input: string, now: Date = new Date()): As
 
   // ---- Conquistas / vínculo ----
   if (/^(?:(?:mostr\w*|abr\w*|ver|quais (?:sao )?)\s*)?(?:(?:as |os |meus |minhas )?(?:minhas? )?(?:conquistas?|trofeus?|medalhas?))[ ?!.]*$|\bminhas? (?:conquistas?|trofeus?)\b/.test(fb) && !/\b(?:cri\w*|adicion\w*|anot\w*|lembr\w*)\b/.test(fb)) return { kind: 'achievements' };
+
+  // ---- Estatísticas da semana ----
+  if (/^(?:(?:mostr\w*|ver|abr\w*|quais (?:sao )?)\s*)?(?:(?:minha|a|as|minhas) )?(?:semana|estatisticas?|numeros|desempenho)(?: da semana| de foco)?[ ?!.]*$|\bcomo foi (?:a |minha )?(?:minha )?semana\b/.test(fb) && !/\b(?:cri\w*|adicion\w*|anot\w*|lembr\w*)\b/.test(fb)) return { kind: 'stats' };
 
   // ---- Resumo / fechamento do dia ----
   const makes =/\b(?:cri\w*|adicion\w*|nov[ao]|anot\w*|lembr\w*|faca|fazer)\b/.test(fb);
