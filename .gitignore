@@ -77,3 +77,6 @@ CLAUDE.local.md
 
 # empacotamento
 release/
+
+# Config local do Claude Code / Headroom (nao versionar)
+.claude/
