@@ -6,6 +6,7 @@ import {
   describeNote,
   emptyNoteDoc,
   isNoteId,
+  isLinkRef,
   likePattern,
   noteFail,
   noteOk,
@@ -45,6 +46,8 @@ interface Row {
   win_h: number | null;
   created_at: string;
   updated_at: string;
+  task_id: string | null;
+  event_ref: string | null;
 }
 
 const toBounds = (r: Row): NoteBounds | null =>
@@ -71,6 +74,8 @@ const toNote = (r: Row): Note => ({
   bounds: toBounds(r),
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+  taskId: r.task_id ?? null,
+  eventRef: r.event_ref ?? null,
 });
 
 const toSummary = (r: Row): NoteSummary => ({
@@ -80,6 +85,8 @@ const toSummary = (r: Row): NoteSummary => ({
   color: (validateNoteColor(r.color).ok ? r.color : DEFAULT_NOTE_COLOR) as NoteColor,
   pinned: r.pinned === 1,
   updatedAt: r.updated_at,
+  taskId: r.task_id ?? null,
+  eventRef: r.event_ref ?? null,
 });
 
 /**
@@ -161,8 +168,25 @@ export class SqliteNotesRepository implements NotesRepository {
     const color = input.color === undefined ? noteOk(DEFAULT_NOTE_COLOR) : validateNoteColor(input.color);
     if (!color.ok) return color;
     const meta = describeNote(doc.value);
+    let taskId: string | null = null;
+    if (input.taskId !== undefined && input.taskId !== null) {
+      if (!isNoteId(input.taskId)) return noteFail('invalid_id', 'Identificador de tarefa inválido.');
+      taskId = input.taskId;
+    }
+    let eventRef: string | null = null;
+    if (input.eventRef !== undefined && input.eventRef !== null) {
+      if (!isLinkRef(input.eventRef)) return noteFail('invalid_id', 'Evento inválido.');
+      eventRef = input.eventRef.trim();
+    }
     const result = this.guard(() =>
-      this.transaction((): NoteResult<Note> => {
+      this.transaction((): NoteResult<Note> & { existing?: boolean } => {
+        // Idempotente por vínculo: a mesma tarefa/evento devolve a nota que já existe.
+        if (taskId !== null || eventRef !== null) {
+          const found = this.db
+            .prepare('SELECT * FROM notes WHERE (task_id IS NOT NULL AND task_id = ?) OR (event_ref IS NOT NULL AND event_ref = ?) LIMIT 1')
+            .get(taskId, eventRef) as unknown as Row | undefined;
+          if (found) return { ...noteOk(toNote(found)), existing: true };
+        }
         const total = this.db.prepare('SELECT COUNT(*) AS n FROM notes').get() as { n: number };
         if (total.n >= NOTE_LIMIT) return noteFail('limit_reached', 'Há notas demais guardadas. Exclua algumas.');
         const at = this.now().toISOString();
@@ -180,17 +204,32 @@ export class SqliteNotesRepository implements NotesRepository {
           win_h: null,
           created_at: at,
           updated_at: at,
+          task_id: taskId,
+          event_ref: eventRef,
         };
         this.db
           .prepare(
-            'INSERT INTO notes (id, title, preview, plain, doc, color, pinned, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)',
+            'INSERT INTO notes (id, title, preview, plain, doc, color, pinned, created_at, updated_at, task_id, event_ref) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)',
           )
-          .run(row.id, row.title, row.preview, row.plain, row.doc, row.color, row.created_at, row.updated_at);
+          .run(
+            row.id,
+            row.title,
+            row.preview,
+            row.plain,
+            row.doc,
+            row.color,
+            row.created_at,
+            row.updated_at,
+            row.task_id,
+            row.event_ref,
+          );
         return noteOk(toNote(row));
       }),
     );
-    if (result.ok) this.notify({ type: 'created', id: result.value.id });
-    return result;
+    if (!result.ok) return result;
+    const { existing, ...plain } = result as NoteResult<Note> & { existing?: boolean };
+    if (!existing) this.notify({ type: 'created', id: result.value.id });
+    return plain as NoteResult<Note>;
   }
 
   async update(id: string, patch: NoteUpdatePatch): Promise<NoteResult<Note>> {

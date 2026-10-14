@@ -377,3 +377,15 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Adiar:** sem coluna nova — "+10 min / +1 h / Amanhã 9h" são atalhos de `setDue` no editor de prazo.
 - **Interface:** duplo clique renomeia (Enter grava, Esc cancela); bolinha de prioridade (clique avança); ↻ marca
   as que repetem. Cor da prioridade média é o token `--t-warn` (contraste verificado em `contrast.test.ts`).
+
+## D39 — Malha de ligações: anotações da tarefa, pauta do evento e nota → tarefa (migração v6)
+- **Decisão:** a nota ganha `taskId` e `eventRef` (migração v6, índices únicos parciais): **uma nota por
+  tarefa** ("anotações") e **uma por evento da agenda** ("pauta"). `notes.create({ taskId | eventRef })` é
+  idempotente: devolve a nota existente; excluir a nota libera o vínculo.
+- **Interface:** botão de nota em cada tarefa ativa (vira "aberto" quando já existe) e em cada evento da agenda;
+  a janela de notas mostra a etiqueta do vínculo e marca a lista (· tarefa / · pauta). A nota nasce com o
+  título (e horário/local do evento) como cabeçalho.
+- **Nota → tarefa:** botão da barra do editor transforma a **seleção** (ou a linha do cursor) em tarefa, e
+  "Criar tarefa da nota" usa o título da nota. Sem vínculo automático de volta (a tarefa criada é comum).
+- **Limites:** tarefa excluída deixa a nota no lugar (sem vínculo órfão visível); o vínculo não vai no
+  arquivo de exportação (ids mudam entre bancos).

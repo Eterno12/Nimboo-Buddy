@@ -160,27 +160,26 @@ try {
     const click = (label) => manager.ev(`document.querySelector('[aria-label^="${label}"]').click()`);
     // Novo parágrafo no fim, com texto que recebe a formatação.
     await manager.ev(`(() => { const el = document.querySelector('.note-prose'); el.focus(); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('insertParagraph'); document.execCommand('insertText', false, 'Texto importante'); })()`);
-    await manager.ev(`document.execCommand('selectAll')`);
     // seleciona só a última linha: Shift+Home equivalente
-    await manager.ev(`(() => { const ps = document.querySelectorAll('.note-prose p'); const last = ps[ps.length - 1]; const r = document.createRange(); r.selectNodeContents(last); const s = getSelection(); s.removeAllRanges(); s.addRange(r); })()`);
+    await manager.ev(`(() => { const ed = document.querySelector('.note-prose').editor; let from = -1; ed.state.doc.descendants((n, pos) => { if (n.isText && n.text === 'Texto importante') from = pos; }); ed.chain().focus().setTextSelection({ from, to: from + 'Texto importante'.length }).run(); })()`);
     await click('Negrito');
     await click('Itálico');
     await click('Sublinhado');
     await click('Centralizar');
     await click('Cor do texto');
     await manager.ev(`document.querySelector('[aria-label="Texto #c0392b"]').click()`);
-    await manager.ev(`(() => { const ps = document.querySelectorAll('.note-prose p'); const last = ps[ps.length - 1]; const r = document.createRange(); r.selectNodeContents(last); const s = getSelection(); s.removeAllRanges(); s.addRange(r); })()`);
+    await manager.ev(`(() => { const ed = document.querySelector('.note-prose').editor; let from = -1; ed.state.doc.descendants((n, pos) => { if (n.isText && n.text === 'Texto importante') from = pos; }); ed.chain().focus().setTextSelection({ from, to: from + 'Texto importante'.length }).run(); })()`);
     await click('Marca-texto');
     await manager.ev(`document.querySelector('[aria-label="Marca-texto #fff176"]').click()`);
     // lista de tarefas com um item
     await manager.ev(`(() => { const el = document.querySelector('.note-prose'); el.focus(); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('insertParagraph'); document.execCommand('insertText', false, 'comprar café'); })()`);
     await click('Lista de tarefas');
     await manager.ev(`(() => { const el = document.querySelector('.note-prose'); el.focus(); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('insertParagraph'); document.execCommand('insertText', false, 'ver o site'); })()`);
-    // link: seleciona "site" e aplica
-    await manager.ev(`(() => { const ps = [...document.querySelectorAll('.note-prose li p')]; const p = ps[ps.length - 1]; const w = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); let t = null; while (w.nextNode()) t = w.currentNode; const r = document.createRange(); r.setStart(t, t.textContent.length - 4); r.setEnd(t, t.textContent.length); const s = getSelection(); s.removeAllRanges(); s.addRange(r); })()`);
-    await click('Link');
+    // link: seleciona "café" pela API do editor (determinístico; a seleção do DOM é lida de forma assíncrona)
+    await manager.ev(`(() => { const ed = document.querySelector('.note-prose').editor; let from = -1; ed.state.doc.descendants((n, pos) => { if (n.isText && n.text.includes('café')) from = pos + n.text.indexOf('café'); }); ed.chain().focus().setTextSelection({ from, to: from + 4 }).run(); })()`);    await click('Link');
     await manager.waitFor(`!!document.querySelector('.note-link-input')`, 'campo do link');
     await manager.ev(`(() => { const i = document.querySelector('.note-link-input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, 'exemplo.com/pagina'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await sleep(150); // deixa o React aplicar o valor digitado antes de enviar
     await manager.ev(`document.querySelector('.note-link-form').requestSubmit()`);
     // título grande no primeiro bloco já existe (H1); confere um H2 em outra linha
     await sleep(900); // autosave
@@ -188,7 +187,7 @@ try {
     assert.equal(r.ok, true);
     const json = JSON.stringify(r.value.doc);
     for (const piece of ['"bold"', '"italic"', '"underline"', '"textAlign":"center"', '"#c0392b"', '"#fff176"', '"taskList"', '"taskItem"', 'https://exemplo.com/pagina']) {
-      assert.ok(json.includes(piece), `faltou ${piece} em ${json.slice(0, 400)}`);
+      assert.ok(json.includes(piece), `faltou ${piece} em ...${json.slice(-600)}`);
     }
     assert.ok(json.includes('Texto importante') && json.includes('comprar ') && json.includes('"café"'), json);
     await manager.shot('notes-manager.png');

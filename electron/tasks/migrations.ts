@@ -108,6 +108,20 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Notas ligadas a uma tarefa (anotações da tarefa) ou a um evento da agenda (pauta). No máximo uma
+    // nota por tarefa e uma por evento (índices únicos parciais).
+    version: 6,
+    name: 'note_links',
+    up(db) {
+      db.exec(`
+        ALTER TABLE notes ADD COLUMN task_id TEXT;
+        ALTER TABLE notes ADD COLUMN event_ref TEXT;
+        CREATE UNIQUE INDEX idx_notes_task ON notes (task_id) WHERE task_id IS NOT NULL;
+        CREATE UNIQUE INDEX idx_notes_event ON notes (event_ref) WHERE event_ref IS NOT NULL;
+      `);
+    },
+  },
 ];
 
 /** O banco foi criado por uma versão mais nova do app; não é seguro abri-lo. */

@@ -52,6 +52,10 @@ export interface Note {
   bounds: NoteBounds | null;
   createdAt: string;
   updatedAt: string;
+  /** Tarefa a que esta nota pertence (anotações da tarefa) ou `null`. */
+  taskId: string | null;
+  /** Evento da agenda a que esta nota está anexada (pauta) ou `null`. */
+  eventRef: string | null;
 }
 
 /** O que a lista mostra (sem o documento inteiro). */
@@ -62,6 +66,8 @@ export interface NoteSummary {
   color: NoteColor;
   pinned: boolean;
   updatedAt: string;
+  taskId: string | null;
+  eventRef: string | null;
 }
 
 export type NoteErrorCode =
@@ -90,6 +96,10 @@ export const noteFail = <T = never>(code: NoteErrorCode, message: string): NoteR
 export interface NoteCreateInput {
   doc?: unknown;
   color?: unknown;
+  /** Cria (ou devolve, se já existe) a nota desta tarefa. */
+  taskId?: unknown;
+  /** Cria (ou devolve, se já existe) a nota deste evento da agenda. */
+  eventRef?: unknown;
 }
 
 export interface NoteUpdatePatch {
@@ -132,6 +142,14 @@ export interface NotesApi {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isNoteId = (value: unknown): value is string => typeof value === 'string' && UUID_RE.test(value);
+
+/** Referência de vínculo (id de evento da agenda): texto curto, sem caracteres de controle. */
+export function isLinkRef(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const text = value.trim();
+  // eslint-disable-next-line no-control-regex
+  return text.length > 0 && text.length <= 300 && !/[\u0000-\u001f\u007f]/.test(text);
+}
 
 export const isNoteColor = (value: unknown): value is NoteColor =>
   typeof value === 'string' && (NOTE_COLORS as readonly string[]).includes(value);

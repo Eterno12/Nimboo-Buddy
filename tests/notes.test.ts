@@ -334,3 +334,80 @@ test('notas: um documento corrompido no banco abre vazio em vez de quebrar', asy
     t.cleanup();
   }
 });
+
+
+// ---- Vínculos: nota da tarefa e nota (pauta) do evento --------------------------------
+
+test('vínculos: a nota da tarefa e a do evento são únicas e idempotentes', async () => {
+  const t = setup();
+  try {
+    const task = '11111111-1111-4111-8111-111111111111';
+    const a = await t.repo.create({ doc: doc(p('Anotações do projeto')), taskId: task });
+    assert.ok(a.ok);
+    if (!a.ok) return;
+    assert.equal(a.value.taskId, task);
+    assert.equal(a.value.eventRef, null);
+    const created = t.events.filter((e) => e.type === 'created').length;
+    const again = await t.repo.create({ doc: doc(p('Outro texto')), taskId: task });
+    assert.ok(again.ok && again.value.id === a.value.id, 'mesma tarefa, mesma nota');
+    assert.equal(again.ok && again.value.title, 'Anotações do projeto', 'não sobrescreve');
+    assert.equal(t.events.filter((e) => e.type === 'created').length, created, 'sem novo aviso');
+
+    const ev = await t.repo.create({ doc: doc(p('Pauta')), eventRef: 'uid-9@google.com|1777640400000' });
+    assert.ok(ev.ok);
+    if (!ev.ok) return;
+    const evAgain = await t.repo.create({ eventRef: 'uid-9@google.com|1777640400000' });
+    assert.ok(evAgain.ok && evAgain.value.id === ev.value.id);
+
+    const list = await t.repo.list();
+    const byTask = list.find((n) => n.taskId === task);
+    const byEvent = list.find((n) => n.eventRef === 'uid-9@google.com|1777640400000');
+    assert.equal(byTask?.id, a.value.id);
+    assert.equal(byEvent?.id, ev.value.id);
+    assert.equal((await t.repo.create({})).ok && true, true, 'nota comum continua livre');
+  } finally {
+    t.cleanup();
+  }
+});
+
+test('vínculos: referências inválidas são recusadas; excluir a nota libera o vínculo', async () => {
+  const t = setup();
+  try {
+    for (const bad of [{ taskId: 'nao-e-uuid' }, { taskId: 42 }, { eventRef: '' }, { eventRef: 'com\nquebra' }, { eventRef: 'x'.repeat(301) }]) {
+      assert.equal((await t.repo.create(bad)).ok, false, JSON.stringify(bad));
+    }
+    const task = '22222222-2222-4222-8222-222222222222';
+    const a = await t.repo.create({ taskId: task });
+    assert.ok(a.ok);
+    if (!a.ok) return;
+    assert.ok((await t.repo.remove(a.value.id)).ok);
+    const fresh = await t.repo.create({ taskId: task });
+    assert.ok(fresh.ok && fresh.value.id !== a.value.id, 'depois de excluída, nasce outra');
+  } finally {
+    t.cleanup();
+  }
+});
+
+test('migração v6: bancos v5 ganham task_id/event_ref sem perder as notas', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mochi-v6-'));
+  const file = path.join(dir, 'mochi.db');
+  try {
+    const v5 = openDatabase(file, { migrations: MIGRATIONS.slice(0, 5) });
+    v5.prepare(
+      "INSERT INTO notes (id, title, preview, plain, doc, color, pinned, created_at, updated_at) VALUES ('66666666-6666-4666-8666-666666666666', 'antiga', '', 'antiga', '{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\"}]}', 'blue', 0, 'x', 'x')",
+    ).run();
+    v5.close();
+    const db = openDatabase(file);
+    try {
+      assert.equal(currentVersion(db), MIGRATIONS.length);
+      const notes = await new SqliteNotesRepository(db).list();
+      assert.equal(notes.length, 1);
+      assert.deepEqual([notes[0].title, notes[0].color, notes[0].taskId, notes[0].eventRef], ['antiga', 'blue', null, null]);
+    } finally {
+      db.close();
+    }
+    assert.ok(fs.readdirSync(dir).some((n) => n.startsWith('mochi.db.bak-v5-')), 'backup antes de migrar');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

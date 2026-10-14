@@ -61,6 +61,8 @@ interface NoteEditorProps {
   /** Barra mais compacta (nota flutuante). */
   compact?: boolean;
   autoFocus?: boolean;
+  /** Se presente, mostra o botão "Transformar em tarefa" (a seleção, ou a linha onde está o cursor). */
+  onMakeTask?: (text: string) => void;
 }
 
 interface ToolState {
@@ -126,7 +128,15 @@ function ToolButton({ label, active, disabled, onClick, children }: ButtonProps)
 }
 
 /** Editor de nota com formatação completa (TipTap/ProseMirror). O documento é JSON validado no main. */
-export function NoteEditor({ initialDoc, onChange, remote, toolbar = true, compact = false, autoFocus = false }: NoteEditorProps) {
+export function NoteEditor({
+  initialDoc,
+  onChange,
+  remote,
+  toolbar = true,
+  compact = false,
+  autoFocus = false,
+  onMakeTask,
+}: NoteEditorProps) {
   const timer = useRef<number | undefined>(undefined);
   const pending = useRef<NoteDoc | null>(null);
   const onChangeRef = useRef(onChange);
@@ -222,15 +232,24 @@ export function NoteEditor({ initialDoc, onChange, remote, toolbar = true, compa
   const [popover, setPopover] = useState<'color' | 'highlight' | 'link' | null>(null);
   const [linkText, setLinkText] = useState('');
   const [linkError, setLinkError] = useState(false);
+  /** Seleção no instante em que o campo do link abriu (o campo toma o foco e o editor pode perdê-la). */
+  const linkRange = useRef<{ from: number; to: number } | null>(null);
 
   if (!editor) return null;
   const s = state;
   const chain = () => editor.chain().focus();
 
+  /** Devolve a seleção de quando o campo abriu e traz o foco de volta ao editor. */
+  const restoreLinkSelection = () => {
+    const range = linkRange.current;
+    const c = chain();
+    return range ? c.setTextSelection(range) : c;
+  };
+
   const applyLink = () => {
     const raw = linkText.trim();
     if (raw === '') {
-      chain().extendMarkRange('link').unsetLink().run();
+      restoreLinkSelection().extendMarkRange('link').unsetLink().run();
       setPopover(null);
       return;
     }
@@ -239,13 +258,17 @@ export function NoteEditor({ initialDoc, onChange, remote, toolbar = true, compa
       setLinkError(true);
       return;
     }
-    chain().extendMarkRange('link').setLink({ href }).run();
+    restoreLinkSelection().extendMarkRange('link').setLink({ href }).run();
     setPopover(null);
   };
 
   const toggle = (name: 'color' | 'highlight' | 'link') => {
     setLinkError(false);
-    if (name === 'link') setLinkText(s?.linkHref ?? '');
+    if (name === 'link') {
+      const { from, to } = editor.state.selection;
+      linkRange.current = { from, to };
+      setLinkText(s?.linkHref ?? '');
+    }
     setPopover((current) => (current === name ? null : name));
   };
 
@@ -362,6 +385,23 @@ export function NoteEditor({ initialDoc, onChange, remote, toolbar = true, compa
               </Icon>
             </ToolButton>
           </div>
+
+          {onMakeTask && (
+            <div className="note-tool-group">
+              <ToolButton
+                label="Transformar a seleção (ou a linha) em tarefa"
+                onClick={() => {
+                  const { from, to, empty, $from } = editor.state.selection;
+                  const text = (empty ? $from.parent.textContent : editor.state.doc.textBetween(from, to, ' ')).trim();
+                  if (text) onMakeTask(text);
+                }}
+              >
+                <Icon>
+                  <path d="M4 7l2 2 3.500-4M4 17l2 2 3.500-4M13 8h7M13 18h7M16.500 5v6" {...stroke} />
+                </Icon>
+              </ToolButton>
+            </div>
+          )}
 
           <div className="note-tool-group">
             <ToolButton label="Limpar formatação" onClick={() => chain().unsetAllMarks().clearNodes().run()}>

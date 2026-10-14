@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { canBecomeTask, eventTimeLabel, taskFromEvent, todaysAgenda, type CalendarEvent } from '../../../shared/calendar';
 import { useTasks } from '../tasks/useTasks';
+import { openLinkedNote, useNoteLinks } from '../notes/useNoteLinks';
 import { useCalendar } from './useCalendar';
 import './calendar.css';
 
@@ -26,6 +27,7 @@ interface AgendaSectionProps {
 export function AgendaSection({ variant }: AgendaSectionProps) {
   const { state } = useCalendar();
   const tasks = useTasks();
+  const noteLinks = useNoteLinks();
   /** Eventos que já viraram tarefa (ativa ou concluída ainda guardada), por id do evento. */
   const linked = new Set([...tasks.active, ...tasks.completed].flatMap((t) => (t.sourceRef ? [t.sourceRef] : [])));
   const [busy, setBusy] = useState<string | null>(null);
@@ -96,6 +98,23 @@ export function AgendaSection({ variant }: AgendaSectionProps) {
               <li key={event.id} className="agenda-item" data-past={past} title={event.location ?? undefined}>
                 <span className="agenda-time">{eventTimeLabel(event)}</span>
                 <span className="agenda-title">{event.title}</span>
+                <button
+                  type="button"
+                  className="agenda-agenda-note"
+                  data-has={noteLinks.byEvent.has(event.id)}
+                  aria-label={
+                    noteLinks.byEvent.has(event.id) ? `Abrir a pauta do evento: ${event.title}` : `Criar a pauta do evento: ${event.title}`
+                  }
+                  title={noteLinks.byEvent.has(event.id) ? 'Abrir a pauta (nota do evento)' : 'Pauta: cria uma nota para este evento'}
+                  onClick={async () => {
+                    const message = await openLinkedNote({ eventRef: event.id }, event.title, `${eventTimeLabel(event)}${event.location ? ` · ${event.location}` : ''}`);
+                    setProblem(message ? `Não foi possível abrir a pauta. ${message}` : null);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" focusable="false">
+                    <path d="M6 4h8.5L18 7.500V20H6zM9 11h6M9 15h4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
                 {linked.has(event.id) ? (
                   <span className="agenda-linked" role="img" aria-label="Já é uma tarefa">
                     ✓ Tarefa

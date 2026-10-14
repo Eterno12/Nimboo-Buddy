@@ -20,6 +20,7 @@ import { draftStore, useDraft } from './draftStore';
 import { useTasks } from './useTasks';
 import { StorageNotice } from './StorageNotice';
 import { AgendaSection } from '../calendar/AgendaSection';
+import { openLinkedNote, useNoteLinks } from '../notes/useNoteLinks';
 import './tasks.css';
 
 interface TasksViewProps {
@@ -59,6 +60,7 @@ function tomorrowMorning(now: Date = new Date()): string {
 export function TasksView({ variant, onBack }: TasksViewProps) {
   const tasks = useTasks();
   const draft = useDraft();
+  const noteLinks = useNoteLinks();
   const [formError, setFormError] = useState<string | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -377,6 +379,11 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
               busy={busy.has(task.id)}
               subs={subsByParent.get(task.id) ?? []}
               busyIds={busy}
+              noteId={noteLinks.byTask.get(task.id) ?? null}
+              onNote={async () => {
+                const problem = await openLinkedNote({ taskId: task.id }, task.title, task.dueAt ? formatDue(task.dueAt) : undefined);
+                if (problem) setOpError(`Não foi possível abrir as anotações. ${problem}`);
+              }}
               position={{ index, total: tops.length }}
               drag={{
                 dragging: dragId === task.id,
@@ -553,6 +560,9 @@ interface TaskRowProps {
   /** Subtarefas (ativas e concluídas) desta tarefa. */
   subs: Task[];
   busyIds: ReadonlySet<string>;
+  /** Nota ligada a esta tarefa (anotações), se já existe. */
+  noteId?: string | null;
+  onNote?: () => void;
   /** Posição entre as principais ativas (habilita mover com Alt+setas). */
   position?: { index: number; total: number };
   drag?: {
@@ -590,6 +600,8 @@ function TaskRow({
   busy,
   subs,
   busyIds,
+  noteId,
+  onNote,
   position,
   drag,
   primary,
@@ -759,6 +771,21 @@ function TaskRow({
               <path d="M12 9.5V13l2.4 1.6M9.5 3.5h5" {...icon} />
             </Icon>
           )}
+        </button>
+      )}
+      {onNote && !done && (
+        <button
+          type="button"
+          className="tasks-icon-button task-note"
+          data-has={!!noteId}
+          aria-label={noteId ? `Abrir anotações da tarefa: ${task.title}` : `Criar anotações da tarefa: ${task.title}`}
+          title={noteId ? 'Abrir anotações' : 'Anotações da tarefa (cria uma nota)'}
+          onClick={onNote}
+          disabled={busy}
+        >
+          <Icon>
+            <path d="M6 4h8.5L18 7.500V20H6zM9 11h6M9 15h4" {...icon} />
+          </Icon>
         </button>
       )}
       {onAddSub && !done && (

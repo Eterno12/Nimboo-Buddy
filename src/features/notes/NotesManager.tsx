@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NOTE_COLORS, type Note, type NoteSummary } from '../../../shared/notes';
+import { TASK_TITLE_MAX } from '../../../shared/tasks';
 import { useSettings } from '../settings/useSettings';
 import { useTheme } from '../settings/useTheme';
 import { NoteEditor } from './NoteEditor';
@@ -48,7 +49,23 @@ export function NotesManager({ initialId }: { initialId: string | null }) {
   const [selected, setSelected] = useState<string | null>(initialId);
   const [undo, setUndo] = useState<{ note: Note; timer: number } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  /** Aviso curto (ex.: "Tarefa criada"). */
+  const [toast, setToast] = useState<string | null>(null);
   const { note, error: noteError, remote, saveDoc, patch } = useNote(selected);
+
+  /** Nota → tarefa: o texto vira o título (cortado se passar do limite). */
+  const makeTask = async (text: string) => {
+    const title = [...text.replace(/\s+/g, ' ').trim()].slice(0, TASK_TITLE_MAX).join('');
+    if (!title) return;
+    const r = await window.mochi.tasks.create(title, null);
+    if (r.ok) {
+      setProblem(null);
+      setToast(`Tarefa criada: ${r.value.title}`);
+      window.setTimeout(() => setToast(null), 4000);
+    } else {
+      setProblem(r.error.message);
+    }
+  };
 
   // Pedido de outra janela (ilha, nota flutuante): abre aquela nota.
   useEffect(() => window.mochi.notes.onOpen((id) => id && setSelected(id)), []);
@@ -153,7 +170,11 @@ export function NotesManager({ initialId }: { initialId: string | null }) {
                   {n.title}
                 </span>
                 {n.preview && <span className="notes-item-preview">{n.preview}</span>}
-                <span className="notes-item-date">{dateFormat.format(new Date(n.updatedAt))}</span>
+                <span className="notes-item-date">
+                  {dateFormat.format(new Date(n.updatedAt))}
+                  {n.taskId && <span className="notes-item-tag"> · tarefa</span>}
+                  {n.eventRef && <span className="notes-item-tag"> · pauta</span>}
+                </span>
               </button>
             </li>
           ))}
@@ -189,18 +210,43 @@ export function NotesManager({ initialId }: { initialId: string | null }) {
                 >
                   <PinIcon /> {note.pinned ? 'Na área de trabalho' : 'Fixar na área de trabalho'}
                 </button>
+                <button
+                  type="button"
+                  className="notes-action"
+                  onClick={() => void makeTask(note.title)}
+                  title="Cria uma tarefa com o título desta nota"
+                >
+                  Criar tarefa da nota
+                </button>
                 <button type="button" className="notes-action notes-danger" onClick={() => void remove()}>
                   Excluir
                 </button>
               </div>
             </header>
+            {(note.taskId || note.eventRef) && (
+              <p className="notes-link-badge">
+                {note.taskId ? 'Anotações de uma tarefa' : 'Pauta de um evento da agenda'}
+              </p>
+            )}
             <div className="notes-paper" data-color={note.color}>
-              <NoteEditor key={note.id} initialDoc={note.doc} remote={remote} onChange={saveDoc} autoFocus />
+              <NoteEditor
+                key={note.id}
+                initialDoc={note.doc}
+                remote={remote}
+                onChange={saveDoc}
+                onMakeTask={(text) => void makeTask(text)}
+                autoFocus
+              />
             </div>
           </>
         ) : (
           <div className="notes-blank">
             <p>{selected === null && items.length === 0 ? 'Crie uma nota para começar.' : 'Escolha uma nota na lista.'}</p>
+          </div>
+        )}
+        {toast && (
+          <div className="notes-toast" role="status">
+            {toast}
           </div>
         )}
         {undo && (

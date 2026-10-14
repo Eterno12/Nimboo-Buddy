@@ -646,3 +646,30 @@ body:has(.note-sheet) {
 .note-prose .ProseMirror-selectednode {
   outline: 2px solid #1f4fd1;
 }
+
+
+/* Vínculos e avisos */
+.notes-link-badge {
+  margin: 0;
+  color: var(--n-muted);
+  font-size: 12.5px;
+}
+
+.notes-item-tag {
+  color: var(--n-accent);
+  font-weight: 600;
+}
+
+.notes-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  max-width: 80%;
+  padding: 8px 14px;
+  border: 1px solid var(--n-accent);
+  border-radius: 12px;
+  background: var(--n-side);
+  color: var(--n-text);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}

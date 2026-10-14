@@ -275,6 +275,29 @@ try {
     );
   });
 
+  await step('"Pauta": cria UMA nota ligada ao evento e abre a janela de notas; de novo, a mesma', async () => {
+    const events = (await page.ev(`window.mochi.calendar.get()`)).events;
+    const lunch = events.find((e) => e.title === 'Almoço com a equipe');
+    const click = () =>
+      panel.ev(
+        `[...document.querySelectorAll('.agenda-item')].find((li) => li.querySelector('.agenda-title').textContent === 'Almoço com a equipe').querySelector('.agenda-agenda-note').click()`,
+      );
+    await click();
+    const manager = await connect(await findTarget('notes='));
+    await manager.waitFor(`document.querySelector('.notes-link-badge')?.textContent === 'Pauta de um evento da agenda'`, 'nota da pauta');
+    manager.close();
+    await sleep(300);
+    await click();
+    await sleep(700);
+    const list = await page.ev(`window.mochi.notes.list()`);
+    const mine = list.value.filter((n) => n.eventRef === lunch.id);
+    assert.equal(mine.length, 1);
+    assert.equal(mine[0].title, 'Almoço com a equipe');
+    await panel.waitFor(
+      `[...document.querySelectorAll('.agenda-item')].find((li) => li.querySelector('.agenda-title').textContent === 'Almoço com a equipe').querySelector('.agenda-agenda-note').dataset.has === 'true'`,
+      'botão marcado',
+    );
+  });
   await step('reabrir o app: a agenda volta sozinha (endereço lido do cofre) mesmo sem baixar de novo', async () => {
     page.close();
     panel?.close();
