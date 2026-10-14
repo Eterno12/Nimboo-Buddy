@@ -555,3 +555,9 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Escolhas** usam as preferências já existentes (personagem, mascotName, bubbles, routine*, mediaPlayer,
   wellness*); nada novo vai para rede. Gemini e agenda ficam em Configurações (exigem chave/endereço).
 - **Limite:** quem já usa o app e não tem `onboardingDone` salvo vê a introdução uma vez.
+
+## D51 (revertida) — Visual vidro escuro / acrílico
+- Tentado e revertido a pedido do usuário: o acrílico nativo não apareceu na máquina dele, apesar de medido
+  como funcionando em outra execução (só vale em janela transparente sem moldura, com barra de título
+  própria). Voltou-se ao visual claro/escuro anterior e à moldura normal do Windows. Os commits `08a3508` e
+  `7ca04de` e suas reversões ficam no histórico do git para consulta.
