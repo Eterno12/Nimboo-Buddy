@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { SKIN_ID_RE } from '../../shared/skins.ts';
 import { EMPTY_BOND, type BondDays, type BondState, type Stats } from '../../shared/achievements.ts';
 
 export interface StoredBond {
@@ -6,6 +7,8 @@ export interface StoredBond {
   /** id → instante (ISO UTC) em que foi desbloqueada. */
   unlocked: Record<string, string>;
   affection: number;
+  /** Ids dos acessórios comprados. */
+  skins: string[];
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -56,10 +59,18 @@ export class SqliteBondStore {
     const unlocked: Record<string, string> = {};
     for (const r of unlockedRows) unlocked[r.id] = r.unlocked_at;
     const aff = Number(kv.get('affection'));
+    let skins: string[] = [];
+    try {
+      const raw = JSON.parse(kv.get('skins') ?? '[]') as unknown;
+      if (Array.isArray(raw)) skins = raw.filter((v): v is string => typeof v === 'string' && SKIN_ID_RE.test(v)).slice(0, 64);
+    } catch {
+      /* dado corrompido: começa sem acessórios */
+    }
     return {
       state: kv.size === 0 ? EMPTY_BOND : { stats: parseStats(kv.get('stats')), days: parseDays(kv.get('days')) },
       unlocked,
       affection: Number.isFinite(aff) ? Math.min(1, Math.max(0, aff)) : 0.5,
+      skins,
     };
   }
 
@@ -77,6 +88,12 @@ export class SqliteBondStore {
       if (this.db.isTransaction) this.db.exec('ROLLBACK');
       throw error;
     }
+  }
+
+  saveSkins(skins: readonly string[]): void {
+    this.db
+      .prepare('INSERT INTO bond_kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+      .run('skins', JSON.stringify(skins));
   }
 
   unlock(id: string, at: string): void {

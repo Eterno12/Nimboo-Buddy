@@ -27,7 +27,7 @@ const TOAST_MS = 5600;
 /** Entre um aviso e o próximo (a animação de saída termina antes de o seguinte entrar). */
 const TOAST_GAP_MS = 500;
 /** Afeto salvo no máximo uma vez a cada tanto (a interface manda a cada minuto). */
-const CHANNELS = [IPC.bondGet, IPC.statsWeek];
+const CHANNELS = [IPC.bondGet, IPC.statsWeek, IPC.bondBuySkin];
 
 export function startBondService({ db, isAppUrl, isDark, canToast }: BondServiceOptions): BondService {
   let win: BrowserWindow | null = null;
@@ -85,6 +85,7 @@ export function startBondService({ db, isAppUrl, isDark, canToast }: BondService
   };
 
   ipcMain.handle(IPC.bondGet, (event) => (trusted(event) ? engine.snapshot() : null));
+  ipcMain.handle(IPC.bondBuySkin, (event, id: unknown) => (trusted(event) ? engine.buySkin(id) : null));
   ipcMain.handle(IPC.statsWeek, (event) => {
     if (!trusted(event)) return null;
     try {

@@ -8,10 +8,11 @@ import {
   type BondSnapshot,
   type BondState,
 } from '../../shared/achievements.ts';
+import { balanceOf, skinById } from '../../shared/skins.ts';
 import type { SqliteBondStore } from './bondStore.ts';
 
 export interface BondEngineOptions {
-  store: Pick<SqliteBondStore, 'load' | 'save' | 'unlock'>;
+  store: Pick<SqliteBondStore, 'load' | 'save' | 'unlock'> & Partial<Pick<SqliteBondStore, 'saveSkins'>>;
   now?: () => Date;
   /** Chamado quando uma conquista é desbloqueada (a interface mostra o aviso). */
   onUnlocked?: (ids: string[]) => void;
@@ -27,6 +28,7 @@ export class BondEngine {
   private state: BondState = EMPTY_BOND;
   private unlocked: Record<string, string> = {};
   private affection = 0.5;
+  private skins: string[] = [];
   private readonly store: BondEngineOptions['store'];
   private readonly now: () => Date;
   private readonly onUnlocked: (ids: string[]) => void;
@@ -41,10 +43,30 @@ export class BondEngine {
     this.state = loaded.state;
     this.unlocked = loaded.unlocked;
     this.affection = loaded.affection;
+    this.skins = loaded.skins ?? [];
   }
 
   snapshot(): BondSnapshot {
-    return buildSnapshot(this.state, this.unlocked, this.affection);
+    return buildSnapshot(this.state, this.unlocked, this.affection, this.skins);
+  }
+
+  /** Compra um acessório com o saldo. Devolve o instantâneo novo, ou `null` se não pôde. */
+  buySkin(id: unknown): BondSnapshot | null {
+    const skin = typeof id === 'string' ? skinById(id) : null;
+    if (!skin || this.skins.includes(skin.id)) return null;
+    const points = this.snapshot().points;
+    if (balanceOf(points, this.skins) < skin.price) return null;
+    const next = [...this.skins, skin.id];
+    try {
+      this.store.saveSkins?.(next);
+    } catch (error) {
+      console.error('Falha ao gravar o acessório:', error);
+      return null;
+    }
+    this.skins = next;
+    const snapshot = this.snapshot();
+    this.onChanged(snapshot);
+    return snapshot;
   }
 
   /** Aceita só os eventos que a interface pode mandar (os demais nascem no processo principal). */

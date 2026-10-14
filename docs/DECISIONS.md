@@ -561,3 +561,16 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   como funcionando em outra execução (só vale em janela transparente sem moldura, com barra de título
   própria). Voltou-se ao visual claro/escuro anterior e à moldura normal do Windows. Os commits `08a3508` e
   `7ca04de` e suas reversões ficam no histórico do git para consulta.
+
+## D52 — Acessórios dos personagens (loja com pontos de conquista)
+- **Moeda:** pontos de conquista. Comprar gasta o **saldo** (`balance` = pontos − preço dos acessórios
+  comprados); o total de pontos e o nível de amizade **não** diminuem.
+- **Itens:** 2 acessórios exclusivos por personagem (16), 20 e 50 pontos (total 560 de 660). Um por vez
+  (`settings.skin`, id `<personagem>.<nome>`); só aparece se for do personagem atual. Cores/paletas extras
+  só existem para o Nimboo original e ficam fora desta etapa.
+- **Dados:** compras em `bond_kv.skins` (JSON, sem migração); validadas no main (`buySkin`): id conhecido,
+  não repetido, saldo suficiente. Arte SVG em `src/features/mascot/skinArt.tsx`, camadas `body` (por cima do
+  corpo) e `face` (acompanha o olhar); animações em `skins.css`, desligadas com "reduzir movimento".
+- **Interface:** aba "Acessórios" na janela de conquistas, com prévia viva, preço e Comprar/Usar/Tirar.
+- **Limite:** o main não confere posse ao receber `skin` pelas preferências (só a interface oferece itens
+  comprados); impacto é só visual e local.

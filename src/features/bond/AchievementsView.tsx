@@ -5,6 +5,7 @@ import { useSettings } from '../settings/useSettings';
 import { useTheme } from '../settings/useTheme';
 import { AchievementIcon } from './AchievementIcon';
 import { useBond } from './useBond';
+import { SkinShop } from './SkinShop';
 import { WeekSection } from './WeekSection';
 import './bond.css';
 
@@ -60,6 +61,7 @@ export function AchievementsView() {
   const theme = useTheme(settings.theme);
   const bond = useBond();
   const [filter, setFilter] = useState<Filter>('all');
+  const [tab, setTab] = useState<'achievements' | 'skins'>('achievements');
 
   const list = useMemo(() => {
     const all = bond?.achievements ?? [];
@@ -95,7 +97,7 @@ export function AchievementsView() {
             blinking={false}
             mood="high"
             character={settings.character}
-            palette={settings.color}
+            palette={settings.color} skin={settings.skin}
             uid="ach"
           />
         </div>
@@ -109,9 +111,28 @@ export function AchievementsView() {
         <div className="ach-score" aria-label={`${bond.points} de ${bond.maxPoints} pontos`}>
           <strong>{bond.points}</strong>
           <span>/ {bond.maxPoints} pts</span>
+          <span className="ach-balance" data-testid="balance">Saldo: {bond.balance} pts</span>
         </div>
       </header>
 
+      <div className="ach-tabs" role="tablist" aria-label="Seção">
+        <button type="button" role="tab" aria-selected={tab === 'achievements'} className="ach-filter" onClick={() => setTab('achievements')}>
+          Conquistas
+        </button>
+        <button type="button" role="tab" aria-selected={tab === 'skins'} className="ach-filter" data-testid="tab-skins" onClick={() => setTab('skins')}>
+          Acessórios
+        </button>
+      </div>
+
+      {tab === 'skins' ? (
+        <SkinShop
+          bond={bond}
+          character={settings.character}
+          equipped={settings.skin}
+          onEquip={(id) => void window.mochi.settings.update({ skin: id })}
+        />
+      ) : (
+        <>
       <section className="ach-summary" aria-label="Resumo">
         <div className="ach-bar big" role="progressbar" aria-valuemin={0} aria-valuemax={bond.total} aria-valuenow={bond.unlockedCount}>
           <span style={{ width: `${totalPct}%` }} />
@@ -147,6 +168,8 @@ export function AchievementsView() {
         ))}
         {list.length === 0 && <li className="ach-empty">Nada por aqui ainda.</li>}
       </ul>
+        </>
+      )}
     </main>
   );
 }

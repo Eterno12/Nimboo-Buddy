@@ -498,7 +498,7 @@ export function MascotView() {
             blinking={mascot.blinking}
             mood={mascot.mood}
             character={character.id}
-            palette={settings.color}
+            palette={settings.color} skin={settings.skin}
             onHopEnd={mascot.endHop}
             onHoverChange={mascot.hoverChange}
           />

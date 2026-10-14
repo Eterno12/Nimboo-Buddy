@@ -1,0 +1,69 @@
+/* Acessórios: movimentos leves, sempre dentro da camada do corpo/rosto. */
+.acc {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.acc-bob {
+  animation: acc-bob 3.4s ease-in-out infinite;
+}
+
+@keyframes acc-bob {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  50% {
+    translate: 0 -1.5px;
+    rotate: 2.5deg;
+  }
+}
+
+.acc-twinkle {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: acc-twinkle 2.2s ease-in-out infinite;
+}
+
+@keyframes acc-twinkle {
+  0%,
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+  50% {
+    scale: 1.18;
+    opacity: 0.75;
+  }
+}
+
+/* Brilho que passa pelas lentes de tempos em tempos. */
+.acc-glint {
+  opacity: 0;
+  animation: acc-glint 6s ease-in-out infinite;
+}
+
+@keyframes acc-glint {
+  0%,
+  70%,
+  100% {
+    opacity: 0;
+    translate: -8px 0;
+  }
+  80% {
+    opacity: 0.75;
+  }
+  90% {
+    opacity: 0;
+    translate: 8px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acc-bob,
+  .acc-twinkle,
+  .acc-glint {
+    animation: none;
+  }
+}

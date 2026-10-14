@@ -46,6 +46,7 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'geminiModel',
   'assistantPersona',
   'assistantContext',
+  'skin',
   'mediaPlayer',
   'mediaReact',
   'onboardingDone',

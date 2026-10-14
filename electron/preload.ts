@@ -107,6 +107,7 @@ const api: MochiApi = {
     get: () => ipcRenderer.invoke(IPC.bondGet),
     week: () => ipcRenderer.invoke(IPC.statsWeek),
     event: (type) => ipcRenderer.send(IPC.bondEvent, { type }),
+    buySkin: (id) => ipcRenderer.invoke(IPC.bondBuySkin, id),
     saveAffection: (value) => ipcRenderer.send(IPC.bondSaveAffection, value),
     open: () => ipcRenderer.send(IPC.bondOpen),
     onChange: (listener) => listen<[BondSnapshot]>(IPC.bondChanged, (s) => listener(s)),

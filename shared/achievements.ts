@@ -1,3 +1,4 @@
+import { balanceOf } from './skins.ts';
 /**
  * Vínculo e conquistas: contadores do que a pessoa faz com o Nimboo, regras de desbloqueio e pontuação no
  * estilo "troféus" (bronze, prata, ouro, platina). Puro: sem DOM, Electron ou banco.
@@ -263,12 +264,17 @@ export interface BondSnapshot {
   title: string;
   /** Afeto persistido (0..1) para o Nimboo lembrar do humor. */
   affection: number;
+  /** Pontos ainda não gastos em acessórios (o total e a amizade não mudam). */
+  balance: number;
+  /** Ids dos acessórios comprados. */
+  ownedSkins: string[];
 }
 
 export function buildSnapshot(
   state: BondState,
   unlockedAt: Readonly<Record<string, string>>,
   affection: number,
+  ownedSkins: readonly string[] = [],
 ): BondSnapshot {
   const unlocked = new Set(Object.keys(unlockedAt));
   const achievements = ALL_ACHIEVEMENTS.map((a): AchievementView => {
@@ -296,5 +302,7 @@ export function buildSnapshot(
     total: ALL_ACHIEVEMENTS.length,
     title: bondTitle(state.stats),
     affection,
+    balance: balanceOf(pointsOf(unlocked), ownedSkins),
+    ownedSkins: [...ownedSkins],
   };
 }

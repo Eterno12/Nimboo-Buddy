@@ -1,3 +1,4 @@
+import { SKIN_ID_RE } from './skins.ts';
 /** Preferências do usuário persistidas em disco (settings.json). */
 
 import { WELLNESS_INTERVALS } from './wellness.ts';
@@ -134,6 +135,8 @@ export interface Settings {
   assistantPersona: string;
   /** Deixar o Gemini ver os títulos das tarefas pendentes e da agenda de hoje (desligado por padrão). */
   assistantContext: boolean;
+  /** Acessório em uso (`<personagem>.<nome>`); só aparece se for do personagem atual. */
+  skin: string | null;
   /** Player de música na ilha (lê o que toca no Windows; tudo local). */
   mediaPlayer: boolean;
   /** O personagem reage à música (balança) enquanto algo toca. */
@@ -199,6 +202,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   geminiModel: 'gemini-3.5-flash-lite',
   assistantPersona: '',
   assistantContext: false,
+  skin: null,
   mediaPlayer: true,
   mediaReact: true,
   onboardingDone: false,
@@ -287,6 +291,8 @@ export function parseSettings(raw: unknown): Settings {
     if (typeof r.onboardingDone === 'boolean') out.onboardingDone = r.onboardingDone;
     if (typeof r.assistantGemini === 'boolean') out.assistantGemini = r.assistantGemini;
     if (typeof r.assistantContext === 'boolean') out.assistantContext = r.assistantContext;
+    if (r.skin === null) out.skin = null;
+    else if (typeof r.skin === 'string' && SKIN_ID_RE.test(r.skin)) out.skin = r.skin;
     if (typeof r.geminiModel === 'string' && GEMINI_MODEL_RE.test(r.geminiModel.trim())) out.geminiModel = r.geminiModel.trim();
     if (typeof r.assistantPersona === 'string') {
       // eslint-disable-next-line no-control-regex

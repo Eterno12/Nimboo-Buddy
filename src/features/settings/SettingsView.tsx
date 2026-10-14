@@ -415,7 +415,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
                 onClick={() => set({ character: id })}
               >
                 <span className="settings-character-preview">
-                  <Mascot state="idle" replay={0} hop={false} blinking={false} mood="mid" character={id} palette={settings.color} uid={`pv-${id}`} />
+                  <Mascot state="idle" replay={0} hop={false} blinking={false} mood="mid" character={id} palette={settings.color} skin={settings.skin} uid={`pv-${id}`} />
                 </span>
                 <span>{info.label}</span>
               </button>

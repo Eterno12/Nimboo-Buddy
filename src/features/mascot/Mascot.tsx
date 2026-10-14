@@ -3,8 +3,10 @@ import type { MascotState, Mood } from './mascotStates';
 import type { CharacterId, MochiColor } from '../../../shared/settings';
 import { characterArt } from './characterArt';
 import { characterInfo } from './characters';
+import { skinArt } from './skinArt';
 import './mascot.css';
 import './characters.css';
+import './skins.css';
 
 interface MascotProps {
   state: MascotState;
@@ -16,6 +18,8 @@ interface MascotProps {
   character?: CharacterId;
   /** Cor do Nimboo (as paletas ficam em mascot.css; só valem para o personagem original). */
   palette?: MochiColor;
+  /** Acessório em uso (só aparece se for deste personagem). */
+  skin?: string | null;
   /** Prefixo dos ids dos gradientes: deve ser único quando há vários mascotes na mesma página. */
   uid?: string;
   /** Usado pela view para escrever as variáveis de "olhar" sem re-renderizar. */
@@ -51,6 +55,7 @@ export function Mascot({
   mood,
   character = 'mochi',
   palette = 'mint',
+  skin = null,
   uid = 'mochi',
   svgRef,
   onHopEnd,
@@ -65,6 +70,7 @@ export function Mascot({
     onPointerEnter: () => onHoverChange?.(true),
     onPointerLeave: () => onHoverChange?.(false),
   });
+  const acc = skinArt(skin, info.id);
   const { dx, dy, scale } = info.face;
   const faceFit = `translate(${FACE_CENTER.x + dx} ${FACE_CENTER.y + dy}) scale(${scale}) translate(${-FACE_CENTER.x} ${-FACE_CENTER.y})`;
 
@@ -77,6 +83,7 @@ export function Mascot({
       data-state={state}
       data-mood={mood}
       data-character={info.id}
+      data-skin={acc ? skin : undefined}
       data-palette={info.id === 'mochi' ? palette : undefined}
       viewBox="0 0 200 200"
       width="100%"
@@ -154,9 +161,11 @@ export function Mascot({
                       strokeLinecap="round"
                     />
                     <ellipse className="face face-mouth-yawn" cx="100" cy="152" rx="9" ry="12" fill="#7a3550" />
+                    {acc?.layer === 'face' && acc.node}
                   </g>
                 </g>
               </g>
+              {acc?.layer === 'body' && acc.node}
             </g>
           </g>
         </g>

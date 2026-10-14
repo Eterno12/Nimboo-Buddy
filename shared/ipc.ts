@@ -40,6 +40,7 @@ export const IPC = {
   /** renderer -> main (invoke): operações de tarefas (cada uma é específica e tipada). */
   bondGet: 'bond:get',
   bondEvent: 'bond:event',
+  bondBuySkin: 'bond:buy-skin',
   bondSaveAffection: 'bond:save-affection',
   bondOpen: 'bond:open',
   /** renderer -> main (invoke): estatísticas da semana (foco e tarefas por dia). */
@@ -198,6 +199,8 @@ export interface MochiApi {
     week(): Promise<WeekStats | null>;
     /** Eventos da interface (carinho, assistente, voz, evento->tarefa, subtarefa). */
     event(type: 'pet' | 'assistant' | 'voice' | 'event_task' | 'subtask'): void;
+    /** Compra um acessório com o saldo; `null` se não deu (sem saldo, já tem, id inválido). */
+    buySkin(id: string): Promise<BondSnapshot | null>;
     saveAffection(value: number): void;
     /** Abre a janela de conquistas. */
     open(): void;

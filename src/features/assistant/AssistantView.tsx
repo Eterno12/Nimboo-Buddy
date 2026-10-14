@@ -464,7 +464,7 @@ export function AssistantView() {
             blinking={false}
             mood="mid"
             character={settings.character}
-            palette={settings.color}
+            palette={settings.color} skin={settings.skin}
             uid="assist"
           />
         </div>
