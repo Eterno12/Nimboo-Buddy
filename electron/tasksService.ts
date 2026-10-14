@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { IPC } from '../shared/ipc';
+import { hardReason, type HardReason } from '../shared/celebration';
 import {
   fail,
   isTaskId,
@@ -70,12 +71,38 @@ export function startTasksService({ dbPath, isAppUrl, onTasksChanged, onChange }
    * impede as demais de atualizar (nem afeta a operação já confirmada).
    * "Concluída" é um evento à parte: só ela faz o Mochi comemorar.
    */
+  /** Por que esta tarefa merece uma comemoração maior (ou `null`). Nunca falha a operação. */
+  const hardReasonOf = (id: string): HardReason | null => {
+    if (!db) return null;
+    try {
+      const row = db
+        .prepare('SELECT priority, due_at, created_at, completed_at, parent_id FROM tasks WHERE id = ?')
+        .get(id) as
+        | { priority: number; due_at: string | null; created_at: string; completed_at: string | null; parent_id: string | null }
+        | undefined;
+      if (!row) return null;
+      const subs = db.prepare('SELECT COUNT(*) AS n FROM tasks WHERE parent_id = ?').get(id) as { n: number };
+      return hardReason({
+        priority: Number(row.priority),
+        dueAt: row.due_at,
+        createdAt: row.created_at,
+        completedAt: row.completed_at,
+        subtasks: Number(subs.n),
+        isSubtask: row.parent_id !== null,
+      });
+    } catch (error) {
+      console.error('Falha ao avaliar a tarefa concluída:', error);
+      return null;
+    }
+  };
+
   const broadcast = (change?: TaskChange) => {
+    const hard = change?.type === 'completed' ? hardReasonOf(change.id) : null;
     for (const win of BrowserWindow.getAllWindows()) {
       if (win.isDestroyed()) continue;
       try {
         win.webContents.send(IPC.tasksChanged);
-        if (change?.type === 'completed') win.webContents.send(IPC.tasksCompleted);
+        if (change?.type === 'completed') win.webContents.send(IPC.tasksCompleted, hard);
         if (change?.type === 'created') win.webContents.send(IPC.tasksCreated);
       } catch (error) {
         console.error('Falha ao avisar uma janela sobre mudanças nas tarefas:', error);

@@ -226,6 +226,21 @@ try {
     await sleep(2500);
     assert.equal(await hasTarget('toast=first_task'), false, 'o aviso não deve voltar');
   });
+
+  await step('tarefa difícil (prioridade alta) comemora com motivo; tarefa comum não', async () => {
+    await main.ev(`(() => { window.__reasons = []; window.mochi.tasks.onCompleted((r) => window.__reasons.push(r)); })()`);
+    const hard = await main.ev(`window.mochi.tasks.create('Declarar imposto', null, null, { priority: 3 })`);
+    assert.ok(hard.ok, JSON.stringify(hard));
+    await main.ev(`window.mochi.tasks.complete(${JSON.stringify(hard.value.id)})`);
+    await main.waitFor(`window.__reasons.length === 1`, 'primeira conclusão');
+    const plain = await main.ev(`window.mochi.tasks.create('Regar a planta', null)`);
+    await main.ev(`window.mochi.tasks.complete(${JSON.stringify(plain.value.id)})`);
+    await main.waitFor(`window.__reasons.length === 2`, 'segunda conclusão');
+    assert.deepEqual(await main.ev(`window.__reasons`), ['priority', null]);
+    // o balão dedicado aparece (balões ligados no e2e? o teste só confere que o app segue vivo e coerente)
+    const s = await main.ev(`window.mochi.bond.get()`);
+    assert.equal(s.stats.tasks_completed, 3);
+  });
 } catch (error) {
   console.log(`  FAIL (infra) ${error.message}`);
   results.push({ name: 'infraestrutura', ok: false, error });

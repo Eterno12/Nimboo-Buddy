@@ -304,8 +304,11 @@ export interface TasksApi {
   dismissNotice(): Promise<void>;
   /** Alguma tarefa mudou (em qualquer janela): recarregue a lista. */
   onChange(listener: () => void): () => void;
-  /** Uma tarefa foi concluída agora (não dispara ao reabrir ou excluir). */
-  onCompleted(listener: () => void): () => void;
+  /**
+   * Uma tarefa foi concluída agora (não dispara ao reabrir ou excluir). `reason` diz se foi uma tarefa
+   * "difícil" (prioridade alta, atrasada, grande ou antiga), para uma comemoração maior.
+   */
+  onCompleted(listener: (reason: 'priority' | 'late' | 'subtasks' | 'old' | null) => void): () => void;
   /** Uma tarefa foi criada agora. */
   onCreated(listener: () => void): () => void;
   /** Chegou um lembrete de prazo. */

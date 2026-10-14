@@ -37,7 +37,16 @@ interface Line {
   mood?: readonly Mood[];
   /** Só nesta parte do dia. */
   part?: DayPart;
+  /** Só nestes dias da semana (0 = domingo ... 6 = sábado). */
+  days?: readonly number[];
+  /** Só de madrugada (0h às 4h59). */
+  late?: boolean;
 }
+
+const WEEKEND = [0, 6] as const;
+
+/** Madrugada: da meia-noite às 5h. */
+export const isLateNight = (date: Date) => date.getHours() < 5;
 
 const L = (text: string, extra: Omit<Line, 'text'> = {}): Line => ({ text, ...extra });
 
@@ -54,6 +63,13 @@ export const LINES: Record<SpeechEvent, readonly Line[]> = {
     L('Já é tarde... bora descansar?', { part: 'night' }),
     L('Madrugada, hein? Água e cama!', { part: 'night' }),
     L('Oi! Tava com saudade.', { mood: ['low'] }),
+    // contexto: dia da semana e madrugada
+    L('Fim de semana! Sem pressa hoje.', { days: WEEKEND }),
+    L('Dia de descanso... vai com calma~', { days: WEEKEND }),
+    L('Segunda! Um passo de cada vez.', { days: [1], part: 'morning' }),
+    L('Sextou! Falta pouquinho.', { days: [5] }),
+    L('Meia-noite já passou... dormir?', { late: true }),
+    L('Tá tarde! Salva e vai descansar.', { late: true }),
   ],
   taskCompleted: [
     L('Mais uma! Mandou bem!'),
@@ -102,6 +118,10 @@ export const LINES: Record<SpeechEvent, readonly Line[]> = {
     L('Faz tempo sem carinho... snif.', { mood: ['low'] }),
     L('Tava pensando em você.', { mood: ['high'] }),
     L('Dia bom pra riscar tarefas!', { mood: ['high'] }),
+    L('Hoje é dia de pausa. Aproveite!', { days: WEEKEND }),
+    L('Fim de semana: cuide de você também.', { days: WEEKEND }),
+    L('A madrugada pede cama, viu?', { late: true }),
+    L('Água e descanso. O resto espera.', { late: true }),
   ],
 };
 
@@ -199,7 +219,11 @@ export function createPersonality(random: () => number = Math.random): Personali
       const part = dayPartOf(ctx.now);
       const candidates = [
         ...LINES[event].filter(
-          (line) => (!line.mood || line.mood.includes(ctx.mood)) && (!line.part || line.part === part),
+          (line) =>
+            (!line.mood || line.mood.includes(ctx.mood)) &&
+            (!line.part || line.part === part) &&
+            (!line.days || line.days.includes(ctx.now.getDay())) &&
+            (!line.late || isLateNight(ctx.now)),
         ),
         ...(ctx.extra?.[event] ?? []).map((text) => ({ text })),
       ];

@@ -445,3 +445,12 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   concluídas por dia **local**; o agrupamento é puro (`shared/stats.ts`, testado, inclui virada de mês).
 - **Limite:** tarefas concluídas somem 30 dias depois (D8), então a semana é sempre confiável; histórico longo
   de tarefas não existe (o total acumulado está nas conquistas).
+
+## D44 — Contexto: dia da semana, madrugada e comemoração de tarefa difícil
+- **Decisão:** nenhuma leitura do que a pessoa faz no computador (sem janela ativa, sem teclado). O contexto é só
+  o relógio local: falas com `days` (fim de semana, segunda, sexta) e `late` (0h–4h59) entram no mesmo sorteio
+  das demais, com os mesmos limites (intervalos, teto por hora, calado no foco, ≤ 38 caracteres).
+- **Tarefa difícil** (`shared/celebration.ts`, puro): prioridade alta, concluída **depois do prazo**, 2+
+  subtarefas ou criada há 3+ dias. Subtarefas nunca disparam. O main calcula o motivo ao concluir e o envia junto
+  do evento; a interface toca o som de conquista e fala uma frase própria (56 caracteres).
+- **Tom:** nunca cobra: "atrasada, mas resolvida!" comemora, não aponta o atraso.

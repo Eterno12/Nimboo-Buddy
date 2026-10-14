@@ -63,7 +63,10 @@ const api: MochiApi = {
       await ipcRenderer.invoke(IPC.tasksDismissNotice);
     },
     onChange: (listener) => listen<[]>(IPC.tasksChanged, () => listener()),
-    onCompleted: (listener) => listen<[]>(IPC.tasksCompleted, () => listener()),
+    onCompleted: (listener) =>
+      listen<[unknown]>(IPC.tasksCompleted, (reason) =>
+        listener(reason === 'priority' || reason === 'late' || reason === 'subtasks' || reason === 'old' ? reason : null),
+      ),
     onCreated: (listener) => listen<[]>(IPC.tasksCreated, () => listener()),
     onReminder: (listener) =>
       listen<[unknown]>(IPC.tasksReminder, (raw) => {

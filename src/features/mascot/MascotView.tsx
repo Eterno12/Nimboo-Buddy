@@ -15,6 +15,7 @@ import { useSettings } from '../settings/useSettings';
 import { useSpeech } from '../personality/useSpeech';
 import { reminderText, type SpeechEvent } from '../personality/personality';
 import { STRETCH_TEXT } from '../../../shared/wellness';
+import { HARD_TEXT } from '../../../shared/celebration';
 import { useWellness } from '../wellness/useWellness';
 import { SpeechBubble } from '../personality/SpeechBubble';
 import { useRoutine } from '../routine/useRoutine';
@@ -191,10 +192,16 @@ export function MascotView() {
   // Reabrir ou excluir não disparam este evento.
   useEffect(
     () =>
-      window.mochi.tasks.onCompleted(() => {
+      window.mochi.tasks.onCompleted((reason) => {
         celebrate();
-        playSound('taskDone');
-        sayRef.current('taskCompleted');
+        if (reason) {
+          // Tarefa difícil: comemoração maior (sininhos de conquista e fala própria).
+          playSound('achievement');
+          if (!sayTextRef.current(HARD_TEXT[reason])) sayRef.current('taskCompleted');
+        } else {
+          playSound('taskDone');
+          sayRef.current('taskCompleted');
+        }
       }),
     [celebrate],
   );
