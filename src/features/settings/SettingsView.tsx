@@ -17,6 +17,7 @@ import {
   type MochiColor,
   type Settings,
 } from '../../../shared/settings';
+import { WELLNESS_INTERVALS, WELLNESS_LABEL } from '../../../shared/wellness';
 import { configureSound, playSound } from '../audio/soundEngine';
 import { useCalendar } from '../calendar/useCalendar';
 import { useSettings } from './useSettings';
@@ -182,6 +183,12 @@ function CalendarSettings() {
 }
 
 /** Tela de configurações (no painel). Cada mudança vale na hora e é salva pelo processo principal. */
+const WELLNESS_ROWS = [
+  { kind: 'water', on: 'wellnessWater', min: 'wellnessWaterMin' },
+  { kind: 'posture', on: 'wellnessPosture', min: 'wellnessPostureMin' },
+  { kind: 'eyes', on: 'wellnessEyes', min: 'wellnessEyesMin' },
+] as const;
+
 export function SettingsView({ onBack }: SettingsViewProps) {
   const { settings, packaged, shortcutActive, effective, update } = useSettings();
 
@@ -235,6 +242,13 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       routineMorning: DEFAULT_SETTINGS.routineMorning,
       routineEvening: DEFAULT_SETTINGS.routineEvening,
       routineEveningHour: DEFAULT_SETTINGS.routineEveningHour,
+      wellnessWater: DEFAULT_SETTINGS.wellnessWater,
+      wellnessWaterMin: DEFAULT_SETTINGS.wellnessWaterMin,
+      wellnessPosture: DEFAULT_SETTINGS.wellnessPosture,
+      wellnessPostureMin: DEFAULT_SETTINGS.wellnessPostureMin,
+      wellnessEyes: DEFAULT_SETTINGS.wellnessEyes,
+      wellnessEyesMin: DEFAULT_SETTINGS.wellnessEyesMin,
+      wellnessStretch: DEFAULT_SETTINGS.wellnessStretch,
       reminderLeadMin: DEFAULT_SETTINGS.reminderLeadMin,
     });
 
@@ -463,6 +477,48 @@ export function SettingsView({ onBack }: SettingsViewProps) {
             ))}
           </select>
         </label>
+      </fieldset>
+
+      <fieldset className="settings-group">
+        <legend>Bem-estar</legend>
+        {WELLNESS_ROWS.map((row) => (
+          <div className="settings-row settings-wellness" key={row.kind}>
+            <label className="settings-check">
+              <input
+                type="checkbox"
+                checked={settings[row.on]}
+                onChange={(e) => set({ [row.on]: e.target.checked })}
+              />
+              <span>{WELLNESS_LABEL[row.kind]}</span>
+            </label>
+            <select
+              aria-label={`Intervalo: ${WELLNESS_LABEL[row.kind]}`}
+              value={settings[row.min]}
+              disabled={!settings[row.on]}
+              onChange={(e) => set({ [row.min]: Number(e.target.value) })}
+            >
+              {WELLNESS_INTERVALS[row.kind].map((m) => (
+                <option key={m} value={m}>
+                  a cada {m} min
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.wellnessStretch}
+            onChange={(e) => set({ wellnessStretch: e.target.checked })}
+          />
+          <span>
+            Alongar depois do foco
+            <small>Ao terminar uma sessão, o Mochi sugere levantar um pouco.</small>
+          </span>
+        </label>
+        <p className="settings-hint">
+          Tudo começa desligado. Os lembretes usam os balões de fala e ficam quietos durante o foco.
+        </p>
       </fieldset>
 
       <fieldset className="settings-group">

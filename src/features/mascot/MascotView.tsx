@@ -14,6 +14,8 @@ import { FocusBadge } from '../focus/FocusView';
 import { useSettings } from '../settings/useSettings';
 import { useSpeech } from '../personality/useSpeech';
 import { reminderText, type SpeechEvent } from '../personality/personality';
+import { STRETCH_TEXT } from '../../../shared/wellness';
+import { useWellness } from '../wellness/useWellness';
 import { SpeechBubble } from '../personality/SpeechBubble';
 import { useRoutine } from '../routine/useRoutine';
 import { dayKey } from '../../../shared/routine';
@@ -175,6 +177,16 @@ export function MascotView() {
     if (routine.ready && routine.kind && presentation) announceRoutineRef.current();
   }, [routine.ready, routine.kind, presentation]);
 
+  // Bem-estar: água, postura e olhos (tudo desligado por padrão). Calado durante o foco.
+  useWellness({
+    settings,
+    blocked: focusActive || !presentation,
+    say: (text) => sayTextRef.current(text),
+    onNudge: () => playSound('happy'),
+  });
+  const stretchRef = useRef(settings.wellnessStretch);
+  stretchRef.current = settings.wellnessStretch;
+
   // Uma tarefa foi concluída (em qualquer janela): o Mochi comemora, fala e faz "plim".
   // Reabrir ou excluir não disparam este evento.
   useEffect(
@@ -212,6 +224,9 @@ export function MascotView() {
         celebrate();
         playSound(kind === 'focus' ? 'focusDone' : 'breakDone');
         sayRef.current(kind === 'focus' ? 'focusFinished' : 'breakFinished');
+        if (kind === 'focus' && stretchRef.current) {
+          window.setTimeout(() => sayTextRef.current(STRETCH_TEXT), 4500);
+        }
         if (modeRef.current === 'island') {
           showFocusRef.current();
         } else {

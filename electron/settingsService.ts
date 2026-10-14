@@ -33,6 +33,13 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'routineLastMorning',
   'routineLastEvening',
   'mascotName',
+  'wellnessWater',
+  'wellnessWaterMin',
+  'wellnessPosture',
+  'wellnessPostureMin',
+  'wellnessEyes',
+  'wellnessEyesMin',
+  'wellnessStretch',
 ];
 
 export interface SettingsService {

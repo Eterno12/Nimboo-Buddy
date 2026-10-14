@@ -425,3 +425,14 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   "Mochi"), usada no assistente e nas conquistas.
 - **Limites:** o horário da madrugada (0–4 h) e do "cedo" (5–6 h) usa o relógio local; dias sem abrir o app
   zeram a sequência; importar dados não traz conquistas (ficam por instalação).
+
+## D42 — Bem-estar: lembretes gentis, desligados por padrão
+- **Decisão:** água (60 min), postura (45) e olhos (20), cada um ligável e com intervalo escolhido em lista
+  fechada (`WELLNESS_INTERVALS`); mais "alongar depois do foco" (fala 4,5 s após o fim da sessão). Tudo
+  **desligado** por padrão: lembretes são opt-in.
+- **Regras (puras, testadas):** vence quando passou o intervalo desde o último lembrete (ou desde ligar/abrir);
+  com vários vencidos sai o mais atrasado e há no mínimo 2 min entre dois lembretes; foco em andamento ou
+  janela oculta (tela cheia) **adia** sem perder o vencimento; ligar/trocar intervalo recomeça a contagem.
+- **Forma:** balão de fala curto (≤ 56 caracteres) + som suave; sem notificação do Windows e sem rede. Com os
+  balões desligados nada aparece (e nada é consumido).
+- **Limite:** os temporizadores vivem na janela do mascote (30 s de resolução); fechar o app zera a contagem.

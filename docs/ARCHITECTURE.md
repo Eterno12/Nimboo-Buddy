@@ -328,6 +328,11 @@ electron/main.ts            submenu "Personagem" (radio) no menu da bandeja/cont
 - `electron/bondService.ts`: IPC (`bondGet`, `bondEvent`, `bondSaveAffection`, `bondOpen`, difusão `bondChanged`), janela de conquistas e fila de avisos (`createToastWindow`). `main.ts` liga os eventos (tarefas, notas, foco, personagem, abrir).
 - Renderer: `src/features/bond/` (`AchievementsView`, `ToastView`, `useBond`, `AchievementIcon`); rotas `#achievements` e `#toast=<id>`. Ver D41.
 
+## 20. Bem-estar
+
+- `shared/wellness.ts` (puro, relógio injetável): `dueNudge` (o mais atrasado, intervalo mínimo de 2 min entre lembretes, bloqueio adia sem perder o vencimento), `commitNudge`, `restartKind`, falas em rodízio.
+- `useWellness` (renderer, na janela do mascote): confere a cada 30 s; só confirma o lembrete se o balão foi mostrado. Preferências `wellness*` (padrão desligado). Ver D42.
+
 ## 11. Foco evoluído, prazos/lembretes e empacotamento
 
 - **Foco:** `shared/focus.ts` (tipos, `nextStep`, validação) → `FocusTimer` (ciclo, tarefa, `configure`) →

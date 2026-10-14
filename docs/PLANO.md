@@ -11,7 +11,7 @@ M (1–2), G (2+).
 | 2 ✅ | **Malha de ligações:** nota → tarefa, tarefa → nota, nota/tarefa anexada a evento da agenda | M | 1 | feito (1 nota por tarefa; pauta por evento; migração v6) |
 | 3 ✅ | **Rotina do dia:** resumo ao abrir e fechamento à noite (tarefas, eventos, atrasadas) | M | 1 | feito (resumo no 1º uso do dia; fechamento às 18h por padrão, 17–21h; desligáveis) |
 | 4 ✅ | **Vínculo e memória:** afeto/humor persistentes, dias de convivência, conquistas, nome do personagem | M | — | feito (conquistas como troféus com aviso e tela própria; afeto persistente; nome do personagem) |
-| 5 | **Bem-estar:** água, postura, descanso dos olhos, alongar na pausa longa (liga com o foco) | P | 4 | Intervalos padrão e desligado/ligado por padrão? |
+| 5 ✅ | **Bem-estar:** água, postura, descanso dos olhos, alongar na pausa longa (liga com o foco) | P | 4 | feito (tudo desligado por padrão; água 60, postura 45, olhos 20 min; alongar depois do foco) |
 | 6 | **Estatísticas:** semana de foco, tarefas concluídas, sequência | P | 1, 4 | — |
 | 7 | **Contexto:** reações a hora/dia (madrugada, fim de semana), comemoração ao concluir tarefa difícil | P | 4 | — |
 | 8 | **Assistente+:** mais comandos (adiar, fixar nota, "o que tenho amanhã?"), histórico local apagável, atalho global para falar | M | 1–2 | Atalho global (padrão Ctrl+Alt+Espaço conflita; sugiro Ctrl+Alt+V) |

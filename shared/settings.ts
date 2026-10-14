@@ -1,5 +1,7 @@
 /** Preferências do usuário persistidas em disco (settings.json). */
 
+import { WELLNESS_INTERVALS } from './wellness.ts';
+
 export type PresentationMode = 'floating' | 'island';
 
 /** Modo com que o app SEMPRE abre, independentemente do que ficou salvo. */
@@ -105,6 +107,15 @@ export interface Settings {
   routineLastEvening: string | null;
   /** Nome que a pessoa deu ao personagem (aparece no assistente e nas conquistas). */
   mascotName: string;
+  /** Bem-estar: lembretes gentis (tudo desligado por padrão). Intervalos em minutos. */
+  wellnessWater: boolean;
+  wellnessWaterMin: number;
+  wellnessPosture: boolean;
+  wellnessPostureMin: number;
+  wellnessEyes: boolean;
+  wellnessEyesMin: number;
+  /** Ao terminar uma sessão de foco, sugere levantar e alongar. */
+  wellnessStretch: boolean;
 }
 
 /** Antecedências oferecidas para o lembrete de prazo (minutos). */
@@ -112,7 +123,6 @@ export const REMINDER_LEADS_MIN = [0, 5, 10, 15, 30] as const;
 
 /** Horas oferecidas para o fechamento do dia. */
 export const ROUTINE_EVENING_HOURS = [17, 18, 19, 20, 21] as const;
-
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   version: 3,
   mode: 'island',
@@ -147,6 +157,13 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   routineLastMorning: null,
   routineLastEvening: null,
   mascotName: 'Mochi',
+  wellnessWater: false,
+  wellnessWaterMin: 60,
+  wellnessPosture: false,
+  wellnessPostureMin: 45,
+  wellnessEyes: false,
+  wellnessEyesMin: 20,
+  wellnessStretch: false,
 });
 
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -227,6 +244,13 @@ export function parseSettings(raw: unknown): Settings {
     if (isFiniteNumber(r.routineEveningHour)) out.routineEveningHour = nearestOf(ROUTINE_EVENING_HOURS, r.routineEveningHour);
     if (typeof r.routineLastMorning === 'string' && DAY_KEY_RE.test(r.routineLastMorning)) out.routineLastMorning = r.routineLastMorning;
     if (typeof r.routineLastEvening === 'string' && DAY_KEY_RE.test(r.routineLastEvening)) out.routineLastEvening = r.routineLastEvening;
+    if (typeof r.wellnessWater === 'boolean') out.wellnessWater = r.wellnessWater;
+    if (typeof r.wellnessPosture === 'boolean') out.wellnessPosture = r.wellnessPosture;
+    if (typeof r.wellnessEyes === 'boolean') out.wellnessEyes = r.wellnessEyes;
+    if (typeof r.wellnessStretch === 'boolean') out.wellnessStretch = r.wellnessStretch;
+    if (isFiniteNumber(r.wellnessWaterMin)) out.wellnessWaterMin = nearestOf(WELLNESS_INTERVALS.water, r.wellnessWaterMin);
+    if (isFiniteNumber(r.wellnessPostureMin)) out.wellnessPostureMin = nearestOf(WELLNESS_INTERVALS.posture, r.wellnessPostureMin);
+    if (isFiniteNumber(r.wellnessEyesMin)) out.wellnessEyesMin = nearestOf(WELLNESS_INTERVALS.eyes, r.wellnessEyesMin);
     if (typeof r.mascotName === 'string') {
       const name = r.mascotName.replace(/\s+/g, ' ').trim();
       // eslint-disable-next-line no-control-regex
