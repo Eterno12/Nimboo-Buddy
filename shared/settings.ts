@@ -94,10 +94,22 @@ export interface Settings {
   assistantLocalAi: boolean;
   /** Modelo do Ollama (ex.: "qwen2.5:3b"). */
   assistantModel: string;
+  /** Resumo do dia no primeiro uso da manhã (cartão nas tarefas + uma fala do Mochi). */
+  routineMorning: boolean;
+  /** Fechamento do dia (o que foi concluído, foco e pendências) a partir da hora escolhida. */
+  routineEvening: boolean;
+  /** Hora local do fechamento (17 a 21). */
+  routineEveningHour: number;
+  /** Dia (AAAA-MM-DD) em que o resumo/fechamento já foi visto ou dispensado; `null` = nunca. */
+  routineLastMorning: string | null;
+  routineLastEvening: string | null;
 }
 
 /** Antecedências oferecidas para o lembrete de prazo (minutos). */
 export const REMINDER_LEADS_MIN = [0, 5, 10, 15, 30] as const;
+
+/** Horas oferecidas para o fechamento do dia. */
+export const ROUTINE_EVENING_HOURS = [17, 18, 19, 20, 21] as const;
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   version: 3,
@@ -127,7 +139,14 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   assistantWeb: false,
   assistantLocalAi: false,
   assistantModel: 'qwen2.5:3b',
+  routineMorning: true,
+  routineEvening: true,
+  routineEveningHour: 18,
+  routineLastMorning: null,
+  routineLastEvening: null,
 });
+
+const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Nome de modelo aceito (formato do Ollama: nome[:tag], com / para bibliotecas de usuários). */
 export const MODEL_NAME_RE = /^[a-z0-9][a-z0-9._-]{0,40}(?:\/[a-z0-9][a-z0-9._-]{0,40})?(?::[a-z0-9][a-z0-9._-]{0,30})?$/i;
@@ -200,6 +219,11 @@ export function parseSettings(raw: unknown): Settings {
     if (typeof r.assistantWeb === 'boolean') out.assistantWeb = r.assistantWeb;
     if (typeof r.assistantLocalAi === 'boolean') out.assistantLocalAi = r.assistantLocalAi;
     if (typeof r.assistantModel === 'string' && MODEL_NAME_RE.test(r.assistantModel)) out.assistantModel = r.assistantModel;
+    if (typeof r.routineMorning === 'boolean') out.routineMorning = r.routineMorning;
+    if (typeof r.routineEvening === 'boolean') out.routineEvening = r.routineEvening;
+    if (isFiniteNumber(r.routineEveningHour)) out.routineEveningHour = nearestOf(ROUTINE_EVENING_HOURS, r.routineEveningHour);
+    if (typeof r.routineLastMorning === 'string' && DAY_KEY_RE.test(r.routineLastMorning)) out.routineLastMorning = r.routineLastMorning;
+    if (typeof r.routineLastEvening === 'string' && DAY_KEY_RE.test(r.routineLastEvening)) out.routineLastEvening = r.routineLastEvening;
   }
   return out;
 }

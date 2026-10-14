@@ -389,3 +389,18 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   "Criar tarefa da nota" usa o título da nota. Sem vínculo automático de volta (a tarefa criada é comum).
 - **Limites:** tarefa excluída deixa a nota no lugar (sem vínculo órfão visível); o vínculo não vai no
   arquivo de exportação (ids mudam entre bancos).
+
+## D40 — Rotina do dia: resumo da manhã e fechamento da noite
+- **Decisão:** `shared/routine.ts` (puro, testado) escolhe e monta o cartão: **resumo da manhã** no primeiro uso
+  do dia (tarefas que pedem atenção, atrasadas, eventos e o próximo) e **fechamento** a partir da hora escolhida
+  (concluídas hoje, foco do dia, pendências; sem culpa quando nada foi feito). O fechamento tem prioridade quando
+  já é a hora; sem fechamento ligado, o resumo vale o dia todo.
+- **Uma vez por dia:** `routineLastMorning`/`routineLastEvening` (AAAA-MM-DD) nas preferências; dispensar o
+  cartão grava a data. Reiniciar no mesmo dia não repete; dia novo volta.
+- **Onde aparece:** cartão "Boa tarde! Hoje: …" no topo das tarefas (ilha e painel) e uma fala curta do Mochi
+  (≤ 56 caracteres, sem repetir por execução, calada durante o foco). O assistente responde "resumo do dia" /
+  "como foi meu dia?" com o mesmo texto.
+- **Preferências:** `routineMorning`, `routineEvening`, `routineEveningHour` (17–21; padrão 18). Tudo ligado por
+  padrão, desligável em Configurações > Rotina do dia.
+- **Limite:** o fechamento "chega" enquanto o app está aberto; se o Mochi está escondido, a fala vem quando a ilha
+  aparecer de novo (o cartão já está nas tarefas).

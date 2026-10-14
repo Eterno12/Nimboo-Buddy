@@ -316,6 +316,12 @@ electron/main.ts            submenu "Personagem" (radio) no menu da bandeja/cont
 - IPC `tasks:update` e `tasks:reorder`; `useTasks` expõe `update`/`reorder`/`create(..., extra)`.
 - `TasksView.tsx`: agrupa principais × subtarefas (`useMemo`), `TaskRow` com edição, prioridade, repetição, adiar, subtarefas e arrastar/Alt+setas. Ver D38.
 
+## 18. Rotina do dia
+
+- `shared/routine.ts` (puro): `pickRoutine` (qual cartao e quando), `buildRoutine` (resumo), `routineText`.
+- `useRoutine` (renderer): combina tarefas, agenda e foco do dia; `DaySummaryCard` nas tarefas; `MascotView` anuncia (fala curta, 1x por dia e execucao).
+- Preferencias `routineMorning`/`routineEvening`/`routineEveningHour` e as datas `routineLast*` (gravadas ao dispensar). Ver D40.
+
 ## 11. Foco evoluído, prazos/lembretes e empacotamento
 
 - **Foco:** `shared/focus.ts` (tipos, `nextStep`, validação) → `FocusTimer` (ciclo, tarefa, `configure`) →

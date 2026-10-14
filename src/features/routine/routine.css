@@ -1,0 +1,82 @@
+/* Cartão da rotina do dia (usa os tokens --t-* do painel/ilha, já verificados em contrast.test.ts) */
+.day-card {
+  flex: none;
+  padding: 8px 10px;
+  border: 1px solid var(--t-accent);
+  border-radius: 12px;
+  background: var(--t-field-bg);
+  color: var(--t-text);
+  font-size: 12.5px;
+}
+
+.day-card[data-kind='evening'] {
+  border-color: var(--t-field-border);
+}
+
+.day-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.day-card-head strong {
+  font-size: 13.5px;
+}
+
+.day-card-close {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--t-muted);
+  cursor: pointer;
+}
+
+.day-card-close:hover {
+  background: var(--t-hover);
+  color: var(--t-text);
+}
+
+.day-card-close:focus-visible {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}
+
+.day-card-lines,
+.day-card-highlights {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.day-card-lines li {
+  line-height: 1.4;
+}
+
+.day-card-highlights li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 0;
+}
+
+.day-card-highlights li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.day-card-highlights small {
+  flex: none;
+  color: var(--t-muted);
+}
+
+.day-card-highlights li[data-reason='overdue'] small {
+  color: var(--t-danger);
+  font-weight: 600;
+}

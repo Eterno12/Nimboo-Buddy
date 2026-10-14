@@ -27,6 +27,11 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'assistantWeb',
   'assistantLocalAi',
   'assistantModel',
+  'routineMorning',
+  'routineEvening',
+  'routineEveningHour',
+  'routineLastMorning',
+  'routineLastEvening',
 ];
 
 export interface SettingsService {

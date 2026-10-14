@@ -134,3 +134,13 @@ test('robustez: entradas estranhas nunca lançam e comandos vazios viram pergunt
   // "crie uma nota" sem texto: o comando existe, com texto vazio (a interface pede o conteúdo)
   assert.deepEqual(parse('crie uma nota'), { kind: 'note.create', text: '' });
 });
+
+
+test('resumo do dia: várias formas de pedir', () => {
+  for (const s of ['resumo do dia', 'como foi o meu dia?', 'resumo de hoje', 'fechamento', 'como está o meu dia', 'resumo']) {
+    assert.deepEqual(parse(s), { kind: 'summary' }, s);
+  }
+  // não confunde com "agenda de hoje" nem com criar tarefa
+  assert.deepEqual(parse('agenda de hoje'), { kind: 'list.agenda' });
+  assert.equal(parse('crie uma tarefa fazer o resumo do dia').kind, 'task.create');
+});

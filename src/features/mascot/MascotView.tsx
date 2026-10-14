@@ -15,6 +15,8 @@ import { useSettings } from '../settings/useSettings';
 import { useSpeech } from '../personality/useSpeech';
 import { reminderText, type SpeechEvent } from '../personality/personality';
 import { SpeechBubble } from '../personality/SpeechBubble';
+import { useRoutine } from '../routine/useRoutine';
+import { dayKey } from '../../../shared/routine';
 import { configureSound, playSound } from '../audio/soundEngine';
 import '../island/island.css';
 
@@ -57,11 +59,13 @@ export function MascotView() {
   /** `say` só existe depois de `useSpeech` (que depende do estado da ilha): usa ref. */
   const sayRef = useRef<(event: SpeechEvent) => void>(() => {});
   const sayTextRef = useRef<(text: string) => boolean>(() => false);
+  const announceRoutineRef = useRef<() => void>(() => {});
   const { presentation, presenceRef, exitUp } = usePresence({
     onShown: (state) => {
       greet(); // chegou em cena: cumprimenta
       greetedAt.current = Date.now();
       sayRef.current('hello');
+      announceRoutineRef.current();
       if (state.mode === 'island') {
         islandRef.current?.resume(ISLAND_FIRST_EXPOSURE_MS);
         if (openFocusOnShown.current) {
@@ -127,6 +131,29 @@ export function MascotView() {
   });
   sayRef.current = speech.say;
   sayTextRef.current = speech.sayText;
+
+  // Rotina do dia: o Mochi anuncia o resumo da manhã / o fechamento (uma vez por dia e por execução).
+  const routine = useRoutine();
+  const routineRef = useRef(routine);
+  routineRef.current = routine;
+  const focusActiveForRoutine = useRef(false);
+  focusActiveForRoutine.current = focusActive;
+  const announcedRoutine = useRef(new Set<string>());
+  announceRoutineRef.current = () => {
+    const r = routineRef.current;
+    if (!r.summary || !r.ready || focusActiveForRoutine.current) return;
+    const key = `${r.kind}-${dayKey(new Date())}`;
+    if (announcedRoutine.current.has(key)) return;
+    announcedRoutine.current.add(key);
+    window.setTimeout(() => {
+      // lê o resumo no momento de falar (os dados do dia podem ter chegado nesse intervalo)
+      const text = routineRef.current.summary?.bubble;
+      if (text && sayTextRef.current(text)) playSound('happy');
+    }, 2600);
+  };
+  useEffect(() => {
+    if (routine.ready && routine.kind && presentation) announceRoutineRef.current();
+  }, [routine.ready, routine.kind, presentation]);
 
   // Uma tarefa foi concluída (em qualquer janela): o Mochi comemora, fala e faz "plim".
   // Reabrir ou excluir não disparam este evento.

@@ -1,6 +1,7 @@
 import { ASSISTANT_HELP, fold, type AssistantCommand } from '../../../shared/assistant';
 import { todaysAgenda, eventTimeLabel } from '../../../shared/calendar';
 import { CHARACTER_LABELS } from '../../../shared/settings';
+import { buildRoutine, routineText } from '../../../shared/routine';
 import type { NoteDoc } from '../../../shared/notes';
 import type { Task } from '../../../shared/tasks';
 
@@ -144,6 +145,25 @@ export async function runAssistantCommand(cmd: AssistantCommand, now: Date = new
       if (r.value.length === 0) return { text: 'Você ainda não tem notas. Diga “crie uma nota …”.' };
       const lines = r.value.slice(0, 6).map((n) => `• ${n.title}`);
       return { text: `Suas notas mais recentes:\n${lines.join('\n')}`, openNoteId: r.value[0].id };
+    }
+
+    case 'summary': {
+      const [list, cal, stats, snap] = await Promise.all([
+        api.tasks.list(),
+        api.calendar.get(),
+        api.focus.stats(),
+        api.settings.get(),
+      ]);
+      if (!list.ok) return { text: `${SORRY} ${list.error.message}` };
+      const evening = now.getHours() >= snap.settings.routineEveningHour;
+      const summary = buildRoutine(evening ? 'evening' : 'morning', {
+        now,
+        active: list.value.active,
+        completed: list.value.completed,
+        events: cal.events,
+        focus: { sessions: stats.sessions, minutes: stats.minutes },
+      });
+      return { text: routineText(summary) };
     }
 
     case 'focus.start': {

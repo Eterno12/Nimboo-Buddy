@@ -10,6 +10,7 @@ import {
   MOCHI_COLORS,
   MOCHI_SCALES,
   REMINDER_LEADS_MIN,
+  ROUTINE_EVENING_HOURS,
   THEMES,
   type ThemePreference,
   SHORTCUT_PRESETS,
@@ -229,6 +230,9 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       assistantWeb: DEFAULT_SETTINGS.assistantWeb,
       assistantLocalAi: DEFAULT_SETTINGS.assistantLocalAi,
       assistantModel: DEFAULT_SETTINGS.assistantModel,
+      routineMorning: DEFAULT_SETTINGS.routineMorning,
+      routineEvening: DEFAULT_SETTINGS.routineEvening,
+      routineEveningHour: DEFAULT_SETTINGS.routineEveningHour,
       reminderLeadMin: DEFAULT_SETTINGS.reminderLeadMin,
     });
 
@@ -397,6 +401,46 @@ export function SettingsView({ onBack }: SettingsViewProps) {
             Balões de fala
             <small>O Mochi comenta de vez em quando; fica quieto durante o foco.</small>
           </span>
+        </label>
+      </fieldset>
+
+      <fieldset className="settings-group">
+        <legend>Rotina do dia</legend>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.routineMorning}
+            onChange={(e) => set({ routineMorning: e.target.checked })}
+          />
+          <span>
+            Resumo da manhã
+            <small>No primeiro uso do dia: tarefas, atrasadas e eventos de hoje.</small>
+          </span>
+        </label>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.routineEvening}
+            onChange={(e) => set({ routineEvening: e.target.checked })}
+          />
+          <span>
+            Fechamento do dia
+            <small>O que você concluiu, o foco e o que ficou pendente.</small>
+          </span>
+        </label>
+        <label className="settings-row">
+          <span>Fechar o dia às</span>
+          <select
+            value={settings.routineEveningHour}
+            disabled={!settings.routineEvening}
+            onChange={(e) => set({ routineEveningHour: Number(e.target.value) })}
+          >
+            {ROUTINE_EVENING_HOURS.map((h) => (
+              <option key={h} value={h}>
+                {h}h
+              </option>
+            ))}
+          </select>
         </label>
       </fieldset>
 

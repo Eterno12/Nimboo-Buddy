@@ -12,6 +12,7 @@ export type AssistantCommand =
   | { kind: 'list.tasks' }
   | { kind: 'list.agenda' }
   | { kind: 'list.notes' }
+  | { kind: 'summary' }
   | { kind: 'focus.start'; minutes: number | null }
   | { kind: 'focus.pause' }
   | { kind: 'focus.resume' }
@@ -254,6 +255,10 @@ export function parseAssistantCommand(input: string, now: Date = new Date()): As
   // ---- Abrir ----
   if (/^(?:abrir|abra|mostrar|mostre|ver|veja)\s+(?:as\s+|a\s+|minhas\s+|minha\s+|janela\s+de\s+)*(?:notas|nota|anotacoes)[ .!]*$/.test(fb)) return { kind: 'open.notes' };
   if (/^(?:abrir|abra|mostrar|mostre|ir para|va para)\s+(?:as\s+|a\s+|minhas\s+)*(?:configuracoes|configuracao|ajustes|preferencias)[ .!]*$/.test(fb)) return { kind: 'open.settings' };
+
+  // ---- Resumo / fechamento do dia ----
+  const makes = /\b(?:cri\w*|adicion\w*|nov[ao]|anot\w*|lembr\w*|faca|fazer)\b/.test(fb);
+  if (!makes && /^(?:resumo|resuma)(?: do dia| de hoje| da manha)?[ ?!.]*$|\bcomo foi (?:o meu |meu |o )?dia\b|^(?:fechamento|fechar o dia)[ ?!.]*$|\bresumo d[eo] (?:meu )?dia\b|\bresumo de hoje\b|^(?:como (?:esta|ta) (?:o )?(?:meu )?dia)[ ?!.]*$/.test(fb)) return { kind: 'summary' };
 
   // ---- Listas ----
   if (/\b(?:agenda|compromissos?|eventos?|reunioes?)\b/.test(fb) && /\b(?:hoje|agenda|quais|o que|que|mostr|list|ver|tenho|tem)\b/.test(fb) && !/\b(?:cri|adicion|nov[ao])\b/.test(fb)) {

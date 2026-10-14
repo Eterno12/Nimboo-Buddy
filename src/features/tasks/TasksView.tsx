@@ -21,6 +21,7 @@ import { useTasks } from './useTasks';
 import { StorageNotice } from './StorageNotice';
 import { AgendaSection } from '../calendar/AgendaSection';
 import { openLinkedNote, useNoteLinks } from '../notes/useNoteLinks';
+import { DaySummaryCard } from '../routine/DaySummaryCard';
 import './tasks.css';
 
 interface TasksViewProps {
@@ -282,6 +283,7 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
       </header>
 
       <StorageNotice />
+      <DaySummaryCard />
       <AgendaSection variant={variant} />
 
       <form className="tasks-form" onSubmit={submit} noValidate>
