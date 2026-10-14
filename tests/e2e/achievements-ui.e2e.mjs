@@ -149,7 +149,7 @@ try {
     await main.ev(`window.mochi.bond.open()`);
     win = track(await connect(await findTarget('achievements')));
     await win.waitFor(`!!document.querySelector('.ach-profile h1')`, 'perfil');
-    assert.equal(await win.ev(`document.querySelector('.ach-profile h1').textContent`), 'Mochi');
+    assert.equal(await win.ev(`document.querySelector('.ach-profile h1').textContent`), 'Nimboo');
     const score = await win.ev(`document.querySelector('.ach-score strong').textContent`);
     assert.ok(Number(score) >= 10, `pontos ${score}`);
     const tile = await win.ev(
@@ -195,7 +195,7 @@ try {
     await main.ev(`window.mochi.settings.update({ mascotName: '  Bolinho  ' })`);
     await win.waitFor(`document.querySelector('.ach-profile h1')?.textContent === 'Bolinho'`, 'nome novo');
     const bad = await main.ev(`window.mochi.settings.update({ mascotName: '<img>' })`);
-    assert.equal(bad.settings.mascotName, 'Mochi', 'nome inválido volta ao padrão, nunca é gravado');
+    assert.equal(bad.settings.mascotName, 'Nimboo', 'nome inválido volta ao padrão, nunca é gravado');
   });
 
   await step('carinho conta; eventos desconhecidos ou que só o app pode gerar são ignorados', async () => {

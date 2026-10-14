@@ -18,7 +18,7 @@ export interface GeminiFetchResponse {
 
 export type GeminiFetch = (
   url: string,
-  init: { method: 'POST'; headers: Record<string, string>; body: string; signal?: AbortSignal },
+  init: { method: 'POST' | 'GET'; headers: Record<string, string>; body?: string; signal?: AbortSignal },
 ) => Promise<GeminiFetchResponse>;
 
 export type GeminiErrorCode =
@@ -91,15 +91,89 @@ export function readCandidate(json: unknown): { text: string; blocked: boolean }
   return { text, blocked };
 }
 
+/** Trecho curto da mensagem de erro do Google (sem nada que pareça uma chave), para diagnosticar. */
+export function errorDetail(status: number, body: string): string {
+  let message = '';
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: unknown; status?: unknown } };
+    if (typeof parsed.error?.message === 'string') message = parsed.error.message;
+    else if (typeof parsed.error?.status === 'string') message = parsed.error.status;
+  } catch {
+    message = body;
+  }
+  message = message
+    .replace(/[A-Za-z0-9_.-]{30,}/g, '…')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 180);
+  return message ? `HTTP ${status}: ${message}` : `HTTP ${status}`;
+}
+
+function withDetail(result: GeminiResult, detail: string): GeminiResult {
+  return result.ok ? result : { ...result, message: `${result.message} (${detail})` };
+}
+
 function mapHttpError(status: number, body: string): GeminiResult {
   const lower = body.toLowerCase();
-  if (status === 429 || lower.includes('quota') || lower.includes('resource_exhausted')) return fail('quota');
+  const detail = errorDetail(status, body);
+  if (status === 429 || lower.includes('quota') || lower.includes('resource_exhausted')) return withDetail(fail('quota'), detail);
   if (status === 401 || status === 403 || lower.includes('api key not valid') || lower.includes('api_key_invalid')) {
-    return fail('invalid_key');
+    return withDetail(fail('invalid_key'), detail);
   }
-  if (status === 400 && lower.includes('api key')) return fail('invalid_key');
-  if (status === 404) return fail('model');
-  return fail('error');
+  if (status === 400 && lower.includes('api key')) return withDetail(fail('invalid_key'), detail);
+  if (status === 404) return withDetail(fail('model'), detail);
+  return withDetail(fail('error'), detail);
+}
+
+/** Modelos que a chave enxerga (nomes sem o prefixo `models/`) e que sabem gerar texto. */
+export async function listGeminiModels(
+  key: string,
+  fetchImpl: GeminiFetch,
+  timeoutMs = 15_000,
+): Promise<{ ok: true; models: string[] } | { ok: false; result: GeminiResult }> {
+  if (!key) return { ok: false, result: fail('no_key') };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetchImpl(`${GEMINI_BASE}/models?pageSize=100`, {
+      method: 'GET',
+      headers: { 'x-goog-api-key': key },
+      signal: controller.signal,
+    });
+    const text = await res.text().catch(() => '');
+    if (!res.ok) return { ok: false, result: mapHttpError(res.status, text) };
+    const data = JSON.parse(text) as { models?: { name?: unknown; supportedGenerationMethods?: unknown }[] };
+    const models = (data.models ?? [])
+      .filter((m) => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+      .map((m) => (typeof m.name === 'string' ? m.name.replace(/^models\//, '') : ''))
+      .filter((n) => GEMINI_MODEL_RE.test(n));
+    return { ok: true, models };
+  } catch (error) {
+    return { ok: false, result: error instanceof Error && error.name === 'AbortError' ? fail('timeout') : fail('offline') };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const versionOf = (name: string): number => {
+  const m = /^gemini-(\d+(?:\.\d+)?)/.exec(name);
+  return m ? Number(m[1]) : 0;
+};
+
+/**
+ * Escolhe o modelo a usar: o atual, se a chave o enxerga; senão o Flash-Lite estável mais novo, depois o
+ * Flash estável mais novo, depois qualquer Gemini de texto. `null` se a lista não tem nada utilizável.
+ */
+export function pickGeminiModel(available: string[], current: string): string | null {
+  if (available.includes(current)) return current;
+  const text = available.filter((n) => /^gemini-/.test(n) && !/(preview|exp|tts|image|live|audio|embedding|vision|thinking|robotics|computer)/.test(n));
+  const newest = (list: string[]) => [...list].sort((a, b) => versionOf(b) - versionOf(a) || b.localeCompare(a))[0] ?? null;
+  return (
+    newest(text.filter((n) => /-flash-lite(-\d+)?$/.test(n))) ??
+    newest(text.filter((n) => /-flash(-\d+)?$/.test(n))) ??
+    newest(text) ??
+    null
+  );
 }
 
 export interface StreamOptions extends GeminiRequestInput {

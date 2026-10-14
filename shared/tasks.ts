@@ -21,7 +21,7 @@ export interface Task {
   createdAt: string;
   completedAt: string | null;
   updatedAt: string;
-  /** Prazo opcional: ISO 8601 em UTC. O Mochi avisa na hora (e um pouco antes, se ligado). */
+  /** Prazo opcional: ISO 8601 em UTC. O Nimboo avisa na hora (e um pouco antes, se ligado). */
   dueAt: string | null;
   /**
    * De onde a tarefa veio (hoje: o id estável de um evento da agenda, `<uid>|<início em ms>`) ou `null`.

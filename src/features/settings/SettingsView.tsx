@@ -102,7 +102,7 @@ function MinutesField({
 const syncTime = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
 /** Google Agenda por endereço iCal (somente leitura). O endereço é um segredo: nunca é exibido de volta. */
-function CalendarSettings() {
+function CalendarSettings({ hidden }: { hidden: boolean }) {
   const { state, busy, setUrl, clear, refresh } = useCalendar();
   const [text, setText] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -115,7 +115,7 @@ function CalendarSettings() {
   };
 
   return (
-    <fieldset className="settings-group">
+    <fieldset className="settings-group" hidden={hidden}>
       <legend>Google Agenda</legend>
       {state.configured ? (
         <>
@@ -132,7 +132,7 @@ function CalendarSettings() {
               Remover agenda
             </button>
           </div>
-          <p className="settings-hint">Só leitura: o Mochi mostra os eventos de hoje nas tarefas e avisa antes.</p>
+          <p className="settings-hint">Só leitura: o Nimboo mostra os eventos de hoje nas tarefas e avisa antes.</p>
         </>
       ) : (
         <>
@@ -188,6 +188,28 @@ function CalendarSettings() {
 }
 
 /** Tela de configurações (no painel). Cada mudança vale na hora e é salva pelo processo principal. */
+type SettingsTab = 'appearance' | 'behavior' | 'assistant' | 'focus' | 'general';
+
+const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
+  { id: 'appearance', label: 'Aparência' },
+  { id: 'behavior', label: 'Comportamento' },
+  { id: 'assistant', label: 'Assistente' },
+  { id: 'focus', label: 'Foco e agenda' },
+  { id: 'general', label: 'Geral' },
+];
+
+const TAB_KEY = 'nimboo.settings.tab';
+
+function initialTab(): SettingsTab {
+  try {
+    const saved = window.sessionStorage.getItem(TAB_KEY);
+    if (SETTINGS_TABS.some((s) => s.id === saved)) return saved as SettingsTab;
+  } catch {
+    /* sem armazenamento: começa na primeira */
+  }
+  return 'appearance';
+}
+
 const WELLNESS_ROWS = [
   { kind: 'water', on: 'wellnessWater', min: 'wellnessWaterMin' },
   { kind: 'posture', on: 'wellnessPosture', min: 'wellnessPostureMin' },
@@ -220,6 +242,15 @@ export function SettingsView({ onBack }: SettingsViewProps) {
   };
   const [modelDraft, setModelDraft] = useState(settings.assistantModel);
   useEffect(() => setModelDraft(settings.assistantModel), [settings.assistantModel]);
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
+  const selectTab = (next: SettingsTab) => {
+    setTab(next);
+    try {
+      window.sessionStorage.setItem(TAB_KEY, next);
+    } catch {
+      /* ignora */
+    }
+  };
   const [gem, setGem] = useState<GeminiStatus>({ hasKey: false, encryptionAvailable: true });
   const [keyDraft, setKeyDraft] = useState('');
   const [gemMsg, setGemMsg] = useState<string | null>(null);
@@ -289,7 +320,24 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         <h2>Configurações</h2>
       </header>
 
-      <fieldset className="settings-group">
+      <div className="settings-tabs" role="tablist" aria-label="Seções das configurações">
+        {SETTINGS_TABS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            role="tab"
+            id={`settings-tab-${s.id}`}
+            aria-selected={tab === s.id}
+            className="settings-tab"
+            data-testid={`settings-tab-${s.id}`}
+            onClick={() => selectTab(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <fieldset className="settings-group" hidden={tab !== 'appearance'}>
         <legend>Tamanho da ilha</legend>
         <div className="settings-chips" role="radiogroup" aria-label="Tamanho da ilha">
           {ISLAND_SCALES.map((s) => (
@@ -308,9 +356,9 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         <p className="settings-hint">{clamped(settings.islandScale, effective.islandScale) ?? 'Vale na hora.'}</p>
       </fieldset>
 
-      <fieldset className="settings-group">
-        <legend>Tamanho do Mochi solto</legend>
-        <div className="settings-chips" role="radiogroup" aria-label="Tamanho do Mochi solto">
+      <fieldset className="settings-group" hidden={tab !== 'appearance'}>
+        <legend>Tamanho do Nimboo solto</legend>
+        <div className="settings-chips" role="radiogroup" aria-label="Tamanho do Nimboo solto">
           {MOCHI_SCALES.map((s) => (
             <button
               key={s}
@@ -326,11 +374,11 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </div>
         <p className="settings-hint">
           {clamped(settings.mochiScale, effective.mochiScale) ??
-            'No modo flutuante e quando o Mochi aparece no canto da tela.'}
+            'No modo flutuante e quando o Nimboo aparece no canto da tela.'}
         </p>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'appearance'}>
         <legend>Aparência do painel</legend>
         <div className="settings-chips" role="radiogroup" aria-label="Tema do painel">
           {THEMES.map((th) => (
@@ -349,7 +397,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         <p className="settings-hint">Automático segue o tema do Windows. A ilha é sempre escura.</p>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'appearance'}>
         <legend>Personagem</legend>
         <div className="settings-characters" role="radiogroup" aria-label="Personagem">
           {CHARACTERS.map((id) => {
@@ -399,9 +447,9 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </button>
       </fieldset>
 
-      <fieldset className="settings-group">
-        <legend>Cor do Mochi</legend>
-        <div className="settings-swatches" role="radiogroup" aria-label="Cor do Mochi">
+      <fieldset className="settings-group" hidden={tab !== 'appearance'}>
+        <legend>Cor do Nimboo</legend>
+        <div className="settings-swatches" role="radiogroup" aria-label="Cor do Nimboo">
           {MOCHI_COLORS.map((c) => (
             <button
               key={c}
@@ -419,11 +467,11 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         <p className="settings-hint">
           {settings.character === 'mochi'
             ? 'A cor vale na hora.'
-            : 'A cor vale para o Mochi original; os outros personagens têm as próprias cores.'}
+            : 'A cor vale para o Nimboo original; os outros personagens têm as próprias cores.'}
         </p>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'behavior'}>
         <legend>Comportamento</legend>
         <label className="settings-row">
           <span>Esconder a ilha depois de</span>
@@ -450,12 +498,12 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           <input type="checkbox" checked={settings.bubbles} onChange={(e) => set({ bubbles: e.target.checked })} />
           <span>
             Balões de fala
-            <small>O Mochi comenta de vez em quando; fica quieto durante o foco.</small>
+            <small>O Nimboo comenta de vez em quando; fica quieto durante o foco.</small>
           </span>
         </label>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'behavior'}>
         <legend>Rotina do dia</legend>
         <label className="settings-row settings-check">
           <input
@@ -495,7 +543,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </label>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'behavior'}>
         <legend>Bem-estar</legend>
         {WELLNESS_ROWS.map((row) => (
           <div className="settings-row settings-wellness" key={row.kind}>
@@ -529,7 +577,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           />
           <span>
             Alongar depois do foco
-            <small>Ao terminar uma sessão, o Mochi sugere levantar um pouco.</small>
+            <small>Ao terminar uma sessão, o Nimboo sugere levantar um pouco.</small>
           </span>
         </label>
         <p className="settings-hint">
@@ -537,7 +585,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </p>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'assistant'}>
         <legend>Assistente</legend>
         <label className="settings-row settings-check">
           <input
@@ -612,7 +660,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           abre o assistente já ouvindo.
         </p>
       </fieldset>
-      <fieldset className="settings-group" data-testid="gemini-group">
+      <fieldset className="settings-group" data-testid="gemini-group" hidden={tab !== 'assistant'}>
         <legend>IA online (Gemini)</legend>
         <p className="settings-hint">
           Conversa de verdade, com a personalidade do seu personagem, usando o Gemini do Google com a sua própria
@@ -651,7 +699,11 @@ export function SettingsView({ onBack }: SettingsViewProps) {
             disabled={keyDraft.trim() === ''}
             onClick={async () => {
               const r = await window.mochi.assistant.gemini.setKey(keyDraft);
-              setGemMsg(r.message);
+              setGemMsg(
+                r.ok && !settings.assistantGemini
+                  ? `${r.message} Agora clique em “Testar conexão”, marque o aviso e ative “Usar o Gemini nas conversas”.`
+                  : r.message,
+              );
               if (r.ok) setKeyDraft('');
               setGem(await window.mochi.assistant.gemini.status());
             }}
@@ -661,11 +713,13 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           <button
             type="button"
             className="settings-small"
-            disabled={!gem.hasKey || !settings.assistantGemini}
+            disabled={!gem.hasKey}
+            data-testid="gemini-test"
             onClick={async () => {
               setGemMsg('Testando…');
               const r = await window.mochi.assistant.gemini.test();
               setGemMsg(r.message);
+              if (r.ok && r.model && r.model !== settings.geminiModel) await update({ geminiModel: r.model });
             }}
           >
             Testar conexão
@@ -769,7 +823,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </label>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'behavior'}>
         <legend>Sons</legend>
         <label className="settings-row settings-check">
           <input
@@ -805,7 +859,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </div>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'focus'}>
         <legend>Modo foco</legend>
         <div className="settings-row">
           <span>Duração padrão</span>
@@ -841,12 +895,12 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           />
           <span>
             Iniciar a próxima etapa sozinho
-            <small>Senão o Mochi espera você confirmar.</small>
+            <small>Senão o Nimboo espera você confirmar.</small>
           </span>
         </label>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'focus'}>
         <legend>Lembretes de tarefas</legend>
         <label className="settings-row settings-check">
           <input
@@ -856,7 +910,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           />
           <span>
             Avisar quando uma tarefa com prazo chegar
-            <small>Balão e som; notificação se o Mochi estiver oculto.</small>
+            <small>Balão e som; notificação se o Nimboo estiver oculto.</small>
           </span>
         </label>
         <label className="settings-row">
@@ -875,9 +929,9 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </label>
       </fieldset>
 
-      <CalendarSettings />
+      <CalendarSettings hidden={tab !== 'focus'} />
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'general'}>
         <legend>Atalho e inicialização</legend>
         <label className="settings-row">
           <span>Atalho para chamar a ilha</span>
@@ -911,14 +965,14 @@ export function SettingsView({ onBack }: SettingsViewProps) {
             Iniciar com o Windows
             <small>
               {packaged
-                ? 'Abre o Mochi quando você entrar no computador.'
-                : 'Disponível quando o Mochi estiver instalado (esta é a versão de desenvolvimento).'}
+                ? 'Abre o Nimboo quando você entrar no computador.'
+                : 'Disponível quando o Nimboo estiver instalado (esta é a versão de desenvolvimento).'}
             </small>
           </span>
         </label>
       </fieldset>
 
-      <fieldset className="settings-group">
+      <fieldset className="settings-group" hidden={tab !== 'general'}>
         <legend>Seus dados</legend>
         <div className="settings-chips">
           <button type="button" className="settings-small" disabled={dataBusy} onClick={() => void runData('export')}>
@@ -933,7 +987,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </p>
       </fieldset>
 
-      <div className="settings-footer">
+      <div className="settings-footer" hidden={tab !== 'general'}>
         <button type="button" className="settings-small" onClick={resetAll}>
           Restaurar padrões
         </button>

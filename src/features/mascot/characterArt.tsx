@@ -11,7 +11,7 @@ import type { CharacterId } from '../../../shared/settings';
  *  - `body`: o corpo (recebe os handlers de "mouse em cima");
  *  - `front`: complementos por cima do corpo e abaixo do rosto (coroa, braços, chapéu...).
  * As cores do corpo vêm das variáveis `--m-*` definidas por `[data-character]` em mascot.css.
- * Todo o desenho cabe em x 12..188 e y 30..184, o mesmo envelope do Mochi original.
+ * Todo o desenho cabe em x 12..188 e y 30..184, o mesmo envelope do Nimboo original.
  */
 export interface CharacterArt {
   defs: ReactNode;

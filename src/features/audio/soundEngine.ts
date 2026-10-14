@@ -9,7 +9,7 @@ import {
 } from './sounds';
 
 /**
- * Toca os sons do Mochi com WebAudio (sintetizados, sem arquivos). Vive no renderer; cada janela
+ * Toca os sons do Nimboo com WebAudio (sintetizados, sem arquivos). Vive no renderer; cada janela
  * tem o seu. Configuração (ligado, volume e identidade sonora do personagem) vem das preferências.
  */
 let context: AudioContext | null = null;

@@ -13,7 +13,7 @@ export interface AssistantReply {
   undo?: () => Promise<void>;
   /** Abre esta nota na janela de notas. */
   openNoteId?: string;
-  /** O Mochi "comemora" (a ação deu certo). */
+  /** O Nimboo "comemora" (a ação deu certo). */
   happy?: boolean;
   /** Próxima mensagem da pessoa será o texto da nota. */
   awaitNote?: boolean;

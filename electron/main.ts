@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import {
   app,
@@ -67,7 +68,7 @@ let pendingPanelView: PanelView = 'home';
 /** O atalho global escolhido está registrado (outro app pode já tê-lo). */
 let shortcutActive = false;
 let fullscreenWatcher: FullscreenWatcher | null = null;
-/** O Mochi foi escondido por causa de um app em tela cheia (e não pela pessoa). */
+/** O Nimboo foi escondido por causa de um app em tela cheia (e não pela pessoa). */
 let hiddenByFullscreen = false;
 
 const isAppUrl = (url: string): boolean =>
@@ -143,7 +144,7 @@ function applyShortcut(accelerator: string | null, assistantAccelerator: string 
   }
 }
 
-/** Só no app instalado: em desenvolvimento registraria o executável do Electron, não o Mochi. */
+/** Só no app instalado: em desenvolvimento registraria o executável do Electron, não o Nimboo. */
 function applyLaunchAtLogin(enabled: boolean): void {
   if (!app.isPackaged) return;
   try {
@@ -153,7 +154,7 @@ function applyLaunchAtLogin(enabled: boolean): void {
   }
 }
 
-/** Esconde o Mochi enquanto há um app em tela cheia e o traz de volta depois. */
+/** Esconde o Nimboo enquanto há um app em tela cheia e o traz de volta depois. */
 function applyDoNotDisturb(enabled: boolean): void {
   if (!enabled) {
     fullscreenWatcher?.stop();
@@ -337,6 +338,29 @@ function startCursorBroadcast(): void {
   }, CURSOR_POLL_MS);
 }
 
+/**
+ * O app foi renomeado (Mochi → Nimboo), o que mudaria a pasta de dados. Quem já tinha dados continua na pasta
+ * antiga: nada é movido nem apagado. Não vale com `--user-data-dir` (testes e execuções isoladas).
+ */
+function adoptLegacyUserData(): void {
+  if (process.argv.some((a) => a.startsWith('--user-data-dir'))) return;
+  try {
+    const current = app.getPath('userData');
+    if (fs.existsSync(current)) return;
+    const appData = app.getPath('appData');
+    for (const name of ['Mochi', 'mochi-desktop']) {
+      const legacy = path.join(appData, name);
+      if (fs.existsSync(legacy) && fs.readdirSync(legacy).length > 0) {
+        app.setPath('userData', legacy);
+        return;
+      }
+    }
+  } catch (error) {
+    console.error('Não foi possível localizar os dados da instalação anterior:', error);
+  }
+}
+adoptLegacyUserData();
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -473,7 +497,7 @@ if (!app.requestSingleInstanceLock()) {
         const visible = !!mascot && !mascot.isDestroyed() && mascot.isVisible();
         if (!visible && Notification.isSupported()) {
           new Notification({
-            title: 'Mochi',
+            title: 'Nimboo',
             body: kind === 'focus' ? 'Sessão de foco concluída. Hora de uma pausa!' : 'Pausa concluída. Pronto para focar?',
             silent: true,
           }).show();

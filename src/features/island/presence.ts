@@ -23,7 +23,7 @@ export function entranceStart(entrance: Entrance): { transform: string; opacity:
 
 /**
  * Entrada. Ilha: cresce a partir da linha (ease-out, com um assentar curtinho na altura,
- * o "peso" do movimento). Mochi: surge pela lateral do canto e assenta (passa ~6px do ponto).
+ * o "peso" do movimento). Nimboo: surge pela lateral do canto e assenta (passa ~6px do ponto).
  */
 export function playEntrance(el: HTMLElement, entrance: NonNullable<Entrance>): Animation {
   if (entrance.kind === 'drop') {
@@ -52,7 +52,7 @@ export function playEntrance(el: HTMLElement, entrance: NonNullable<Entrance>): 
 
 /**
  * Saída (mais curta que a entrada, ease-in: "puxa" para a linha). A ilha achata até virar
- * a linha e some; o Mochi sai pela lateral.
+ * a linha e some; o Nimboo sai pela lateral.
  */
 export function playExit(el: HTMLElement, direction: ExitDirection): Animation {
   if (direction === 'up') {

@@ -121,7 +121,7 @@
 }
 
 .tasks-add {
-  height: 36px;
+  min-height: 36px;
   padding: 0 14px;
   border: 0;
   border-radius: 10px;
@@ -230,7 +230,7 @@
   align-items: center;
   justify-content: center;
   width: 32px;
-  height: 32px;
+  min-height: 32px;
   flex: none;
   border: 0;
   border-radius: 8px;
@@ -297,7 +297,7 @@
 }
 
 .tasks-undo-button {
-  height: 28px;
+  min-height: 28px;
   padding: 0 10px;
   border: 0;
   border-radius: 8px;
@@ -457,7 +457,7 @@
   box-sizing: border-box;
   flex: 1;
   min-width: 0;
-  height: 32px;
+  min-height: 32px;
   padding: 0 8px;
   border: 1px solid var(--t-field-border);
   border-radius: 8px;
@@ -473,7 +473,7 @@
 }
 
 .tasks-due-chip {
-  height: 32px;
+  min-height: 32px;
   padding: 0 10px;
   border: 1px solid var(--t-field-border);
   border-radius: 8px;
@@ -569,7 +569,7 @@
   box-sizing: border-box;
   flex: 1;
   min-width: 0;
-  height: 30px;
+  min-height: 30px;
   padding: 0 8px;
   border: 1px solid var(--t-accent);
   border-radius: 8px;
@@ -600,7 +600,7 @@
   align-items: center;
   justify-content: center;
   width: 24px;
-  height: 32px;
+  min-height: 32px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -703,7 +703,7 @@
 
 .task-sub-check {
   width: 28px;
-  height: 28px;
+  min-height: 28px;
 }
 
 .task-sub .task-circle {
@@ -726,7 +726,7 @@
   box-sizing: border-box;
   flex: 1;
   min-width: 0;
-  height: 30px;
+  min-height: 30px;
   padding: 0 8px;
   border: 1px solid var(--t-field-border);
   border-radius: 8px;
@@ -748,7 +748,7 @@
 }
 
 .task-repeat-field select {
-  height: 30px;
+  min-height: 30px;
   padding: 0 6px;
   border: 1px solid var(--t-field-border);
   border-radius: 8px;

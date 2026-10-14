@@ -66,9 +66,11 @@ export function createMascotWindow(bounds: Rect, options: MascotWindowOptions): 
 
 export function createPanelWindow(dark = false): BrowserWindow {
   const win = new BrowserWindow({
-    width: 380,
-    height: 640,
-    title: 'Mochi',
+    width: 400,
+    height: 680,
+    minWidth: 320,
+    minHeight: 440,
+    title: 'Nimboo',
     autoHideMenuBar: true,
     show: false,
     backgroundColor: dark ? '#342b3f' : '#fdf8f3',
@@ -86,7 +88,7 @@ export function createAssistantWindow(dark: boolean): BrowserWindow {
     height: 660,
     minWidth: 340,
     minHeight: 420,
-    title: 'Assistente — Mochi',
+    title: 'Assistente — Nimboo',
     autoHideMenuBar: true,
     show: false,
     backgroundColor: dark ? '#342b3f' : '#fdf8f3',
@@ -105,7 +107,7 @@ export function createAchievementsWindow(dark: boolean): BrowserWindow {
     height: 700,
     minWidth: 420,
     minHeight: 460,
-    title: 'Conquistas — Mochi',
+    title: 'Conquistas — Nimboo',
     autoHideMenuBar: true,
     show: false,
     backgroundColor: dark ? '#342b3f' : '#fdf8f3',
@@ -169,7 +171,7 @@ export function createNotesWindow(openId: string | null, dark: boolean): Browser
     height: 600,
     minWidth: 560,
     minHeight: 380,
-    title: 'Notas — Mochi',
+    title: 'Notas — Nimboo',
     autoHideMenuBar: true,
     show: false,
     backgroundColor: dark ? '#342b3f' : '#fdf8f3',
@@ -198,7 +200,7 @@ export function createNoteWindow(id: string, color: string, bounds: Rect): Brows
     alwaysOnTop: false,
     hasShadow: true,
     show: false,
-    title: 'Nota — Mochi',
+    title: 'Nota — Nimboo',
     backgroundColor: NOTE_PAPER[color] ?? NOTE_PAPER.yellow,
     webPreferences: secureWebPreferences(),
   });
@@ -241,7 +243,7 @@ export const EDGE_HINT_RESET_JS = `(()=>{document.body.classList.remove('out');c
 export const EDGE_HINT_FADE_JS = `document.body.classList.add('out')`;
 
 /**
- * Janela da linha branca no topo da tela, mostrada enquanto o Mochi está no canto
+ * Janela da linha branca no topo da tela, mostrada enquanto o Nimboo está no canto
  * (a ilha escondida): indica onde levar o cursor para trazer a ilha de volta.
  * Não recebe foco nem cliques (atravessante) e não aparece na barra de tarefas.
  */

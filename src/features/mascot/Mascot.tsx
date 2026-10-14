@@ -14,7 +14,7 @@ interface MascotProps {
   mood: Mood;
   /** Personagem desenhado (o rosto, os estados e as animações são os mesmos para todos). */
   character?: CharacterId;
-  /** Cor do Mochi (as paletas ficam em mascot.css; só valem para o personagem original). */
+  /** Cor do Nimboo (as paletas ficam em mascot.css; só valem para o personagem original). */
   palette?: MochiColor;
   /** Prefixo dos ids dos gradientes: deve ser único quando há vários mascotes na mesma página. */
   uid?: string;

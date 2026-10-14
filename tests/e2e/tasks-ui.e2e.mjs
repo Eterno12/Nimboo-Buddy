@@ -5,7 +5,7 @@
  * - Usa um diretório de dados temporário (`--user-data-dir`): o banco real do app
  *   nunca é tocado.
  * - Exige o app compilado: rode `npm run build` antes (ou use `npm run test:e2e`).
- * - Precisa de uma sessão gráfica do Windows (abre as janelas do Mochi).
+ * - Precisa de uma sessão gráfica do Windows (abre as janelas do Nimboo).
  */
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -226,7 +226,7 @@ try {
     assert.match(color, /rgb/);
   });
 
-  await step('concluir: some da lista, o Mochi comemora e a contagem sobe', async () => {
+  await step('concluir: some da lista, o Nimboo comemora e a contagem sobe', async () => {
     await keepAlive();
     await page.ev(`document.querySelector('.tasks-scroll .task .task-primary').click()`);
     await page.waitFor(`document.querySelector('svg.mascot').dataset.state === 'celebrate'`, 'comemoração');

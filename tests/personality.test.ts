@@ -83,7 +83,7 @@ test('intervalo por tipo: "hello" não se repete em 20 min; "taskCompleted" semp
   for (let s = 0; s < 3; s++) assert.ok(p.pick('taskCompleted', ctx(`2026-03-10T10:30:0${s}`)));
 });
 
-test('foco: o Mochi fica quietinho (só fim/pausa/conclusão falam)', () => {
+test('foco: o Nimboo fica quietinho (só fim/pausa/conclusão falam)', () => {
   const p = createPersonality(fixed(0));
   const busy = (iso: string) => ctx(iso, { focusActive: true });
   for (const e of ['hello', 'idle', 'sleepy', 'woke', 'giggle', 'annoyed'] as SpeechEvent[]) {

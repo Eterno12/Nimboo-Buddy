@@ -123,7 +123,7 @@ export const MIGRATIONS: readonly Migration[] = [
     },
   },
   {
-    // Vínculo com o Mochi: contadores (JSON em `bond_kv`: stats, days, affection) e conquistas desbloqueadas.
+    // Vínculo com o Nimboo: contadores (JSON em `bond_kv`: stats, days, affection) e conquistas desbloqueadas.
     version: 7,
     name: 'bond_and_achievements',
     up(db) {

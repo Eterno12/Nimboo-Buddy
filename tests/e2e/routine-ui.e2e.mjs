@@ -1,5 +1,5 @@
 /**
- * Rotina do dia no app REAL: resumo da manhã (cartão nas tarefas + fala do Mochi), dispensar por hoje e
+ * Rotina do dia no app REAL: resumo da manhã (cartão nas tarefas + fala do Nimboo), dispensar por hoje e
  * persistir entre reinícios, fechamento da noite (quando a hora já passou) e preferências.
  * Dados isolados; o horário do fechamento depende da hora do computador (o passo se adapta).
  */
@@ -127,7 +127,7 @@ try {
   await main.ev(`window.mochi.tasks.create('Pagar o boleto', ${JSON.stringify(yesterday)})`);
   await main.ev(`window.mochi.tasks.create('Enviar o relatório', ${JSON.stringify(later)})`);
 
-  await step('o Mochi anuncia o resumo da manhã em um balão curto', async () => {
+  await step('o Nimboo anuncia o resumo da manhã em um balão curto', async () => {
     await main.waitFor(
       `/tarefa\\(s\\)|Dia livre/.test(document.querySelector('.speech')?.textContent ?? '')`,
       'balão do resumo',

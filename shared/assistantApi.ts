@@ -49,7 +49,7 @@ export interface GeminiStatus {
 }
 
 export type GeminiChatOutcome =
-  | { ok: true; text: string }
+  | { ok: true; text: string; /** Modelo realmente usado (pode diferir do configurado). */ model?: string }
   | { ok: false; code: string; message: string; partial?: string };
 
 export interface GeminiChatRequest {
@@ -64,7 +64,7 @@ export interface GeminiApi {
   setKey(key: string): Promise<{ ok: boolean; message: string }>;
   clearKey(): Promise<void>;
   /** Faz uma chamada mínima para conferir chave e modelo. */
-  test(): Promise<{ ok: boolean; message: string }>;
+  test(): Promise<{ ok: boolean; message: string; model?: string }>;
   /** Abre a página oficial onde a pessoa cria a chave. */
   openKeyPage(): void;
   chat(requestId: number, request: GeminiChatRequest): Promise<GeminiChatOutcome>;

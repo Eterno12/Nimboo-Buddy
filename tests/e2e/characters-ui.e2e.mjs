@@ -21,7 +21,7 @@ if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 
 const CHARACTERS = ['mochi', 'pineapple', 'square', 'mushroom', 'cactus', 'cloud', 'planet', 'ghost'];
 const LABEL = {
-  mochi: 'Mochi',
+  mochi: 'Nimboo',
   pineapple: 'Abacaxi',
   square: 'Quadrado',
   mushroom: 'Cogumelo',
@@ -153,10 +153,10 @@ try {
   const snapshot = () => page.ev(`window.mochi.settings.get()`);
   const svg = `document.querySelector('svg.mascot')`;
 
-  await step('padrão: o Mochi original, com rosto, folha e rótulo "Mochi"', async () => {
+  await step('padrão: o Nimboo original, com rosto, folha e rótulo "Nimboo"', async () => {
     assert.equal((await snapshot()).settings.character, 'mochi');
     assert.equal(await page.ev(`${svg}.dataset.character`), 'mochi');
-    assert.equal(await page.ev(`${svg}.getAttribute('aria-label')`), 'Mochi');
+    assert.equal(await page.ev(`${svg}.getAttribute('aria-label')`), 'Nimboo');
     assert.equal(await page.ev(`!!${svg}.querySelector('.mascot-leaf')`), true);
     assert.equal(await page.ev(`${svg}.dataset.palette`), 'mint');
   });
@@ -290,17 +290,17 @@ try {
     }
   });
 
-  await step('valor inválido volta ao Mochi; campos estranhos são ignorados', async () => {
+  await step('valor inválido volta ao Nimboo; campos estranhos são ignorados', async () => {
     await update({ character: 'planet' });
     await page.waitFor(`${svg}.dataset.character === 'planet'`, 'planeta');
     const s = await update({ character: 'dragon', __proto__x: 1 });
     assert.equal(s.settings.character, 'mochi');
-    await page.waitFor(`${svg}.dataset.character === 'mochi'`, 'voltou ao Mochi');
+    await page.waitFor(`${svg}.dataset.character === 'mochi'`, 'voltou ao Nimboo');
     const t = await update({ character: 42 });
     assert.equal(t.settings.character, 'mochi');
   });
 
-  await step('painel: a grade mostra os 8 com prévia; escolher troca na hora; "Restaurar padrões" volta ao Mochi', async () => {
+  await step('painel: a grade mostra os 8 com prévia; escolher troca na hora; "Restaurar padrões" volta ao Nimboo', async () => {
     await page.ev(`window.mochi.openSettings()`);
     const panel = await connect(await findTarget(a.port, 'panel'));
     conns.push(panel);
@@ -308,7 +308,7 @@ try {
     const names = await panel.ev(`[...document.querySelectorAll('[aria-label="Personagem"] [role=radio]')].map((b) => b.getAttribute('aria-label'))`);
     assert.deepEqual(names, CHARACTERS.map((id) => LABEL[id]));
     assert.equal(await panel.ev(`document.querySelectorAll('[aria-label="Personagem"] svg.mascot').length`), 8);
-    assert.equal(await panel.ev(`document.querySelector('[aria-label="Personagem"] [aria-checked=true]').getAttribute('aria-label')`), 'Mochi');
+    assert.equal(await panel.ev(`document.querySelector('[aria-label="Personagem"] [aria-checked=true]').getAttribute('aria-label')`), 'Nimboo');
     await panel.ev(`document.querySelector('[data-character-id="ghost"]').click()`);
     await panel.waitFor(`document.querySelector('[data-character-id="ghost"]').getAttribute('aria-checked') === 'true'`, 'marcado');
     await page.waitFor(`${svg}.dataset.character === 'ghost'`, 'mascote trocou');
@@ -335,7 +335,7 @@ try {
     await shutdown(b.proc);
   });
 
-  await step('configuração antiga ou inválida abre com segurança no Mochi original', async () => {
+  await step('configuração antiga ou inválida abre com segurança no Nimboo original', async () => {
     for (const saved of [
       { version: 3, character: 'dragon' },
       { version: 3, character: 7 },
@@ -347,7 +347,7 @@ try {
       apps.push(c.proc);
       const s = await c.page.ev(`window.mochi.settings.get()`);
       assert.equal(s.settings.character, 'mochi', JSON.stringify(saved));
-      await c.page.waitFor(`document.querySelector('svg.mascot')?.dataset.character === 'mochi'`, 'Mochi');
+      await c.page.waitFor(`document.querySelector('svg.mascot')?.dataset.character === 'mochi'`, 'Nimboo');
       c.page.close();
       await shutdown(c.proc);
     }
@@ -362,7 +362,7 @@ try {
     await c.page.ev(`window.mochi.settings.update({ hideDelaySec: 3 })`);
     await c.page.move(-30, -30);
     await c.page.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`);
-    await c.page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'floating'`, 'Mochi no canto', 40000);
+    await c.page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'floating'`, 'Nimboo no canto', 40000);
     await c.page.waitFor(`window.outerWidth === 240 && window.outerHeight === 240`, 'janela do canto');
     assert.equal(await c.page.ev(`document.querySelector('svg.mascot').dataset.character`), 'cactus');
     await sleep(500);

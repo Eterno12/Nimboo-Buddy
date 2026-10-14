@@ -147,6 +147,12 @@ try {
     await main.ev(`window.mochi.openSettings()`);
     const panel = track(await connect(await findTarget('panel')));
     await panel.waitFor(`!!document.querySelector('[data-testid="gemini-group"]')`, 'seção do Gemini');
+    // abas: a seção do Gemini só aparece na aba "Assistente"
+    assert.equal(await panel.ev(`document.querySelectorAll('[role="tab"]').length`), 5);
+    assert.equal(await panel.ev(`document.querySelector('[data-testid="gemini-group"]').hidden`), true);
+    await panel.ev(`document.querySelector('[data-testid="settings-tab-assistant"]').click()`);
+    await panel.waitFor(`document.querySelector('[data-testid="gemini-group"]').hidden === false`, 'aba Assistente');
+    assert.equal(await panel.ev(`document.querySelector('[data-testid="settings-tab-assistant"]').getAttribute('aria-selected')`), 'true');
     assert.equal(await panel.ev(`document.querySelector('[data-testid="gemini-enable"]').disabled`), true);
     await panel.ev(`document.querySelector('[data-testid="gemini-consent"]').click()`);
     await panel.waitFor(`!document.querySelector('[data-testid="gemini-enable"]').disabled`, 'ativar liberado');

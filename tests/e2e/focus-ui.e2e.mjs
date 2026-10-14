@@ -237,7 +237,7 @@ try {
     assert.equal(started.ok, true);
     await page.move(-30, -30); // sem hover: a ilha pode se esconder
     // Some da tela (fica longe da ilha) e só volta ao terminar a sessão.
-    await page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'floating'`, 'Mochi no canto', 30000);
+    await page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'floating'`, 'Nimboo no canto', 30000);
     // O cursor real do sistema pode estar na borda superior e trazer a ilha antes; o essencial é o
     // que acontece ao FIM da sessão, então espera o estado "finished" primeiro.
     await page.waitFor(`window.mochi.focus.getState().then((s) => s.status === 'finished')`, 'sessão concluída', 80000);

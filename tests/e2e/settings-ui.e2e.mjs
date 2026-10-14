@@ -112,7 +112,7 @@ try {
   const snapshot = () => page.ev(`window.mochi.settings.get()`);
   const update = (patch) => page.ev(`window.mochi.settings.update(${JSON.stringify(patch)})`);
 
-  await step('padrões: ilha 100%, Mochi 100%, cor menta, sons e balões ligados, atalho ativo', async () => {
+  await step('padrões: ilha 100%, Nimboo 100%, cor menta, sons e balões ligados, atalho ativo', async () => {
     const s = await snapshot();
     assert.equal(s.settings.islandScale, 1);
     assert.equal(s.settings.mochiScale, 1);
@@ -129,7 +129,7 @@ try {
     assert.equal((await snapshot()).settings.mode, 'island');
   });
 
-  await step('balão: o Mochi cumprimenta ao chegar e o balão some sozinho', async () => {
+  await step('balão: o Nimboo cumprimenta ao chegar e o balão some sozinho', async () => {
     await page.waitFor(`!!document.querySelector('.speech')`, 'balão de boas-vindas', 6000);
     const text = await page.ev(`document.querySelector('.speech').textContent`);
     assert.ok(text.length > 0 && text.length <= 40, text);
@@ -193,30 +193,30 @@ try {
     await update({ bubbles: true });
   });
 
-  await step('painel nas configurações: abre pela engrenagem e altera o tamanho do Mochi', async () => {
+  await step('painel nas configurações: abre pela engrenagem e altera o tamanho do Nimboo', async () => {
     await page.ev(`window.mochi.openSettings()`);
     panel = await connect(await findTarget('panel'));
     await panel.waitFor(`!!document.querySelector('.settings')`, 'tela de configurações');
-    // Clica no passo "140%" do grupo "Tamanho do Mochi solto".
+    // Clica no passo "140%" do grupo "Tamanho do Nimboo solto".
     await panel.ev(
-      `[...document.querySelectorAll('[aria-label="Tamanho do Mochi solto"] button')].find((b) => b.textContent === '140%').click()`,
+      `[...document.querySelectorAll('[aria-label="Tamanho do Nimboo solto"] button')].find((b) => b.textContent === '140%').click()`,
     );
     await panel.waitFor(
-      `[...document.querySelectorAll('[aria-label="Tamanho do Mochi solto"] [aria-checked=true]')].map((b) => b.textContent).join() === '140%'`,
+      `[...document.querySelectorAll('[aria-label="Tamanho do Nimboo solto"] [aria-checked=true]')].map((b) => b.textContent).join() === '140%'`,
       'passo marcado',
     );
     const s = await snapshot();
     assert.equal(s.settings.mochiScale, 1.4);
   });
 
-  await step('Mochi no canto usa o tamanho do Mochi solto (240 × 1,4 = 336)', async () => {
+  await step('Nimboo no canto usa o tamanho do Nimboo solto (240 × 1,4 = 336)', async () => {
     await page.ev(`document.querySelector('.island-gear')?.blur?.()`);
     // A ilha se esconde sozinha depois de recolher: tira o ponteiro de cima e fecha a ilha (Esc).
     await update({ hideDelaySec: 3 });
     await page.move(-30, -30);
     await page.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`);
-    await page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'floating'`, 'Mochi no canto', 40000);
-    await page.waitFor(`window.outerWidth === 336 && window.outerHeight === 336`, 'janela do Mochi ampliada', 4000);
+    await page.waitFor(`document.querySelector('.shell')?.dataset.mode === 'floating'`, 'Nimboo no canto', 40000);
+    await page.waitFor(`window.outerWidth === 336 && window.outerHeight === 336`, 'janela do Nimboo ampliada', 4000);
     const svgW = await page.ev(`Math.round(document.querySelector('svg.mascot').getBoundingClientRect().width)`);
     assert.ok(svgW >= 330 && svgW <= 340, `svg ${svgW}`);
   });
@@ -224,11 +224,11 @@ try {
   await step('restaurar padrões (pelo painel) volta tudo ao normal', async () => {
     await panel.ev(`[...document.querySelectorAll('button')].find((b) => b.textContent === 'Restaurar padrões').click()`);
     await panel.waitFor(
-      `[...document.querySelectorAll('[aria-label="Tamanho do Mochi solto"] [aria-checked=true]')].map((b) => b.textContent).join() === '100%'`,
+      `[...document.querySelectorAll('[aria-label="Tamanho do Nimboo solto"] [aria-checked=true]')].map((b) => b.textContent).join() === '100%'`,
       'voltou a 100%',
       12000,
     );
-    await page.waitFor(`window.outerWidth === 240`, 'janela do Mochi em 240', 12000);
+    await page.waitFor(`window.outerWidth === 240`, 'janela do Nimboo em 240', 12000);
   });
 
   await step('prazo: datas inválidas são recusadas e um prazo válido é gravado em UTC', async () => {
@@ -246,7 +246,7 @@ try {
     assert.equal(cleared.value.dueAt, null);
   });
 
-  await step('lembrete: na hora marcada o Mochi mostra o balão com o nome da tarefa', async () => {
+  await step('lembrete: na hora marcada o Nimboo mostra o balão com o nome da tarefa', async () => {
     await update({ remindersEnabled: true, reminderLeadMin: 0, bubbles: true });
     const due = new Date(Date.now() + 65_000).toISOString();
     const r = await page.ev(`window.mochi.tasks.create('Revisar a proposta', ${JSON.stringify(due)})`);

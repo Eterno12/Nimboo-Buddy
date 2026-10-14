@@ -1,4 +1,4 @@
-# Mochi Desktop
+# Nimboo Desktop
 
 Bichinho virtual (blob) que vive na área de trabalho do Windows e vira um assistente pessoal discreto:
 um mascote animado, uma ilha expansível no topo da tela e uma lista de tarefas local.
@@ -33,21 +33,21 @@ npm run test:e2e:settings # configurações no app real
 
 ## Como usar
 
-O Mochi abre como uma **ilha** no topo da tela e vive este ciclo:
+O Nimboo abre como uma **ilha** no topo da tela e vive este ciclo:
 
 1. **Entra** descendo da borda superior e cumprimenta.
 2. **Clique** expande a ilha (atalhos); clique de novo recolhe. Também recolhe com `Esc`, ao perder o
    foco ou sozinha após 8 s sem interação (pausado com o cursor sobre ela).
 3. **Esconde-se**: recolhida e parada por ~3 s (6 s na chegada), a ilha sobe e some.
-4. **O Mochi surge** pela lateral de um dos cantos inferiores e fica solto, arrastável.
-5. **Cursor na borda superior** (centro do monitor, ~0,25 s) faz o Mochi sair e a ilha voltar.
+4. **O Nimboo surge** pela lateral de um dos cantos inferiores e fica solto, arrastável.
+5. **Cursor na borda superior** (centro do monitor, ~0,25 s) faz o Nimboo sair e a ilha voltar.
 
 **Menu** (clique direito no mascote ou ícone da bandeja): *Mostrar painel*, *Ocultar/Mostrar mascote*,
 *Expandir/Recolher ilha*, *Mostrar ilha* (quando ele está no canto), *Usar modo flutuante / Usar modo
 ilha* e *Sair*. O **modo flutuante** fixa o mascote solto, sem esconder nem voltar à ilha; a escolha e a
 posição são lembradas. Trocar de modo preserva o estado do mascote (expressão, humor).
 
-### Reações do Mochi
+### Reações do Nimboo
 
 | Gatilho | Reação |
 |---|---|
@@ -102,11 +102,11 @@ Além de criar, concluir e excluir (com *Desfazer*): **duplo clique no título p
 
 ### Rotina do dia
 
-No primeiro uso da manhã o Mochi mostra um **resumo** (tarefas que pedem atenção, atrasadas, eventos e o próximo) — um cartão no topo das tarefas e uma fala curta. No fim do dia (padrão 18h) vem o **fechamento**: o que você concluiu, o foco do dia e o que ficou pendente. Cada um aparece uma vez por dia e dá para dispensar; ligue/desligue e escolha a hora em *Configurações > Rotina do dia*. Também dá para perguntar ao assistente: *"resumo do dia"*.
+No primeiro uso da manhã o Nimboo mostra um **resumo** (tarefas que pedem atenção, atrasadas, eventos e o próximo) — um cartão no topo das tarefas e uma fala curta. No fim do dia (padrão 18h) vem o **fechamento**: o que você concluiu, o foco do dia e o que ficou pendente. Cada um aparece uma vez por dia e dá para dispensar; ligue/desligue e escolha a hora em *Configurações > Rotina do dia*. Também dá para perguntar ao assistente: *"resumo do dia"*.
 
 ### Conversa com IA (Gemini)
 
-Opcional e **desligado por padrão**: o Mochi conversa de verdade (como num chat), com a personalidade do personagem que você escolheu e o nome que você deu a ele. Para ligar, em *Configurações > IA online (Gemini)*: crie uma chave grátis no Google AI Studio (o app mostra o passo a passo), cole e guarde (fica cifrada pelo Windows), marque que entende que **as mensagens vão para o Google** e ative. Ele pode propor **ações** (criar tarefa com prazo, nota ou iniciar foco) em cartões: nada acontece até você tocar em *Aceitar*. Em *Deixar o Gemini ver minhas tarefas e agenda* você decide se os títulos do dia vão junto. Comandos como "crie uma tarefa…" continuam locais, instantâneos e sem internet. O plano gratuito do Google tem limites e termos próprios.
+Opcional e **desligado por padrão**: o Nimboo conversa de verdade (como num chat), com a personalidade do personagem que você escolheu e o nome que você deu a ele. Para ligar, em *Configurações > IA online (Gemini)*: crie uma chave grátis no Google AI Studio (o app mostra o passo a passo), cole e guarde (fica cifrada pelo Windows), marque que entende que **as mensagens vão para o Google** e ative. Ele pode propor **ações** (criar tarefa com prazo, nota ou iniciar foco) em cartões: nada acontece até você tocar em *Aceitar*. Em *Deixar o Gemini ver minhas tarefas e agenda* você decide se os títulos do dia vão junto. Comandos como "crie uma tarefa…" continuam locais, instantâneos e sem internet. O plano gratuito do Google tem limites e termos próprios.
 
 ### Assistente: histórico e atalho
 
@@ -122,7 +122,7 @@ Lembretes gentis para **beber água**, **ajeitar a postura** e **descansar os ol
 
 ### Vínculo e conquistas
 
-O Mochi lembra de você: o humor dele **persiste** entre aberturas do app, e ele conta os **dias juntos** e a sequência de dias seguidos. As **conquistas** funcionam como troféus de Steam/PSN (bronze, prata, ouro e platina, algumas secretas): ao liberar uma, um aviso aparece no canto da tela com um som curto (não aparece com apps em tela cheia). Veja tudo em *bandeja > Conquistas*, em *Configurações > Personagem > Ver conquistas* ou perguntando ao assistente: *"minhas conquistas"*. Você também pode dar um **nome** ao personagem em *Configurações > Personagem*.
+O Nimboo lembra de você: o humor dele **persiste** entre aberturas do app, e ele conta os **dias juntos** e a sequência de dias seguidos. As **conquistas** funcionam como troféus de Steam/PSN (bronze, prata, ouro e platina, algumas secretas): ao liberar uma, um aviso aparece no canto da tela com um som curto (não aparece com apps em tela cheia). Veja tudo em *bandeja > Conquistas*, em *Configurações > Personagem > Ver conquistas* ou perguntando ao assistente: *"minhas conquistas"*. Você também pode dar um **nome** ao personagem em *Configurações > Personagem*.
 
 ### Notas
 
@@ -134,20 +134,23 @@ Atalho **Assistente** da ilha (ou na bandeja): converse por texto ou **pelo micr
 
 ### Configurações
 
-Engrenagem na ilha aberta, na barra do painel, ou *Configurações* no menu da bandeja.
+Engrenagem na ilha aberta, na barra do painel, ou *Configurações* no menu da bandeja. As opções ficam em abas:
+**Aparência** (tamanhos, tema, personagem, cor e nome), **Comportamento** (balões, rotina do dia, bem-estar e
+sons), **Assistente** (histórico, atalho, Wikipédia, IA local e Gemini), **Foco e agenda** (modo foco,
+lembretes e Google Agenda) e **Geral** (atalho, iniciar com o Windows, seus dados e restaurar padrões).
 
-- **Tamanho da ilha** (80–140 %) e **do Mochi solto** (70–160 %), separados; valem na hora.
-- **Personagem:** Mochi (original), Abacaxi, Quadrado, Cogumelo, Cacto, Nuvem, Planeta e Fantasma, com
+- **Tamanho da ilha** (80–140 %) e **do Nimboo solto** (70–160 %), separados; valem na hora.
+- **Personagem:** Nimboo (original), Abacaxi, Quadrado, Cogumelo, Cacto, Nuvem, Planeta e Fantasma, com
   prévia de cada um. Todos têm o mesmo rosto, as mesmas animações e reações; mudam o corpo, os
   complementos (folhas, chapéu, braços, anel...), o ritmo (mais agitado, mais sonolento...) e o "som"
   (altura e timbre). Também dá para trocar no menu da bandeja → *Personagem*. A escolha é lembrada e vale
   na hora, na ilha e no modo flutuante.
-- **Cor do Mochi** (menta, pêssego, céu, lilás, limão, rosa): vale para o Mochi original; os outros
+- **Cor do Nimboo** (menta, pêssego, céu, lilás, limão, rosa): vale para o Nimboo original; os outros
   personagens têm as próprias cores.
 - **Esconder a ilha depois de** 3 s, 6 s, 10 s ou nunca.
-- **Não incomodar:** o Mochi sai da frente quando um app está em tela cheia (jogo, vídeo, apresentação) e
+- **Não incomodar:** o Nimboo sai da frente quando um app está em tela cheia (jogo, vídeo, apresentação) e
   volta depois.
-- **Balões de fala** (o Mochi comenta de vez em quando e fica quietinho durante o foco) e **sons suaves**
+- **Balões de fala** (o Nimboo comenta de vez em quando e fica quietinho durante o foco) e **sons suaves**
   (tec, sininhos e uma vozinha fina), com volume.
 - **Atalho global** para chamar a ilha direto nas tarefas (padrão **Ctrl+Alt+M**; avisa se outro programa já
   o usa). **Iniciar com o Windows** é opcional e só vale no app instalado.
@@ -158,25 +161,25 @@ Atalho **Foco** na ilha (ou o cartão no painel): 15, 25, 45 ou 60 minutos **ou 
 (1 a 180), com pausa configurável. Dá para **vincular uma tarefa** à sessão (e concluí-la no fim). O **ciclo
 Pomodoro** (pausa longa a cada 4 focos, com avanço automático opcional) é ligado nas configurações.
 Pausar, retomar e cancelar; a pílula recolhida mostra o tempo; "Hoje: n sessões · m min". Ao terminar, o
-Mochi comemora e a ilha volta.
+Nimboo comemora e a ilha volta.
 
 ### Prazos e lembretes
 
 Ao criar uma tarefa, o relógio ao lado do campo define data e hora (ou use Hoje/Amanhã); em cada tarefa o
-selo de prazo permite alterar. Atrasadas e as de hoje ficam destacadas. O Mochi avisa na hora e alguns
+selo de prazo permite alterar. Atrasadas e as de hoje ficam destacadas. O Nimboo avisa na hora e alguns
 minutos antes (configurável) com balão e som; se estiver oculto, vira notificação.
 
 ### Google Agenda
 
-Em Configurações → **Google Agenda**, cole o "endereço secreto no formato iCal" da sua agenda (o app explica onde achar). O Mochi mostra a **Agenda de hoje** no topo das tarefas e avisa dos eventos na hora e antes. É somente leitura, o endereço fica criptografado neste computador e nunca é exibido de volta.
+Em Configurações → **Google Agenda**, cole o "endereço secreto no formato iCal" da sua agenda (o app explica onde achar). O Nimboo mostra a **Agenda de hoje** no topo das tarefas e avisa dos eventos na hora e antes. É somente leitura, o endereço fica criptografado neste computador e nunca é exibido de volta.
 
 ### Aparência e brincadeiras
 
-Em Configurações: tema **Automático/Claro/Escuro** do painel. Segurando o Mochi, ele fica com cara de espanto e balança no ar; ao soltar, dá um pulinho.
+Em Configurações: tema **Automático/Claro/Escuro** do painel. Segurando o Nimboo, ele fica com cara de espanto e balança no ar; ao soltar, dá um pulinho.
 
 ### Instalador
 
-`npm run dist` gera `release/Mochi Setup <versão>.exe` (instalação por usuário, sem administrador, sem
+`npm run dist` gera `release/Nimboo Setup <versão>.exe` (instalação por usuário, sem administrador, sem
 assinatura de código). `npm run pack` gera só a pasta `release/win-unpacked`. O app sempre **abre como ilha**.
 ## Dados e preferências
 

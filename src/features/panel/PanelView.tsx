@@ -37,7 +37,7 @@ export function PanelView() {
   return (
     <main className="panel" data-theme={theme}>
       <div className="panel-bar">
-        <span>Mochi</span>
+        <span>Nimboo</span>
         <button type="button" className="panel-gear" onClick={() => setScreen('settings')} aria-label="Abrir configurações" title="Configurações">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
             <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />

@@ -26,7 +26,7 @@ const S = await import('../src/features/mascot/mascotStates.ts');
 
 const SOUND_NAMES = Object.keys(SOUNDS) as SoundName[];
 
-test('registro: um personagem por id, rótulos únicos vindos da fonte compartilhada, Mochi é o padrão', () => {
+test('registro: um personagem por id, rótulos únicos vindos da fonte compartilhada, Nimboo é o padrão', () => {
   assert.equal(DEFAULT_CHARACTER, 'mochi');
   assert.equal(DEFAULT_SETTINGS.character, 'mochi');
   assert.deepEqual(Object.keys(CHARACTER_REGISTRY).sort(), [...CHARACTERS].sort());
@@ -62,7 +62,7 @@ test('characterInfo: id desconhecido, vazio ou de tipo errado cai no original', 
   }
 });
 
-test('configurações: personagem válido é mantido; inválido, tipo errado ou versão antiga viram o Mochi', () => {
+test('configurações: personagem válido é mantido; inválido, tipo errado ou versão antiga viram o Nimboo', () => {
   assert.equal(parseSettings({ version: 3, character: 'cactus' }).character, 'cactus');
   for (const id of CHARACTERS) assert.equal(parseSettings({ version: 3, character: id }).character, id);
   for (const bad of ['dragon', 7, null, {}, [], true, 'MOCHI', ' ghost']) {
@@ -143,7 +143,7 @@ test('personalidade: as frases do personagem entram no sorteio e respeitam o esp
   assert.equal(p.pick('idle', ctx), 'Frase do abacaxi');
   // intervalo geral: outra fala logo em seguida é recusada
   assert.equal(p.pick('hello', { ...ctx, now: new Date(ctx.now.getTime() + 1000) }), null);
-  // sem frases extras, o conjunto continua sendo só o do Mochi
+  // sem frases extras, o conjunto continua sendo só o do Nimboo
   const q = createPersonality(() => 0.999);
   const text = q.pick('idle', { now: ctx.now, mood: 'mid', focusActive: false });
   assert.ok(LINES.idle.some((l) => l.text === text));

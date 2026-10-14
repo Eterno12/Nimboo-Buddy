@@ -100,7 +100,7 @@ export function MascotView() {
   }, [settings.soundEnabled, settings.soundVolume, character]);
   useEffect(() => setTraits(character.traits), [character, setTraits]);
 
-  // O humor do Mochi sobrevive ao app: volta ao afeto guardado e o salva de minuto em minuto.
+  // O humor do Nimboo sobrevive ao app: volta ao afeto guardado e o salva de minuto em minuto.
   const { restoreAffection, getAffection } = mascot;
   useEffect(() => {
     let alive = true;
@@ -155,7 +155,7 @@ export function MascotView() {
   sayRef.current = speech.say;
   sayTextRef.current = speech.sayText;
 
-  // Rotina do dia: o Mochi anuncia o resumo da manhã / o fechamento (uma vez por dia e por execução).
+  // Rotina do dia: o Nimboo anuncia o resumo da manhã / o fechamento (uma vez por dia e por execução).
   const routine = useRoutine();
   const routineRef = useRef(routine);
   routineRef.current = routine;
@@ -188,7 +188,7 @@ export function MascotView() {
   const stretchRef = useRef(settings.wellnessStretch);
   stretchRef.current = settings.wellnessStretch;
 
-  // Uma tarefa foi concluída (em qualquer janela): o Mochi comemora, fala e faz "plim".
+  // Uma tarefa foi concluída (em qualquer janela): o Nimboo comemora, fala e faz "plim".
   // Reabrir ou excluir não disparam este evento.
   useEffect(
     () =>
@@ -217,7 +217,7 @@ export function MascotView() {
     [],
   );
 
-  // Uma sessão de foco terminou: o Mochi comemora e a ilha mostra o resultado. Se ela
+  // Uma sessão de foco terminou: o Nimboo comemora e a ilha mostra o resultado. Se ela
   // estava escondida, o main a traz de volta e a tela de foco abre quando ela chegar.
   const modeRef = useRef(mode);
   modeRef.current = mode;
@@ -277,7 +277,7 @@ export function MascotView() {
     [],
   );
 
-  // Reações do Mochi ao próprio estado: dormir, acordar, cócegas, emburrar.
+  // Reações do Nimboo ao próprio estado: dormir, acordar, cócegas, emburrar.
   // Cada animação tem a sua assinatura sonora e a sua fala. O som toca sempre (os espontâneos ficam em
   // silêncio durante o foco); a fala passa pela personalidade, que impõe um intervalo entre falas.
   const previousState = useRef(mascot.state);

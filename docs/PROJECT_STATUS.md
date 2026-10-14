@@ -25,12 +25,12 @@ copiado de planos. Legenda de evidência:
 | `npm run test:e2e:notes` | **11/11** passos (criar/buscar sem acento; segurança do documento; janela de notas; formatação completa pelo editor real; busca; fixar → folha flutuante; cor do papel sincronizada; edição em duas janelas; soltar; reabrir no mesmo lugar ao reiniciar; excluir + desfazer) |
 | `npm run test:e2e:assistant` | **9/9** passos (nota por frase + desfazer; nota sem texto; tarefa com prazo, listar e concluir por nome; foco; trocar personagem; pergunta sem fonte → ativar → resposta com fonte [arquivo-fixture, sem rede]; microfone até a mensagem de privacidade do Windows; privacidade por padrão) |
 | Rede real | agenda pública do Google (feriados do Brasil) lida em ~0,6 s; endereço errado → "não encontrada (código 404)" |
-| `npm run pack` + `node tests/e2e/packaged.e2e.mjs` | **5/5** passos no `Mochi.exe` empacotado (ilha, `packaged`, banco, foco, preferências) |
-| `npm run dist` | gera `release/Mochi Setup 0.4.0.exe` (106,6 MB, NSIS por usuário, **sem assinatura**); `packaged.e2e` 5/5 no `win-unpacked` novo |
+| `npm run pack` + `node tests/e2e/packaged.e2e.mjs` | **5/5** passos no `Nimboo.exe` empacotado (ilha, `packaged`, banco, foco, preferências) |
+| `npm run dist` | gera `release/Nimboo Setup 0.4.0.exe` (106,6 MB, NSIS por usuário, **sem assinatura**); `packaged.e2e` 5/5 no `win-unpacked` novo |
 
 Verificações manuais com o app real nesta etapa: atalho global (Ctrl+Alt+M enviado por `keybd_event`
 com a ilha escondida → ilha volta, tarefas abertas, campo em foco) e "não incomodar" (janela em tela
-cheia → Mochi some em ~1 s e volta ~1,5 s depois de fechá-la).
+cheia → Nimboo some em ~1 s e volta ~1,5 s depois de fechá-la).
 
 Ambiente: Windows 11, Node 24.20, Electron 44.7.0 (Node 24.21 / Chromium 152 / SQLite 3.53), React 19.3,
 Vite 8.3, TypeScript 7.0. Máquina de desenvolvimento com 1 monitor a 100 % de escala.
@@ -46,27 +46,27 @@ Vite 8.3, TypeScript 7.0. Máquina de desenvolvimento com 1 monitor a 100 % de e
 | Arraste, clique, menu de contexto, bandeja (ícone gerado em memória), instância única, "Sair" fecha o SQLite | [manual] |
 | Modo flutuante: posição lembrada, reposicionamento se o monitor some | geometria [auto]; app [manual] |
 | Ilha: expandir/recolher por clique, Esc, perda de foco, inatividade (8 s); forma por `setShape`, cliques fora da forma atravessam; sem redimensionar a janela | `islandController` e geometria [auto]; janela real [manual] |
-| Ciclo: ilha entra → esconde (3/6/10 s ou nunca; 6 s na chegada) → Mochi surge num canto inferior → borda superior (250 ms) traz a ilha | [manual] (8 execuções cronometradas: 7,6–8,0 s até o Mochi aparecer no canto) |
+| Ciclo: ilha entra → esconde (3/6/10 s ou nunca; 6 s na chegada) → Nimboo surge num canto inferior → borda superior (250 ms) traz a ilha | [manual] (8 execuções cronometradas: 7,6–8,0 s até o Nimboo aparecer no canto) |
 | Linha-dica da borda (lente que afina nas pontas) e morph da ilha (achata até a linha e cresce dela) | geometria [auto]; app real [manual] (capturas de quadros) |
 | Tarefas: criar, concluir, reabrir, excluir com desfazer (5 s), validação (200 caracteres), retenção de 30 dias, rodapé "Concluídas", rascunho, foco, contador, `aria-live` | [auto] unit + e2e |
 | SQLite: esquema v1, migrações versionadas, WAL, `synchronous=FULL` conferido a cada abertura, leituras sem transação de escrita quando nada expirou, concorrência (3 processos) | [auto] |
 | **Backup antes de migrar** (`mochi.db.bak-v<n>-<data>`, últimas 3), migração que falha deixa o banco intacto | [auto] |
 | **Aviso ao usuário** quando o arquivo foi recuperado (corrompido) ou é de versão mais nova | serviço/banco [auto]; faixa na lista [manual] |
 | Modo foco (temporizador): foco 15/25/45/60 min e pausa 5 min; pausar/retomar/cancelar; relógio no main pelo relógio do sistema; selo na pílula; fim → comemora e traz a ilha | `FocusTimer` [auto] (13); ilha e ciclo completo e2e (9 passos); painel [manual] |
-| **Configurações** (painel, aberto pela engrenagem da ilha ou pela bandeja): tamanho da ilha (80–140 %) e do Mochi solto (70–160 %), cor, tempo para esconder, sons e volume, balões, atalho global, não incomodar, iniciar com o Windows | `parseSettings`/store [auto]; e2e (10 passos); visual [manual] |
+| **Configurações** (painel, aberto pela engrenagem da ilha ou pela bandeja): tamanho da ilha (80–140 %) e do Nimboo solto (70–160 %), cor, tempo para esconder, sons e volume, balões, atalho global, não incomodar, iniciar com o Windows | `parseSettings`/store [auto]; e2e (10 passos); visual [manual] |
 | **Atalho global** (padrão Ctrl+Alt+M; predefinidos; aviso se outro app já usa) | [manual] com teclas reais |
-| **Não incomodar**: esconde o Mochi com app em tela cheia (`SHQueryUserNotificationState`) e o traz de volta | parser/vigia [auto]; tela cheia real [manual] |
+| **Não incomodar**: esconde o Nimboo com app em tela cheia (`SHQueryUserNotificationState`) e o traz de volta | parser/vigia [auto]; tela cheia real [manual] |
 | **Sons** sintetizados (tec, sininhos, vozinha do balão), baixos e curtos | planos [auto] (limites de duração/volume/frequência); audição [manual] |
 | **Personalidade e balões**: falas por hora do dia/humor, quieto durante o foco, intervalos e teto por hora | `personality` [auto]; balão [manual] (captura) |
-| **Cores do Mochi** (menta, pêssego, céu, lilás, limão, rosa) | e2e (estilo do SVG) |
+| **Cores do Nimboo** (menta, pêssego, céu, lilás, limão, rosa) | e2e (estilo do SVG) |
 | **Abre sempre como ilha**, mesmo com o modo flutuante salvo (D26) | [auto] e2e (dev e empacotado) |
 | **Som e fala para cada animação** (carinho, curioso, susto, cócegas, emburrado, arraste, bocejo, espreguiçar, olhar em volta, sono, pulinho); fala com intervalo por animação, som sempre (os espontâneos calam no foco) | catálogo e regras [auto]; audição [manual] |
 | **Foco evoluído:** minutos livres (1–180), última duração lembrada, tarefa vinculada (e "Concluir tarefa" no fim), ciclo Pomodoro opcional (pausa longa a cada 4; automático opcional), contador do dia | `FocusTimer`/`FocusLog` [auto]; e2e (11 passos) |
 | **Tarefas com prazo e lembrete:** data/hora opcional, atrasada/hoje destacados, lembrete na hora e N min antes (balão + som + notificação se oculto) | repositório, validação, agendador [auto]; e2e (lembrete real) |
 | **Migração v2 do banco** (`due_at`, `focus_sessions`) com backup automático | [auto] |
 | **Empacotamento:** `npm run pack`/`dist` (electron-builder, NSIS por usuário, ícone do blob); app empacotado reconhece `isPackaged` | e2e empacotado [auto]; instalador **construído**, não instalado nesta máquina |
-| **Segurar o Mochi:** primeira versão (D33): cara de espanto, balanço e pulinho ao soltar; sem física e sem enjoo | estados e prioridades [auto] (`mascotController`); app real [manual] |
-| **Personagens (D34):** Mochi original + Abacaxi, Quadrado, Cogumelo, Cacto, Nuvem, Planeta e Fantasma sobre o mesmo controlador, rosto, sons e interação; seleção nas configurações (prévias) e na bandeja; ritmo e som próprios; persistência | registro, validação, limites de som, personalidade, ritmos [auto] (12); renderização, nada cortado, painel, persistência, config inválida, flutuante [auto] e2e (10); aparência [manual] (capturas de todos os personagens em 9 estados) |
+| **Segurar o Nimboo:** primeira versão (D33): cara de espanto, balanço e pulinho ao soltar; sem física e sem enjoo | estados e prioridades [auto] (`mascotController`); app real [manual] |
+| **Personagens (D34):** Nimboo original + Abacaxi, Quadrado, Cogumelo, Cacto, Nuvem, Planeta e Fantasma sobre o mesmo controlador, rosto, sons e interação; seleção nas configurações (prévias) e na bandeja; ritmo e som próprios; persistência | registro, validação, limites de som, personalidade, ritmos [auto] (12); renderização, nada cortado, painel, persistência, config inválida, flutuante [auto] e2e (10); aparência [manual] (capturas de todos os personagens em 9 estados) |
 | **Modo noturno do painel:** Automático (segue o Windows) / Claro / Escuro, em tarefas, foco, agenda e configurações (D32) | contraste dos tokens escuros [auto]; capturas [manual] |
 | **Evento → tarefa (D35):** botão "→ Virar tarefa" (título, horário como prazo, dia inteiro sem prazo), "✓ Tarefa" depois, sem duplicar, lembrete único; migração v3 | repositório, migração e conversão [auto] (9 testes); e2e (4 passos) + captura |
 | **Notas com formatação (D36):** negrito/itálico/sublinhado/tachado/código, títulos, listas, tarefas, citação, bloco de código, alinhamento, cor, marca-texto, link; busca sem acento; cor do papel; **nota flutuante** na área de trabalho (posição lembrada, reabre com o app); excluir com desfazer; migração v4 | validação do documento, repositório e migração [auto] (13); e2e (11 passos); aparência [manual] (capturas do editor e da folha) |
@@ -112,7 +112,7 @@ analisador local executa), reconhecimento de voz offline, login, sincronização
 atualização automática, recorrência de tarefas (prazo é uma data só), escrever na agenda/login Google (OAuth), várias agendas, internacionalização (textos fixos em
 pt-BR), tema escuro do painel, opção de movimento reduzido (decidido: o mascote sempre anima), edição de
 título de tarefa, ordenação manual de tarefas, personagens fora dos 8 do registro (nem importar/criar
-personagem pela interface), paleta de cores para os personagens novos (só o Mochi original tem), atalho
+personagem pela interface), paleta de cores para os personagens novos (só o Nimboo original tem), atalho
 global personalizado livre (só os predefinidos), escolha do monitor da ilha pela interface.
 
 ## Problemas conhecidos e limitações
@@ -142,7 +142,7 @@ global personalizado livre (só os predefinidos), escolha do monitor da ilha pel
 | 27 | O app passa a usar internet (só se a agenda for conectada) | informativa | regra atualizada em `CLAUDE.md`; D31 |
 | 28 | Sons dos personagens nunca foram ouvidos por uma pessoa | média | os planos de notas são testados (limites de frequência, volume e duração; assinaturas distintas), mas o timbre "agradável" depende de audição; os perfis são só números em `characters.ts` e ajustáveis |
 | 29 | Submenu "Personagem" da bandeja/menu de contexto não exercitado com clique real | baixa | o menu nativo não é acionável por CDP; a troca em si (`chooseCharacter` → mesmo caminho de `settings.update`) é a mesma testada pelo painel; compila e tipa |
-| 30 | Personagens novos vistos só em 1 monitor/100 % | baixa | a janela é a mesma do Mochi; o teste mede pontos do contorno (não caixas) em 12 estados |
+| 30 | Personagens novos vistos só em 1 monitor/100 % | baixa | a janela é a mesma do Nimboo; o teste mede pontos do contorno (não caixas) em 12 estados |
 | 36 | ~~Link no editor de notas aplicado à seleção errada~~ | **resolvido** | o campo do link tomava o foco e o editor podia perder a seleção (intermitente); agora a seleção do momento da abertura é restaurada ao aplicar. O e2e de notas foi a fonte (5/5 depois do ajuste) |
 | 35 | Em baterias longas de e2e (várias suítes em sequência) o passo "restaurar padrões" de configurações e o passo do editor de notas falharam algumas vezes; sozinhos passam sempre | baixa | não reproduzido isoladamente (13/13 e 11/11 em repetições); suspeita: máquina ocupada/processos do Electron de execuções anteriores; limpar `electron.exe` antes de rodar |
 | 31 | Microfone do assistente depende de "Reconhecimento de fala online" do Windows e nunca foi testado com fala | média | sem a opção, o app explica e abre a página; áudio processado pelo serviço de fala da Microsoft quando ligada; alternativa offline (Whisper local) não existe |
@@ -154,7 +154,7 @@ global personalizado livre (só os predefinidos), escolha do monitor da ilha pel
 
 ## Próxima etapa recomendada
 
-1. **Instalar de verdade e conferir** (por você): rodar `release/Mochi Setup 0.4.0.exe`, ligar "iniciar com o
+1. **Instalar de verdade e conferir** (por você): rodar `release/Nimboo Setup 0.4.0.exe`, ligar "iniciar com o
    Windows", reiniciar e ver se abre como ilha.
 2. **Experimentar com a sua agenda real:** colar o endereço secreto e conferir eventos recorrentes, fusos e lembretes.
 3. **Notas rápidas** (fase D do `ROADMAP.md`): a migração v3 já tem backup automático.

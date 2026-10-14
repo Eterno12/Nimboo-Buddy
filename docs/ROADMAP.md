@@ -23,7 +23,7 @@ Pré-requisito saudável antes de novos tipos de dado.
 
 ### Fase C — Temporizador ("Modo foco") — v1 implementada, ver D18
 - ✅ Relógio no processo principal; tela na ilha (`IslandExtent` `focus`) e cartão no painel; selo com o
-  tempo na pílula recolhida; fim de sessão: Mochi comemora, ilha volta, notificação se o mascote está oculto.
+  tempo na pílula recolhida; fim de sessão: Nimboo comemora, ilha volta, notificação se o mascote está oculto.
 - ✅ Foco (15/25/45/60 min) e pausa (5 min), pausar/retomar/cancelar; uma sessão por vez.
 - ⏳ Ciclo Pomodoro automático (foco → pausa → pausa longa a cada 4), duração personalizada, histórico e
   estatísticas, som opcional, vincular sessão a uma tarefa, retomar sessão após reiniciar o app.
@@ -81,7 +81,7 @@ escritas concorrentes (WAL + `BEGIN IMMEDIATE`, testado com 3 processos); limpez
 - **Aplicativo móvel** — consome o mesmo serviço de sincronização; só faz sentido depois do item acima.
 - Edição de título e ordenação manual das tarefas; recorrência, prazos e prioridades (explicitamente
   fora de escopo até agora).
-- Mais cantos/comportamentos espontâneos, sons, skins do Mochi, humor persistente.
+- Mais cantos/comportamentos espontâneos, sons, skins do Nimboo, humor persistente.
 - Reagir ao contexto do desktop (hora do dia, janelas em foco) — planejado na proposta original da ilha,
   nunca implementado.
 - Atalho global de teclado para abrir a ilha; "Desfazer" por teclado (Ctrl+Z).
@@ -111,7 +111,7 @@ as funcionalidades da v1 estabilizarem.
 - ✅ Abrir sempre como ilha; som e fala por animação; foco com tempo livre/Pomodoro/tarefa/contador;
   tarefas com prazo e lembrete; migração v2; empacotamento (instalador NSIS).
 - ✅ Modo noturno do painel (a física ao segurar + enjoo foi feita e depois **revertida**, D33); Google Agenda por endereço iCal (somente leitura).
-- ✅ Sistema de personagens: Mochi + 7 (abacaxi, quadrado, cogumelo, cacto, nuvem, planeta, fantasma), com
+- ✅ Sistema de personagens: Nimboo + 7 (abacaxi, quadrado, cogumelo, cacto, nuvem, planeta, fantasma), com
   seleção nas configurações e na bandeja, som e ritmo próprios (D34).
 - ✅ Evento da agenda → tarefa (D35), notas com formatação e nota flutuante (D36), assistente com voz, comandos locais e perguntas via Wikipédia/IA local opt-in (D37).
 - ⏳ Próximo: modo de voz 100 % offline (Whisper local), assinatura de código, atualização automática, instalador novo, login Google (OAuth) se a agenda precisar de escrita.

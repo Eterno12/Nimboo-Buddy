@@ -52,7 +52,7 @@ export function startDataService({ database, isAppUrl }: DataServiceOptions): Da
     const choice = await dialog.showSaveDialog(win, {
       title: 'Exportar tarefas e notas',
       defaultPath: `mochi-backup-${stamp}.json`,
-      filters: [{ name: 'Backup do Mochi (JSON)', extensions: ['json'] }],
+      filters: [{ name: 'Backup do Nimboo (JSON)', extensions: ['json'] }],
     });
     if (choice.canceled || !choice.filePath) return { ok: false, message: 'Exportação cancelada.' };
     try {
@@ -75,14 +75,14 @@ export function startDataService({ database, isAppUrl }: DataServiceOptions): Da
     const choice = await dialog.showOpenDialog(win, {
       title: 'Importar tarefas e notas',
       properties: ['openFile'],
-      filters: [{ name: 'Backup do Mochi (JSON)', extensions: ['json'] }],
+      filters: [{ name: 'Backup do Nimboo (JSON)', extensions: ['json'] }],
     });
     if (choice.canceled || choice.filePaths.length === 0) return { ok: false, message: 'Importação cancelada.' };
     try {
       const file = choice.filePaths[0];
       if (fs.statSync(file).size > IMPORT_MAX_BYTES) return { ok: false, message: 'Esse arquivo é grande demais.' };
       const parsed = parseExportFile(fs.readFileSync(file, 'utf8'));
-      if (!parsed) return { ok: false, message: 'Esse arquivo não é um backup do Mochi.' };
+      if (!parsed) return { ok: false, message: 'Esse arquivo não é um backup do Nimboo.' };
       const s = await applyImport(parsed, new SqliteTaskRepository(db), new SqliteNotesRepository(db));
       notifyAll();
       const parts = [`${s.tasksAdded} tarefa(s) e ${s.notesAdded} nota(s) importadas`];

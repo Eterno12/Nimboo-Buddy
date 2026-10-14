@@ -61,10 +61,10 @@ por isso trocar de apresentação não o reinicia.
 | Apresentação | Janela | Quando |
 |---|---|---|
 | **ilha** | 352×380 fixa, topo-centro da área útil do monitor; forma = pílula 176×58 (recolhida), 352×174 (aberta, home), 352×214 (aberta, foco) ou 352×380 (aberta, tarefas); não focável quando recolhida | modo preferido `island` e ilha à vista |
-| **flutuante** | 240×240, arrastável, posição lembrada | modo preferido `floating`, ou "Mochi no canto" (*away*) |
+| **flutuante** | 240×240, arrastável, posição lembrada | modo preferido `floating`, ou "Nimboo no canto" (*away*) |
 
 `settings.mode` (`island` padrão | `floating`) é a **preferência**. Em `island` há um estado de execução
-`away` (ilha escondida, Mochi solto num canto): usa o layout flutuante, mas não persiste a posição.
+`away` (ilha escondida, Nimboo solto num canto): usa o layout flutuante, mas não persiste a posição.
 
 ### Fluxos principais
 
@@ -79,7 +79,7 @@ por isso trocar de apresentação não o reinicia.
 - **Esconder → canto:** ilha recolhida, sem hover/atividade por 3 s (6 s na chegada) → `exitUp` anima →
   `islandHidden` → `goAway()` troca para 240×240 num canto inferior (alterna esquerdo/direito) com entrada
   `slide`.
-- **Linha-dica da borda (edge hint):** enquanto o Mochi está no canto (*away*) e visível, uma **segunda
+- **Linha-dica da borda (edge hint):** enquanto o Nimboo está no canto (*away*) e visível, uma **segunda
   janela** pequena (`createEdgeHintWindow`: 280×8 no topo físico do monitor, transparente, `setShape` para
   limitar a altura, `setIgnoreMouseEvents`, não focável, sem preload, CSP restrita) mostra uma linha
   branca pulsante, rente ao topo, que afina e perde opacidade nas pontas, com a largura exata da zona de revelação (`EDGE_REVEAL_HALF_WIDTH`).
@@ -124,8 +124,8 @@ sem expor `ipcRenderer` nem o objeto `event`.
 | `island:open` / `island:extent` | R→M | invoke | forma cheia / extensão (home, tasks) |
 | `island:closed` | R→M | send | recolheu; forma compacta |
 | `island:toggle` | M→R | evento | alternar pelo menu |
-| `island:hidden` | R→M | send | ilha escondida; Mochi vai ao canto |
-| `presence:leave` / `presence:leave-done` | M→R / R→M | evento / send | Mochi sai de cena |
+| `island:hidden` | R→M | send | ilha escondida; Nimboo vai ao canto |
+| `presence:leave` / `presence:leave-done` | M→R / R→M | evento / send | Nimboo sai de cena |
 | `tasks:list/create/complete/reopen` | R→M | invoke | operações de tarefa |
 | `tasks:schedule-remove` / `tasks:undo-remove` | R→M | invoke | excluir com desfazer |
 | `tasks:changed` | M→R | evento | recarregue a lista |
@@ -282,7 +282,7 @@ electron/main.ts            submenu "Personagem" (radio) no menu da bandeja/cont
 - **Fluxo da troca:** configurações/bandeja → `settings.update({character})` (main valida) → `settings:changed`
   para todas as janelas → `MascotView` recalcula `characterInfo(settings.character)` → `<Mascot character>`,
   `configureSound({profile})` e `setTraits(traits)`. Nenhum remount do controlador; estado e timers seguem.
-- **Rosto compartilhado:** fica sempre em coordenadas do Mochi; cada personagem só o posiciona com um
+- **Rosto compartilhado:** fica sempre em coordenadas do Nimboo; cada personagem só o posiciona com um
   `<g transform>` (atributo, não CSS) em volta de `.mascot-face`, para não colidir com as animações CSS.
 - **Camadas de movimento:** um único dono de `transform` por grupo. Atenção: um grupo com atributo
   `transform` não deve receber `transform-origin`/`transform-box` por CSS (o origin passa a valer para o

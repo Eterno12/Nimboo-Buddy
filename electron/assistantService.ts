@@ -19,6 +19,8 @@ import type { GeminiKeyStore } from './geminiKey';
 import type { GeminiChatOutcome, GeminiStatus } from '../shared/assistantApi';
 import { buildSystemPrompt } from '../shared/persona';
 import {
+  listGeminiModels,
+  pickGeminiModel,
   streamGemini,
   type GeminiFetch,
   type GeminiFetchResponse,
@@ -50,7 +52,13 @@ const GEMINI_KEY_PAGE = 'https://aistudio.google.com/apikey';
  */
 function fixtureGemini(file: string): GeminiFetch {
   const data = JSON.parse(fs.readFileSync(file, 'utf8')) as { chunks?: unknown; status?: unknown; error?: unknown };
-  return async () => {
+  return async (url) => {
+    if (url.includes('/models?')) {
+      const body = JSON.stringify({
+        models: [{ name: 'models/gemini-3.5-flash-lite', supportedGenerationMethods: ['generateContent'] }],
+      });
+      return { ok: true, status: 200, body: null, text: async () => body };
+    }
     const status = typeof data.status === 'number' ? data.status : 200;
     if (status !== 200) {
       const body = JSON.stringify({ error: { message: typeof data.error === 'string' ? data.error : 'erro' } });
@@ -156,7 +164,7 @@ export function startAssistantService({ isAppUrl, settings, isDark, getHistory, 
     onDelta: (d: string) => void,
     signal?: AbortSignal,
     system?: string,
-  ): Promise<GeminiResult> => {
+  ): Promise<GeminiResult & { model?: string }> => {
     const key = keyStore?.get() ?? null;
     if (!key) return { ok: false, code: 'no_key', message: 'Falta a chave do Gemini. Cole a chave em Configurações > Assistente.' };
     const s = settings();
@@ -169,19 +177,46 @@ export function startAssistantService({ isAppUrl, settings, isDark, getHistory, 
         now: new Date(),
         context: s.assistantContext ? context : null,
       });
-    return streamGemini({ key, model: s.geminiModel, system: prompt, turns, onDelta, fetchImpl: geminiFetch, signal });
+    const attempt = (model: string) =>
+      streamGemini({ key, model, system: prompt, turns, onDelta, fetchImpl: geminiFetch, signal });
+    let model = s.geminiModel;
+    let result = await attempt(model);
+    // Modelo que a chave não enxerga: descobre um que funcione e tenta uma vez de novo.
+    if (!result.ok && result.code === 'model') {
+      const listed = await listGeminiModels(key, geminiFetch);
+      const better = listed.ok ? pickGeminiModel(listed.models, model) : null;
+      if (better && better !== model) {
+        model = better;
+        result = await attempt(model);
+      }
+    }
+    return result.ok ? { ...result, model } : result;
   };
 
-  ipcMain.handle(IPC.geminiTest, async (event): Promise<{ ok: boolean; message: string }> => {
+  ipcMain.handle(IPC.geminiTest, async (event): Promise<{ ok: boolean; message: string; model?: string }> => {
     if (!trusted(event)) return { ok: false, message: 'Remetente não autorizado.' };
-    const r = await runGemini(
-      [{ role: 'user', text: 'Responda apenas: ok' }],
-      null,
-      () => undefined,
-      undefined,
-      'Responda em no máximo duas palavras.',
-    );
-    return r.ok ? { ok: true, message: 'Conexão funcionando!' } : { ok: false, message: r.message };
+    const key = keyStore?.get() ?? null;
+    if (!key) return { ok: false, message: 'Falta a chave do Gemini. Cole a chave e clique em “Guardar chave”.' };
+    // 1) a chave enxerga algum modelo? (isso já separa "chave ruim" de "modelo ruim")
+    const listed = await listGeminiModels(key, geminiFetch);
+    if (!listed.ok) return { ok: false, message: listed.result.ok ? 'Erro desconhecido.' : listed.result.message };
+    const chosen = pickGeminiModel(listed.models, settings().geminiModel);
+    if (!chosen) return { ok: false, message: 'A chave funciona, mas não encontrei nenhum modelo de texto liberado para ela.' };
+    // 2) uma pergunta mínima com o modelo escolhido
+    const r = await streamGemini({
+      key,
+      model: chosen,
+      system: 'Responda em no máximo duas palavras.',
+      turns: [{ role: 'user', text: 'Responda apenas: ok' }],
+      fetchImpl: geminiFetch,
+    });
+    if (!r.ok) return { ok: false, message: r.message };
+    const switched = chosen !== settings().geminiModel;
+    return {
+      ok: true,
+      model: chosen,
+      message: switched ? `Conexão funcionando! Usei o modelo ${chosen}.` : 'Conexão funcionando!',
+    };
   });
 
   ipcMain.handle(IPC.geminiChat, async (event, requestId: unknown, request: unknown): Promise<GeminiChatOutcome> => {
@@ -215,7 +250,9 @@ export function startAssistantService({ isAppUrl, settings, isDark, getHistory, 
         },
         controller.signal,
       );
-      return r.ok ? { ok: true, text: r.text } : { ok: false, code: r.code, message: r.message, partial: r.partial };
+      return r.ok
+        ? { ok: true, text: r.text, model: r.model }
+        : { ok: false, code: r.code, message: r.message, partial: r.partial };
     } finally {
       chats.delete(requestId);
     }

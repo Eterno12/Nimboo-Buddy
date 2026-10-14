@@ -7,7 +7,7 @@
  *     - recolher: o visual fecha → ao fim da transição (`transitionEnded`) ou no
  *       tempo limite, `closeWindow()` devolve a forma compacta;
  *  2. presença: depois de recolhida e sem interação, a ilha se esconde (`hide`)
- *     e o Mochi passa a viver solto num canto.
+ *     e o Nimboo passa a viver solto num canto.
  */
 export interface IslandDeps {
   /** Libera a forma cheia; resolve quando já pode animar a abertura. */

@@ -308,7 +308,7 @@
 .assistant-mic,
 .assistant-send {
   flex: none;
-  height: 38px;
+  min-height: 38px;
   border: 1px solid var(--a-border);
   border-radius: 12px;
   background: var(--a-field);

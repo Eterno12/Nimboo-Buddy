@@ -48,7 +48,7 @@ test('exportar e importar em outro banco: tudo volta, sem duplicar na segunda ve
   }
 });
 
-test('importar: itens inválidos são ignorados e contados; arquivos que não são do Mochi são recusados', async () => {
+test('importar: itens inválidos são ignorados e contados; arquivos que não são do Nimboo são recusados', async () => {
   const x = fresh();
   try {
     const parsed = parseExportFile(

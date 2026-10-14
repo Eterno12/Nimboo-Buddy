@@ -1,9 +1,9 @@
 {
-  "name": "mochi-desktop",
+  "name": "nimboo-desktop",
   "version": "0.4.0",
   "private": true,
-  "description": "Mochi Desktop - bichinho virtual para a área de trabalho",
-  "author": "Mochi",
+  "description": "Nimboo Desktop - bichinho virtual para a área de trabalho",
+  "author": "Nimboo",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
@@ -52,8 +52,8 @@
   },
   "build": {
     "appId": "com.mochi.desktop",
-    "productName": "Mochi",
-    "copyright": "Mochi",
+    "productName": "Nimboo",
+    "copyright": "Nimboo",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -82,7 +82,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Mochi",
+      "shortcutName": "Nimboo",
       "deleteAppDataOnUninstall": false
     }
   }

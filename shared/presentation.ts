@@ -46,11 +46,11 @@ export function islandShape(open: boolean, extent: IslandExtent = 'home'): Rect 
 /** Como o mascote entra em cena depois de uma troca de apresentação. */
 export type Entrance =
   | { kind: 'drop' } // a ilha desce da borda superior
-  | { kind: 'slide'; from: 'left' | 'right' } // o Mochi surge pela lateral, no canto
+  | { kind: 'slide'; from: 'left' | 'right' } // o Nimboo surge pela lateral, no canto
   | null;
 
 export interface PresentationState {
-  /** Layout a desenhar. O Mochi "fora da ilha" também é `floating`. */
+  /** Layout a desenhar. O Nimboo "fora da ilha" também é `floating`. */
   mode: PresentationMode;
   entrance: Entrance;
 }
@@ -64,7 +64,7 @@ export const EDGE_REVEAL_HALF_WIDTH = 140;
 export const EDGE_HINT_SIZE: Size = { width: EDGE_REVEAL_HALF_WIDTH * 2, height: 8 };
 
 /**
- * Área do balão de fala do Mochi, logo abaixo da pílula recolhida (coordenadas base da janela da
+ * Área do balão de fala do Nimboo, logo abaixo da pílula recolhida (coordenadas base da janela da
  * ilha). Entra na forma da janela só enquanto há um balão, para o resto continuar atravessável.
  */
 export const ISLAND_BUBBLE_RECT: Rect = { x: 44, y: 58, width: 264, height: 76 };

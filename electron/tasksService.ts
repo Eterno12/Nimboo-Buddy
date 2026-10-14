@@ -69,7 +69,7 @@ export function startTasksService({ dbPath, isAppUrl, onTasksChanged, onChange }
   /**
    * Avisa todas as janelas. Cada envio é isolado: uma janela com problema não
    * impede as demais de atualizar (nem afeta a operação já confirmada).
-   * "Concluída" é um evento à parte: só ela faz o Mochi comemorar.
+   * "Concluída" é um evento à parte: só ela faz o Nimboo comemorar.
    */
   /** Por que esta tarefa merece uma comemoração maior (ou `null`). Nunca falha a operação. */
   const hardReasonOf = (id: string): HardReason | null => {
@@ -139,7 +139,7 @@ export function startTasksService({ dbPath, isAppUrl, onTasksChanged, onChange }
     if (opened.recoveredFrom) {
       notice =
         'O arquivo das suas tarefas estava danificado e foi guardado à parte. Começamos uma lista nova; ' +
-        'se precisar das tarefas antigas, a cópia está na pasta de dados do Mochi.';
+        'se precisar das tarefas antigas, a cópia está na pasta de dados do Nimboo.';
     }
     repo = new SqliteTaskRepository(db, { onChange: (c) => broadcast(c) });
     scheduler = new RemovalScheduler(repo, { onChange: () => broadcast() });
@@ -150,8 +150,8 @@ export function startTasksService({ dbPath, isAppUrl, onTasksChanged, onChange }
     console.error('Não foi possível abrir o banco de tarefas:', error);
     notice =
       error instanceof SchemaTooNewError
-        ? 'Suas tarefas foram criadas por uma versão mais nova do Mochi. Atualize o app para usá-las.'
-        : 'Não foi possível abrir suas tarefas agora. Elas continuam salvas; tente reiniciar o Mochi.';
+        ? 'Suas tarefas foram criadas por uma versão mais nova do Nimboo. Atualize o app para usá-las.'
+        : 'Não foi possível abrir suas tarefas agora. Elas continuam salvas; tente reiniciar o Nimboo.';
     try {
       db?.close();
     } catch {

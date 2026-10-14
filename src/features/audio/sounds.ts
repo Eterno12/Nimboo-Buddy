@@ -1,5 +1,5 @@
 /**
- * Sons do Mochi: dados puros (sem DOM, testáveis). Tudo é sintetizado em tempo real com
+ * Sons do Nimboo: dados puros (sem DOM, testáveis). Tudo é sintetizado em tempo real com
  * WebAudio: nenhum arquivo de áudio, nenhum som alto, nada que dure mais de ~1,5 s.
  * A intenção é "lo-fi tranquilo": tecs curtos, sininhos suaves e uma vozinha fina.
  */
@@ -34,7 +34,7 @@ export type SoundName =
   | 'preview'
   | 'reminder'
   | 'achievement'
-  // uma assinatura sonora curta para cada animação do Mochi
+  // uma assinatura sonora curta para cada animação do Nimboo
   | 'happy'
   | 'curious'
   | 'surprised'
@@ -129,7 +129,7 @@ export const SOUNDS: Record<SoundName, readonly Note[]> = {
 };
 
 /**
- * Sons de animação que são espontâneos (o Mochi fazendo coisas sozinho). Ficam em silêncio durante o
+ * Sons de animação que são espontâneos (o Nimboo fazendo coisas sozinho). Ficam em silêncio durante o
  * foco; os que respondem a algo que a pessoa fez (carinho, susto, arraste) continuam.
  */
 export const AMBIENT_SOUNDS: readonly SoundName[] = ['curious', 'yawn', 'stretch', 'lookaround', 'sleepy', 'pop'];

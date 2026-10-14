@@ -1,5 +1,5 @@
 /**
- * Teste do app EMPACOTADO (release/win-unpacked/Mochi.exe, gerado por `npm run pack`).
+ * Teste do app EMPACOTADO (release/win-unpacked/Nimboo.exe, gerado por `npm run pack`).
  * Confere o que só muda fora do desenvolvimento: `app.isPackaged`, caminho dos dados, banco,
  * preferências e a janela da ilha. Usa dados isolados (`--user-data-dir`).
  */
@@ -11,9 +11,9 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const exe = path.join(root, 'release', 'win-unpacked', 'Mochi.exe');
+const exe = path.join(root, 'release', 'win-unpacked', 'Nimboo.exe');
 if (!fs.existsSync(exe)) {
-  console.log('Mochi.exe não encontrado: rode `npm run pack` antes.');
+  console.log('Nimboo.exe não encontrado: rode `npm run pack` antes.');
   process.exit(2);
 }
 const PORT = 9620 + Math.floor(Math.random() * 40);
@@ -93,7 +93,7 @@ async function connect(target) {
 
 let page;
 try {
-  console.log('App empacotado (Mochi.exe, dados isolados)');
+  console.log('App empacotado (Nimboo.exe, dados isolados)');
   page = await connect(await findTarget('mascot'));
   await page.waitFor(`!!window.mochi && !!document.querySelector('.shell')`, 'app pronto');
 

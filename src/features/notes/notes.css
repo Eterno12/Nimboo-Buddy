@@ -75,7 +75,7 @@
 .notes-search {
   flex: 1;
   min-width: 0;
-  height: 32px;
+  min-height: 32px;
   padding: 0 10px;
   border: 1px solid var(--n-border);
   border-radius: 10px;
@@ -87,7 +87,7 @@
 .notes-new,
 .notes-action,
 .notes-undo button {
-  height: 32px;
+  min-height: 32px;
   padding: 0 12px;
   border: 1px solid var(--n-border);
   border-radius: 10px;
@@ -306,7 +306,7 @@ body:has(.note-sheet) {
   flex: none;
   align-items: center;
   justify-content: space-between;
-  height: 34px;
+  min-height: 34px;
   margin: 0 -12px;
   padding: 0 8px 0 12px;
   -webkit-app-region: drag;
@@ -394,7 +394,7 @@ body:has(.note-sheet) {
   align-items: center;
   justify-content: center;
   min-width: 28px;
-  height: 28px;
+  min-height: 28px;
   padding: 0 5px;
   border: 1px solid transparent;
   border-radius: 7px;
@@ -472,7 +472,7 @@ body:has(.note-sheet) {
 
 .note-link-input {
   width: 220px;
-  height: 28px;
+  min-height: 28px;
   padding: 0 8px;
   border: 1px solid #857b8e;
   border-radius: 7px;
@@ -486,7 +486,7 @@ body:has(.note-sheet) {
 }
 
 .note-link-apply {
-  height: 28px;
+  min-height: 28px;
   padding: 0 10px;
   border: 0;
   border-radius: 7px;

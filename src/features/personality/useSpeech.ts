@@ -28,7 +28,7 @@ interface SpeechOptions {
 }
 
 /**
- * O Mochi "fala": escolhe a frase (personalidade), mostra o balão por um tempo proporcional ao
+ * O Nimboo "fala": escolhe a frase (personalidade), mostra o balão por um tempo proporcional ao
  * texto e toca a vozinha. Avisa o main quando há balão para a forma da janela incluí-lo.
  */
 export function useSpeech({ enabled, mood, focusActive, suppressed, extra }: SpeechOptions) {

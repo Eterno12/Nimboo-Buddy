@@ -113,13 +113,13 @@ test('personagem: troca pelo nome (com artigo)', () => {
   assert.deepEqual(parse('troque para o fantasma'), { kind: 'character.set', id: 'ghost' });
   assert.deepEqual(parse('quero o abacaxi'), { kind: 'character.set', id: 'pineapple' });
   assert.deepEqual(parse('mude para o quadradinho'), { kind: 'character.set', id: 'square' });
-  assert.deepEqual(parse('volte para o Mochi'), { kind: 'ask', question: 'volte para o Mochi' }, 'sem verbo reconhecido vira pergunta');
+  assert.deepEqual(parse('volte para o Nimboo'), { kind: 'ask', question: 'volte para o Nimboo' }, 'sem verbo reconhecido vira pergunta');
 });
 
 test('ajuda, saudação e perguntas livres', () => {
   assert.deepEqual(parse('ajuda'), { kind: 'help' });
   assert.deepEqual(parse('o que você consegue fazer?'), { kind: 'help' });
-  assert.deepEqual(parse('Oi, Mochi!'), { kind: 'greeting' });
+  assert.deepEqual(parse('Oi, Nimboo!'), { kind: 'greeting' });
   assert.deepEqual(parse('quem descobriu o Brasil?'), { kind: 'ask', question: 'quem descobriu o Brasil?' });
   assert.deepEqual(parse('qual é a capital da Austrália'), { kind: 'ask', question: 'qual é a capital da Austrália' });
   assert.deepEqual(parse('   '), { kind: 'ask', question: '' });

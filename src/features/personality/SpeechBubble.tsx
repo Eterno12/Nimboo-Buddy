@@ -3,7 +3,7 @@ import './speech.css';
 
 interface SpeechBubbleProps {
   bubble: Bubble | null;
-  /** `island`: abaixo da pílula (escuro). `floating`: acima da cabeça do Mochi (claro). */
+  /** `island`: abaixo da pílula (escuro). `floating`: acima da cabeça do Nimboo (claro). */
   placement: 'island' | 'floating';
 }
 

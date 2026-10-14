@@ -1,6 +1,6 @@
 import type { Mood } from '../mascot/mascotStates.ts';
 
-/** Coisas que o Mochi pode comentar. Cada uma tem frases curtas (máx. ~38 caracteres). */
+/** Coisas que o Nimboo pode comentar. Cada uma tem frases curtas (máx. ~38 caracteres). */
 export type SpeechEvent =
   | 'hello'
   | 'taskCompleted'
@@ -50,7 +50,7 @@ export const isLateNight = (date: Date) => date.getHours() < 5;
 
 const L = (text: string, extra: Omit<Line, 'text'> = {}): Line => ({ text, ...extra });
 
-/** O texto é do Mochi: fofo, brincalhão, nunca cobra nem julga. */
+/** O texto é do Nimboo: fofo, brincalhão, nunca cobra nem julga. */
 export const LINES: Record<SpeechEvent, readonly Line[]> = {
   hello: [
     L('Bom dia! Vamos nessa?', { part: 'morning' }),
@@ -147,7 +147,7 @@ const EVENT_COOLDOWN_MS: Record<SpeechEvent, number> = {
   lookaround: 90_000,
 };
 
-/** Falas "de fundo": somem enquanto o foco está correndo (o Mochi fica quietinho). */
+/** Falas "de fundo": somem enquanto o foco está correndo (o Nimboo fica quietinho). */
 const SUPPRESSED_DURING_FOCUS: readonly SpeechEvent[] = [
   'hello',
   'sleepy',
@@ -168,7 +168,7 @@ const SUPPRESSED_DURING_FOCUS: readonly SpeechEvent[] = [
 const URGENT: readonly SpeechEvent[] = ['taskCompleted', 'focusFinished', 'breakFinished', 'focusStart'];
 
 /**
- * Reações a algo que a pessoa fez ao Mochi (carinho, susto, arraste, cócegas): também passam por cima do
+ * Reações a algo que a pessoa fez ao Nimboo (carinho, susto, arraste, cócegas): também passam por cima do
  * intervalo geral, mas cada uma tem o seu próprio intervalo e não contam no teto por hora.
  */
 const REACTIVE: readonly SpeechEvent[] = ['happy', 'giggle', 'annoyed', 'surprised', 'grabbed'];
@@ -193,7 +193,7 @@ export interface Personality {
 }
 
 /**
- * Escolhe o que o Mochi diz. Regras: respeita o foco, nunca fala demais (intervalo geral, intervalo
+ * Escolhe o que o Nimboo diz. Regras: respeita o foco, nunca fala demais (intervalo geral, intervalo
  * por tipo e teto por hora) e evita repetir as últimas frases. `random` é injetável para testes.
  */
 export function createPersonality(random: () => number = Math.random): Personality {

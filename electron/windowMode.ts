@@ -38,23 +38,23 @@ const primaryId = (): number => screen.getPrimaryDisplay().id;
 
 /** Tempo máximo que uma troca espera o renderer desenhar o novo layout. */
 const APPLY_ACK_TIMEOUT_MS = 300;
-/** Tempo máximo que a volta à ilha espera a animação de saída do Mochi. */
+/** Tempo máximo que a volta à ilha espera a animação de saída do Nimboo. */
 const LEAVE_TIMEOUT_MS = 500;
 /** Revelar a ilha: cursor na borda superior, perto do centro, por este tempo. */
 const REVEAL_DWELL_MS = 250;
 const REVEAL_HALF_WIDTH = EDGE_REVEAL_HALF_WIDTH;
 /** Duração do esmaecer da linha-dica quando a ilha surge a partir dela. */
 const EDGE_HINT_FADE_MS = 200;
-/** Depois que o Mochi surge no canto, ignora a borda por um instante. */
+/** Depois que o Nimboo surge no canto, ignora a borda por um instante. */
 const AWAY_COOLDOWN_MS = 1500;
 
 export interface WindowModeManager {
   readonly window: BrowserWindow;
   /** Modo preferido (o que fica salvo). */
   getMode(): PresentationMode;
-  /** Layout em uso agora: `island` só com a ilha à vista; o Mochi no canto é `floating`. */
+  /** Layout em uso agora: `island` só com a ilha à vista; o Nimboo no canto é `floating`. */
   getPresentation(): PresentationMode;
-  /** O modo preferido é a ilha, mas ela está escondida e o Mochi está no canto. */
+  /** O modo preferido é a ilha, mas ela está escondida e o Nimboo está no canto. */
   isAway(): boolean;
   isIslandOpen(): boolean;
   /** Reaplica tamanhos (e posição) depois de uma mudança de configuração. */
@@ -65,7 +65,7 @@ export interface WindowModeManager {
   summon(): Promise<void>;
   setMode(mode: PresentationMode): Promise<void>;
   toggleMode(): Promise<void>;
-  /** Traz a ilha de volta (a partir do Mochi no canto). */
+  /** Traz a ilha de volta (a partir do Nimboo no canto). */
   showIsland(): Promise<void>;
   /** Pede ao renderer para alternar a ilha (alternativa ao clique). */
   requestIslandToggle(): void;
@@ -80,7 +80,7 @@ export interface WindowModeManager {
  *
  * Apresentações:
  *  - ilha: janela 352x174 fixa no topo; expandir só muda a forma (`setShape`);
- *  - flutuante: janela 240x240 solta; no modo ilha, o Mochi "fora da ilha"
+ *  - flutuante: janela 240x240 solta; no modo ilha, o Nimboo "fora da ilha"
  *    também usa este layout, num canto inferior, enquanto a ilha está escondida.
  */
 export function createWindowModeManager(settings: SettingsStore): WindowModeManager {
@@ -154,7 +154,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   };
   /**
    * Mostra a linha-dica no topo do monitor da ilha: no instante em que a ilha começa a se esconder
-   * (`hiding`) e enquanto o Mochi estiver no canto (`away`) e visível.
+   * (`hiding`) e enquanto o Nimboo estiver no canto (`away`) e visível.
    */
   const showEdgeHint = (delay = 0) => {
     clearTimeout(edgeHintTimer);
@@ -204,7 +204,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
 
   /**
    * Guarda a posição flutuante só se o usuário a mudou: o evento 'move' também
-   * dispara no posicionamento inicial. Na ilha e no Mochi do canto (temporário)
+   * dispara no posicionamento inicial. Na ilha e no Nimboo do canto (temporário)
    * a posição não é do usuário.
    */
   const persistPosition = () => {
@@ -316,7 +316,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     }
   }
 
-  /** A ilha se escondeu: o Mochi surge de um canto inferior. */
+  /** A ilha se escondeu: o Nimboo surge de um canto inferior. */
   async function goAway(): Promise<void> {
     if (mode !== 'island' || away || busy || window.isDestroyed()) return;
     const corner: 'left' | 'right' = lastCorner === 'left' ? 'right' : 'left'; // alterna os cantos
@@ -331,10 +331,10 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
       entrance: { kind: 'slide', from: corner },
     });
     hiding = false;
-    showEdgeHint(0); // com o Mochi no canto, a linha mostra por onde a ilha volta (já está à vista)
+    showEdgeHint(0); // com o Nimboo no canto, a linha mostra por onde a ilha volta (já está à vista)
   }
 
-  /** Traz a ilha de volta: o Mochi sai de cena e a ilha desce do topo. */
+  /** Traz a ilha de volta: o Nimboo sai de cena e a ilha desce do topo. */
   async function showIsland(): Promise<void> {
     if (!away || busy || window.isDestroyed()) return;
     busy = true; // a linha segue à vista: a ilha vai surgir dela (esmaece ao começar a entrada)
@@ -365,7 +365,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   };
   ipcMain.on(IPC.bubbleVisible, onBubbleVisible);
 
-  /** Reaplica tamanhos e posição (depois de mudar o tamanho da ilha ou do Mochi nas preferências). */
+  /** Reaplica tamanhos e posição (depois de mudar o tamanho da ilha ou do Nimboo nas preferências). */
   function refreshLayout(): void {
     if (window.isDestroyed() || busy) return;
     if (presentationMode() === 'island') {

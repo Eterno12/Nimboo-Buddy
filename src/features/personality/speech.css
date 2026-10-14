@@ -1,5 +1,5 @@
 /*
- * Balão de fala do Mochi. Na ilha ele fica logo abaixo da pílula recolhida (a forma da janela
+ * Balão de fala do Nimboo. Na ilha ele fica logo abaixo da pílula recolhida (a forma da janela
  * cresce para incluí-lo; ver `ISLAND_BUBBLE_RECT` em shared/presentation.ts). No modo flutuante
  * fica acima da cabeça, dentro da janela.
  */
@@ -34,7 +34,7 @@
   animation: speech-pop 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
-/* Rabinho apontando para o Mochi. */
+/* Rabinho apontando para o Nimboo. */
 .speech::after {
   content: '';
   position: absolute;

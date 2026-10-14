@@ -52,7 +52,7 @@ export async function buildExport(
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
-/** Lê o texto do arquivo; devolve `null` se não for um export do Mochi. */
+/** Lê o texto do arquivo; devolve `null` se não for um export do Nimboo. */
 export function parseExportFile(text: string): { tasks: unknown[]; notes: unknown[] } | null {
   if (text.length > IMPORT_MAX_BYTES) return null;
   let data: unknown;

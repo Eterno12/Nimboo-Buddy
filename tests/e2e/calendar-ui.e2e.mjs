@@ -198,7 +198,7 @@ try {
     assert.ok(!items.some((i) => i.t.startsWith('Amanhã')));
   });
 
-  await step('lembrete: na hora do evento o Mochi mostra o balão com o nome dele', async () => {
+  await step('lembrete: na hora do evento o Nimboo mostra o balão com o nome dele', async () => {
     const seen = new Set();
     const t0 = Date.now();
     let found = false;

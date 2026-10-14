@@ -3,7 +3,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { buildGeminiBody, readCandidate, streamGemini, type GeminiFetch } from '../electron/gemini.ts';
+import {
+  buildGeminiBody,
+  listGeminiModels,
+  pickGeminiModel,
+  readCandidate,
+  streamGemini,
+  type GeminiFetch,
+} from '../electron/gemini.ts';
 import { GeminiKeyStore, GEMINI_KEY_RE, type KeyCrypto } from '../electron/geminiKey.ts';
 import {
   buildContext,
@@ -49,13 +56,13 @@ test('gemini: junta pedaços de SSE quebrados no meio e entrega os deltas na ord
 test('gemini: a chave vai só no cabeçalho, nunca na URL, e o corpo leva identidade e histórico', async () => {
   let seen: { url: string; headers: Record<string, string>; body: string } | null = null;
   const spy: GeminiFetch = async (url, init) => {
-    seen = { url, headers: init.headers, body: init.body };
+    seen = { url, headers: init.headers, body: init.body ?? '' };
     return fetchOf(200, sse('ok'))(url, init);
   };
   await streamGemini({
     key: KEY,
     model: 'gemini-3.8-flash',
-    system: 'Você é o Mochi.',
+    system: 'Você é o Nimboo.',
     turns: [
       { role: 'user', text: 'a' },
       { role: 'model', text: 'b' },
@@ -69,7 +76,7 @@ test('gemini: a chave vai só no cabeçalho, nunca na URL, e o corpo leva identi
   assert.ok(!s.url.includes(KEY));
   assert.equal(s.headers['x-goog-api-key'], KEY);
   const body = JSON.parse(s.body);
-  assert.equal(body.systemInstruction.parts[0].text, 'Você é o Mochi.');
+  assert.equal(body.systemInstruction.parts[0].text, 'Você é o Nimboo.');
   assert.deepEqual(body.contents.map((c: { role: string }) => c.role), ['user', 'model', 'user']);
   assert.ok(body.generationConfig.maxOutputTokens <= 1000);
 });
@@ -98,6 +105,55 @@ test('gemini: erros viram mensagens claras (chave, cota, modelo, rede, bloqueio,
   ac.abort();
   assert.equal((await pending).ok, false);
   assert.equal(await code(hang, { timeoutMs: 30 }), 'timeout');
+});
+
+test('gemini: lista modelos da chave, escolhe um que existe e mostra o detalhe do erro', async () => {
+  const listing = JSON.stringify({
+    models: [
+      { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+      { name: 'models/gemini-3.5-flash-lite', supportedGenerationMethods: ['generateContent', 'countTokens'] },
+      { name: 'models/gemini-3.8-flash', supportedGenerationMethods: ['generateContent'] },
+      { name: 'models/gemini-3.9-flash-preview', supportedGenerationMethods: ['generateContent'] },
+      { name: 'models/text-embedding-004', supportedGenerationMethods: ['embedContent'] },
+    ],
+  });
+  const r = await listGeminiModels(KEY, fetchOf(200, listing));
+  assert.ok(r.ok);
+  if (r.ok) {
+    assert.deepEqual(r.models, ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.9-flash-preview']);
+    assert.equal(pickGeminiModel(r.models, 'gemini-3.8-flash'), 'gemini-3.8-flash', 'o atual existe: mantém');
+    assert.equal(pickGeminiModel(r.models, 'gemini-9-nao-existe'), 'gemini-3.5-flash-lite', 'prefere lite estável');
+    assert.equal(pickGeminiModel(['gemini-2.5-flash', 'gemini-3.8-flash'], 'x'), 'gemini-3.8-flash');
+    assert.equal(pickGeminiModel(['embedding-001'], 'x'), null);
+  }
+  const bad = await listGeminiModels(KEY, fetchOf(400, '{"error":{"message":"API key not valid. Please pass a valid API key."}}'));
+  assert.ok(!bad.ok);
+  if (!bad.ok && !bad.result.ok) {
+    assert.equal(bad.result.code, 'invalid_key');
+    assert.match(bad.result.message, /HTTP 400: API key not valid/);
+  }
+  const quota = await streamGemini({
+    key: KEY,
+    model: 'gemini-3.5-flash-lite',
+    system: 's',
+    turns: [{ role: 'user', text: 'oi' }],
+    fetchImpl: fetchOf(429, `{"error":{"message":"Quota exceeded for ${KEY}"}}`),
+  });
+  assert.ok(!quota.ok);
+  if (!quota.ok) {
+    assert.ok(!quota.message.includes(KEY), 'a chave não pode aparecer na mensagem');
+    assert.match(quota.message, /HTTP 429/);
+  }
+});
+
+test('chave nova do Google (com pontos) e colada com aspas ou quebra de linha é aceita', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mochi-key-'));
+  const crypto: KeyCrypto = { isAvailable: () => true, encrypt: (s) => Buffer.from(s), decrypt: (d) => d.toString() };
+  const store = new GeminiKeyStore(dir, crypto);
+  const fresh = 'AQ.Ab8RN6Kj3x9_Zq-LmNoPqRsTuVwXyZ0123456789abcdEFGH';
+  assert.equal(store.set(`"${fresh}"\r\n`).ok, true);
+  assert.equal(store.get(), fresh);
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('gemini: corpo limita turnos e tamanho; readCandidate ignora formatos estranhos', () => {
@@ -152,7 +208,7 @@ test('identidade: cada personagem tem tom; a instrução leva nome, regras, cont
   assert.match(p, /Pagar boleto/);
   assert.match(p, /```acoes/);
   assert.match(p, /quarta-feira/);
-  const noCtx = buildSystemPrompt({ character: 'mochi', name: 'Mochi', userNotes: '', now: new Date(), context: null });
+  const noCtx = buildSystemPrompt({ character: 'mochi', name: 'Nimboo', userNotes: '', now: new Date(), context: null });
   assert.ok(!noCtx.includes('Contexto de hoje'));
 });
 

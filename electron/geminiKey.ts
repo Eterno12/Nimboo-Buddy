@@ -1,8 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-/** Chave de API colada pela pessoa: 20 a 100 caracteres de letras, números, `_` e `-`. */
-export const GEMINI_KEY_RE = /^[A-Za-z0-9_-]{20,100}$/;
+/**
+ * Chave de API colada pela pessoa: 20 a 250 caracteres de letras, números, `_`, `-` e `.` (as chaves novas do
+ * Google têm pontos e são maiores que as antigas "AIza…"). Aspas e espaços nas pontas são removidos.
+ */
+export const GEMINI_KEY_RE = /^[A-Za-z0-9_.-]{20,250}$/;
+
+/** Limpa o que costuma vir junto ao copiar: espaços, quebras de linha e aspas. */
+export function normalizeKey(raw: string): string {
+  return raw.replace(/[\s"'“”‘’`]+/g, '');
+}
 
 export interface KeyCrypto {
   isAvailable(): boolean;
@@ -49,7 +57,7 @@ export class GeminiKeyStore {
   }
 
   set(raw: unknown): KeyResult {
-    const key = typeof raw === 'string' ? raw.trim() : '';
+    const key = typeof raw === 'string' ? normalizeKey(raw) : '';
     if (!GEMINI_KEY_RE.test(key)) {
       return { ok: false, message: 'Essa chave não parece válida. Copie a chave inteira, sem espaços.' };
     }

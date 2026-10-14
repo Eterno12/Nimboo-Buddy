@@ -225,12 +225,12 @@ export function parseAssistantCommand(input: string, now: Date = new Date()): As
   if (f.length === 0) return { kind: 'ask', question: '' };
 
   // "por favor", "oi mochi," no começo não mudam nada
-  const lead = /^(?:(?:por favor|pf|ei|oi|ola|e ai|entao|bom dia|boa tarde|boa noite)[ ,.!:-]+)*(?:(?:mochi|assistente|amigo|amiga)[ ,.!:-]+)?/.exec(f);
+  const lead = /^(?:(?:por favor|pf|ei|oi|ola|e ai|entao|bom dia|boa tarde|boa noite)[ ,.!:-]+)*(?:(?:nimboo|mochi|assistente|amigo|amiga)[ ,.!:-]+)?/.exec(f);
   const skip = lead ? lead[0].length : 0;
   const body = original.slice(skip);
   const fb = f.slice(skip);
 
-  if (/^(?:oi|ola|e ai|opa|bom dia|boa tarde|boa noite|hello|hey)[ !.,?]*(?:mochi)?[ !.,?]*$/.test(f)) return { kind: 'greeting' };
+  if (/^(?:oi|ola|e ai|opa|bom dia|boa tarde|boa noite|hello|hey)[ !.,?]*(?:nimboo|mochi)?[ !.,?]*$/.test(f)) return { kind: 'greeting' };
   if (/^(?:ajuda|help|o que (?:voce|vc) (?:sabe|consegue|pode) fazer|o que (?:voce|vc) faz|como (?:te|lhe) uso|comandos)[ ?!.]*$/.test(fb)) return { kind: 'help' };
 
   // ---- Foco ----
@@ -248,9 +248,9 @@ export function parseAssistantCommand(input: string, now: Date = new Date()): As
   }
 
   // ---- Personagem ----
-  const chr = /\b(?:mude|mudar|muda|troque|trocar|troca|use|usar|quero|coloque|colocar|vire|virar)\b.*\b(?:para|pra|o|a|como|em)\b\s+(?:o\s+|a\s+|um\s+|uma\s+)?(mochi|abacaxi|quadrad\w*|cogumelo|cacto|nuvem|planeta|fantasma)\b/.exec(fb);
+  const chr = /\b(?:mude|mudar|muda|troque|trocar|troca|use|usar|quero|coloque|colocar|vire|virar)\b.*\b(?:para|pra|o|a|como|em)\b\s+(?:o\s+|a\s+|um\s+|uma\s+)?(nimboo|mochi|abacaxi|quadrad\w*|cogumelo|cacto|nuvem|planeta|fantasma)\b/.exec(fb);
   if (chr) {
-    const key = chr[1].startsWith('quadrad') ? 'square' : null;
+    const key = chr[1].startsWith('quadrad') ? 'square' : chr[1] === 'mochi' ? 'mochi' : null;
     const id =
       key ??
       CHARACTERS.find((c) => fold(CHARACTER_LABELS[c]) === chr[1]) ??

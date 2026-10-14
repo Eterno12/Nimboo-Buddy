@@ -128,9 +128,9 @@ export const IPC = {
   panelNavigate: 'panel:navigate',
   /** renderer -> main: a ilha começou a se esconder (a linha-dica aparece neste instante). */
   islandHiding: 'island:hiding',
-  /** renderer -> main: a ilha terminou de subir e se esconder; o Mochi pode surgir no canto. */
+  /** renderer -> main: a ilha terminou de subir e se esconder; o Nimboo pode surgir no canto. */
   islandHidden: 'island:hidden',
-  /** main -> renderer: o Mochi deve sair de cena (a ilha vai voltar). */
+  /** main -> renderer: o Nimboo deve sair de cena (a ilha vai voltar). */
   leave: 'presence:leave',
   /** renderer -> main: a animação de saída terminou. */
   leaveDone: 'presence:leave-done',
@@ -180,7 +180,7 @@ export interface MochiApi {
   tasks: TasksApi;
   notes: NotesApi;
   assistant: AssistantApi;
-  /** Vinculo com o Mochi: conquistas, dias juntos e afeto. */
+  /** Vinculo com o Nimboo: conquistas, dias juntos e afeto. */
   bond: {
     get(): Promise<BondSnapshot>;
     /** Foco e tarefas concluídas nos últimos 7 dias. */
@@ -226,9 +226,9 @@ export interface MochiApi {
   };
   /** Informa que a ilha começou a se esconder. */
   islandHiding(): void;
-  /** Informa que a ilha terminou de se esconder (o Mochi surge no canto). */
+  /** Informa que a ilha terminou de se esconder (o Nimboo surge no canto). */
   islandHidden(): void;
-  /** O main pede que o Mochi saia de cena. Retorna a função de cancelamento. */
+  /** O main pede que o Nimboo saia de cena. Retorna a função de cancelamento. */
   onLeave(listener: () => void): () => void;
   /** Confirma que a saída de cena terminou. */
   leaveDone(): void;

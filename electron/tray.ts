@@ -22,7 +22,7 @@ function createTrayIcon() {
 
 export function createTray(menuProvider: () => Menu, onActivate: () => void): Tray {
   const tray = new Tray(createTrayIcon());
-  tray.setToolTip('Mochi');
+  tray.setToolTip('Nimboo');
   tray.on('click', onActivate);
   tray.on('right-click', () => tray.popUpContextMenu(menuProvider()));
   return tray;

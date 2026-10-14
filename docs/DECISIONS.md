@@ -25,8 +25,8 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Limitações:** `setShape` é uma API de Windows/Linux (não macOS); telas novas maiores exigem rever
   `ISLAND_WINDOW_SIZE` (medidas duplicadas em `presentation.ts` e `island.css`).
 
-## D4 — Ciclo da ilha: ilha → esconde → Mochi no canto → borda superior
-- **Por quê:** pedido do usuário (a ilha se esconde por inatividade e o Mochi "surge" de um canto).
+## D4 — Ciclo da ilha: ilha → esconde → Nimboo no canto → borda superior
+- **Por quê:** pedido do usuário (a ilha se esconde por inatividade e o Nimboo "surge" de um canto).
   `island` é o modo padrão; "Usar modo flutuante" desliga o ciclo.
 - **Detalhes:** só cantos **inferiores** (não cobrir botões de fechar de janelas maximizadas); a posição do
   canto não é gravada; configurações v1 migram para `island`.
@@ -81,10 +81,10 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Restrições:** código sob teste usa imports com `.ts` e evita sintaxe TS não "strip-able"; o e2e
   depende de sessão gráfica e de temporização (não roda em CI sem GUI).
 
-## D14 — Nome "Mochi" mantido por enquanto
+## D14 — Nome "Nimboo" mantido por enquanto
 - **Contexto:** o projeto Coucou (referência de interação para a ilha) tem um personagem também chamado
-  Mochi, com nome e arte de direitos reservados. Nada do código nem da arte foi copiado; o desenho do
-  Mochi é original.
+  Nimboo, com nome e arte de direitos reservados. Nada do código nem da arte foi copiado; o desenho do
+  Nimboo é original.
 - **Decisão do usuário:** manter o nome agora e reavaliar depois. Rever **antes de publicar** (Fase E).
 
 ## D15 — Skills de terceiros guardadas em `.agents/skills`
@@ -114,7 +114,7 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   depende do disco (SSD/HDD e antivírus podem variar o custo); `node:sqlite` continua em evolução (D6).
 
 ## D17 — Linha-dica da borda em janela própria (não dentro da janela do mascote)
-- **Contexto:** com o Mochi no canto, nada indicava onde levar o cursor para trazer a ilha de volta. A
+- **Contexto:** com o Nimboo no canto, nada indicava onde levar o cursor para trazer a ilha de volta. A
   janela do mascote está no canto inferior; a dica precisa ficar no topo do monitor.
 - **Decisão:** uma segunda `BrowserWindow` mínima (280×8 DIP, só HTML/CSS inline, sem preload nem IPC),
   clique atravessa, não focável, topo da pilha. Aparece só em *away* com o mascote visível e some em
@@ -140,11 +140,11 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Sem persistência:** fechar o app encerra a sessão. Persistir exigiria decidir o que fazer com o tempo
   decorrido enquanto o app estava fechado; fica para quando houver histórico/estatísticas.
 - **Fim de sessão:** `celebrate`, ilha volta se estava escondida (sem roubar foco) e notificação nativa
-  silenciosa só se o mascote estiver oculto — o aviso padrão é o próprio Mochi, discreto.
+  silenciosa só se o mascote estiver oculto — o aviso padrão é o próprio Nimboo, discreto.
 - **Não suprimido:** o mascote continua animando durante o foco (D12); ficar "quieto" é uma opção futura.
 
 ## D19 — Preferências v3, sempre validadas e aplicadas pelo main
-- **Decisão:** `settings.json` passa à versão 3 (tamanho da ilha, tamanho do Mochi solto, tempo para
+- **Decisão:** `settings.json` passa à versão 3 (tamanho da ilha, tamanho do Nimboo solto, tempo para
   esconder, atalho global, iniciar com o Windows, sons e volume, balões, não incomodar, cor). Arquivos v1/v2
   migram com os padrões. Toda alteração entra por `settings:update` com **lista de campos editáveis**
   (`mode`, posição e monitor continuam do `windowMode`) e passa por `parseSettings`: tamanhos viram o passo
@@ -155,7 +155,7 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   `setLoginItemSettings`, ligar/desligar o vigia de tela cheia.
 
 ## D20 — Tamanho: fator no main (janela e forma) + `transform: scale` no renderer
-- **Decisão:** dois fatores independentes (ilha 80–140 %, Mochi solto 70–160 %). O main multiplica a janela
+- **Decisão:** dois fatores independentes (ilha 80–140 %, Nimboo solto 70–160 %). O main multiplica a janela
   e **todas** as formas (`scaleRect`/`islandShapes`) e limita o fator ao que cabe no monitor (`fitScale`);
   o snapshot devolve o fator **efetivo**. O renderer ampliou o `.shell` por `transform: scale(var(--ui-scale))`
   com `width/height: calc(100% / scale)`, então o layout interno (px) não muda.
@@ -175,7 +175,7 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 ## D22 — "Não incomodar" por `SHQueryUserNotificationState` num PowerShell oculto
 - **Decisão:** um processo PowerShell (`-NoProfile -NonInteractive -Command`, sem `-EncodedCommand` nem
   política de execução) consulta o estado de notificação do Windows a cada 1,5 s e imprime `STATE n` ao
-  mudar; estados 2, 3, 4 e 7 (tela cheia, D3D, apresentação, app da Store) escondem o Mochi, e ele volta
+  mudar; estados 2, 3, 4 e 7 (tela cheia, D3D, apresentação, app da Store) escondem o Nimboo, e ele volta
   quando acaba. O script encerra sozinho se o app pai sumir.
 - **Alternativas descartadas:** módulo nativo/FFI (compilação e empacotamento), heurística de janela
   (frágil), `-EncodedCommand` (padrão de malware; o antivírus pode bloquear — travou em teste).
@@ -192,12 +192,12 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Decisão:** catálogo de frases por evento (hora do dia, humor) e um escolhedor puro com: intervalo geral
   (9 s), intervalo por tipo, teto de 8 falas "de fundo" por hora, sem repetir as últimas 3 e **silêncio
   durante o foco** (só tarefa concluída e fim de sessão passam). Balão: abaixo da pílula (forma da janela
-  cresce enquanto ele existe) ou sobre a cabeça do Mochi solto; `role=status`, cliques atravessam.
+  cresce enquanto ele existe) ou sobre a cabeça do Nimboo solto; `role=status`, cliques atravessam.
 - **Futuro:** outros personagens trocam o desenho (`Mascot.tsx`) e as frases, não o mecanismo.
 
 ## D25 — Atalho global padrão: Ctrl+Alt+M
 - **Contexto:** Ctrl+Alt+Espaço estava em uso (o registro falhava e o teste revelou o conflito).
-- **Decisão:** padrão Ctrl+Alt+M (de "Mochi"), quatro predefinidos, e a tela de configurações mostra quando
+- **Decisão:** padrão Ctrl+Alt+M (de "Nimboo"), quatro predefinidos, e a tela de configurações mostra quando
   o registro não foi possível. O sucesso é conferido por `globalShortcut.isRegistered`, não pelo retorno.
 
 ## D26 — O app sempre abre como ilha
@@ -227,7 +227,7 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Fora de escopo:** recorrência, prazos só de data, fusos diferentes do computador.
 
 ## D29 — Um som e uma fala para cada animação
-- **Decisão:** cada animação do Mochi tem uma assinatura sonora curta e um conjunto de falas. O **som toca
+- **Decisão:** cada animação do Nimboo tem uma assinatura sonora curta e um conjunto de falas. O **som toca
   sempre** (os espontâneos — curioso, bocejo, espreguiçar, olhar em volta, sono, pulinho — calam durante o
   foco); a **fala** respeita um intervalo por animação (20–90 s), reações a ações da pessoa passam por cima do
   intervalo geral mas não contam no teto por hora, e durante o foco só tarefa concluída, lembretes e fim de
@@ -268,7 +268,7 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   do painel nasce com o fundo certo (sem "piscar" claro).
 
 ## D33 — Física do arraste e estado "enjoado" (REVERTIDA)
-- **Decisão atual:** ao segurar o Mochi vale a **primeira versão**: estado `grabbed` (olhos e boca de espanto,
+- **Decisão atual:** ao segurar o Nimboo vale a **primeira versão**: estado `grabbed` (olhos e boca de espanto,
   balanço de pêndulo por CSS `dangle`, sombra menor, folha pendendo) e, ao soltar, um pulinho. Sem física,
   sem giro e sem estado `dizzy`.
 - **Por que:** a física (pêndulo com mola, giro livre, enjoo por 2 voltas em 3 s, amostragem do cursor no main)
@@ -301,7 +301,7 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   canal normal de preferências e validado no main. Seleção na grade "Personagem" das configurações (com
   prévias vivas) e no submenu "Personagem" da bandeja/menu de contexto. A troca vale na hora, sem reiniciar
   e sem interromper a animação em curso.
-- **Cor:** as paletas do Mochi continuam só para o original; os outros têm cores próprias (a interface avisa).
+- **Cor:** as paletas do Nimboo continuam só para o original; os outros têm cores próprias (a interface avisa).
 - **Alternativas descartadas:** um componente por personagem com seu próprio controlador (duplica estados e
   testes); sprites/PNG (perde cor por variável, escala e tema); trocar o rosto por personagem (quebra a
   família visual e as expressões já prontas).
@@ -397,12 +397,12 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   já é a hora; sem fechamento ligado, o resumo vale o dia todo.
 - **Uma vez por dia:** `routineLastMorning`/`routineLastEvening` (AAAA-MM-DD) nas preferências; dispensar o
   cartão grava a data. Reiniciar no mesmo dia não repete; dia novo volta.
-- **Onde aparece:** cartão "Boa tarde! Hoje: …" no topo das tarefas (ilha e painel) e uma fala curta do Mochi
+- **Onde aparece:** cartão "Boa tarde! Hoje: …" no topo das tarefas (ilha e painel) e uma fala curta do Nimboo
   (≤ 56 caracteres, sem repetir por execução, calada durante o foco). O assistente responde "resumo do dia" /
   "como foi meu dia?" com o mesmo texto.
 - **Preferências:** `routineMorning`, `routineEvening`, `routineEveningHour` (17–21; padrão 18). Tudo ligado por
   padrão, desligável em Configurações > Rotina do dia.
-- **Limite:** o fechamento "chega" enquanto o app está aberto; se o Mochi está escondido, a fala vem quando a ilha
+- **Limite:** o fechamento "chega" enquanto o app está aberto; se o Nimboo está escondido, a fala vem quando a ilha
   aparecer de novo (o cartão já está nas tarefas).
 
 ## D41 — Vínculo e conquistas: afeto persistente, dias juntos e troféus (migração v7)
@@ -420,9 +420,9 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Tela de conquistas:** perfil (personagem, nome, dias juntos, sequência, título de amizade, pontos),
   barra geral, filtros Todas/Conquistadas/Bloqueadas, cartões com medalha por nível e barra de progresso.
   Abre pela bandeja, pelas Configurações ou pelo assistente ("minhas conquistas").
-- **Afeto persistente:** o humor do Mochi volta ao valor guardado e é salvo a cada minuto (e ao fechar).
+- **Afeto persistente:** o humor do Nimboo volta ao valor guardado e é salvo a cada minuto (e ao fechar).
 - **Nome do personagem:** preferência `mascotName` (1–20 caracteres, sem `<>` nem controle; inválido volta a
-  "Mochi"), usada no assistente e nas conquistas.
+  "Nimboo"), usada no assistente e nas conquistas.
 - **Limites:** o horário da madrugada (0–4 h) e do "cedo" (5–6 h) usa o relógio local; dias sem abrir o app
   zeram a sequência; importar dados não traz conquistas (ficam por instalação).
 
@@ -504,3 +504,22 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   documentação do Google no dia da implementação e podem mudar — o erro de "modelo não encontrado" orienta a trocar.
 - **Limites:** não testado com a API real (sem chave neste ambiente; o e2e usa uma resposta local de arquivo);
   a cota e a política do plano gratuito são do Google e mudam.
+
+## D48 — Nome Nimboo, Gemini mais robusto, telas responsivas e configurações em abas
+- **Nome:** o app e o personagem original passam a se chamar **Nimboo** (texto, janelas, bandeja, instalador
+  `productName`, pacote `nimboo-desktop`). O **id interno do personagem continua `mochi`** (preferências já
+  salvas) e o nome padrão guardado "Mochi" é lido como "Nimboo". `appId` mantido (`com.mochi.desktop`) para o
+  instalador atualizar a instalação existente em vez de criar outra. A pasta de dados antiga (`Mochi` ou
+  `mochi-desktop`) é **reaproveitada** se existir e a nova não (nada é movido nem apagado); `--user-data-dir`
+  (testes) tem prioridade. A pasta do repositório continua `Mochi-Desktop`.
+- **Gemini — correções:** chave aceita formatos novos (com `.`, até 250 caracteres; aspas e quebras de linha
+  são removidas); "Testar conexão" funciona sem ativar o Gemini, **lista os modelos que a chave enxerga**,
+  escolhe um que existe (Flash-Lite estável mais novo) e grava; na conversa, "modelo não encontrado" tenta uma
+  vez com um modelo válido. Mensagens de erro trazem o detalhe do Google (`HTTP 400: …`, sem a chave).
+- **Responsividade:** `responsive.css` (carregado por último): controles com `min-height` em vez de altura
+  fixa; textos de conteúdo (título de tarefa, prazo, agenda, resumo, foco) **quebram** em vez de cortar;
+  painel rola quando a janela fica baixa (mínimo 320×440); conquistas, assistente e configurações reorganizam
+  abaixo de 520/420 px; notas empilham abaixo de 700 px. Janelas de forma fixa (ilha, Nimboo solto, aviso)
+  continuam com tamanho próprio por desenho.
+- **Configurações em abas:** Aparência · Comportamento · Assistente · Foco e agenda · Geral. As seções
+  inativas ficam com `hidden` (continuam no DOM), a aba escolhida é lembrada na sessão.

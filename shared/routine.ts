@@ -24,7 +24,7 @@ export interface RoutineSummary {
   kind: RoutineKind;
   /** Saudação curta ("Bom dia!", "Boa noite!"). */
   greeting: string;
-  /** Linha curta para o balão do Mochi (cabe nos 56 caracteres do balão). */
+  /** Linha curta para o balão do Nimboo (cabe nos 56 caracteres do balão). */
   bubble: string;
   /** Linhas do cartão. */
   lines: string[];

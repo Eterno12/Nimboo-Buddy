@@ -1,5 +1,5 @@
 /**
- * Vínculo e conquistas: contadores do que a pessoa faz com o Mochi, regras de desbloqueio e pontuação no
+ * Vínculo e conquistas: contadores do que a pessoa faz com o Nimboo, regras de desbloqueio e pontuação no
  * estilo "troféus" (bronze, prata, ouro, platina). Puro: sem DOM, Electron ou banco.
  */
 
@@ -89,21 +89,21 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   def({ id: 'first_focus', title: 'Foco total', description: 'Conclua uma sessão de foco.', tier: 'bronze', icon: 'focus', stat: 'focus_sessions', target: 1 }),
   def({ id: 'focus_10', title: 'Concentração de ferro', description: 'Conclua 10 sessões de foco.', tier: 'silver', icon: 'focus', stat: 'focus_sessions', target: 10 }),
   def({ id: 'focus_300', title: 'Cinco horas de foco', description: 'Acumule 300 minutos de foco.', tier: 'gold', icon: 'flame', stat: 'focus_minutes', target: 300 }),
-  def({ id: 'pets_25', title: 'Carinhoso', description: 'Faça 25 carinhos no Mochi.', tier: 'bronze', icon: 'heart', stat: 'pets', target: 25 }),
+  def({ id: 'pets_25', title: 'Carinhoso', description: 'Faça 25 carinhos no Nimboo.', tier: 'bronze', icon: 'heart', stat: 'pets', target: 25 }),
   def({ id: 'pets_200', title: 'Melhor amigo', description: 'Faça 200 carinhos.', tier: 'silver', icon: 'heart', stat: 'pets', target: 200 }),
-  def({ id: 'days_7', title: 'Uma semana juntos', description: 'Use o Mochi em 7 dias diferentes.', tier: 'bronze', icon: 'calendar', stat: 'days_total', target: 7 }),
-  def({ id: 'days_30', title: 'Um mês de amizade', description: 'Use o Mochi em 30 dias diferentes.', tier: 'gold', icon: 'calendar', stat: 'days_total', target: 30 }),
-  def({ id: 'streak_3', title: 'Três seguidos', description: 'Use o Mochi 3 dias seguidos.', tier: 'bronze', icon: 'flame', stat: 'longest_streak', target: 3 }),
-  def({ id: 'streak_7', title: 'Semana em chamas', description: 'Use o Mochi 7 dias seguidos.', tier: 'silver', icon: 'flame', stat: 'longest_streak', target: 7 }),
-  def({ id: 'streak_30', title: 'Imparável', description: 'Use o Mochi 30 dias seguidos.', tier: 'gold', icon: 'flame', stat: 'longest_streak', target: 30 }),
+  def({ id: 'days_7', title: 'Uma semana juntos', description: 'Use o Nimboo em 7 dias diferentes.', tier: 'bronze', icon: 'calendar', stat: 'days_total', target: 7 }),
+  def({ id: 'days_30', title: 'Um mês de amizade', description: 'Use o Nimboo em 30 dias diferentes.', tier: 'gold', icon: 'calendar', stat: 'days_total', target: 30 }),
+  def({ id: 'streak_3', title: 'Três seguidos', description: 'Use o Nimboo 3 dias seguidos.', tier: 'bronze', icon: 'flame', stat: 'longest_streak', target: 3 }),
+  def({ id: 'streak_7', title: 'Semana em chamas', description: 'Use o Nimboo 7 dias seguidos.', tier: 'silver', icon: 'flame', stat: 'longest_streak', target: 7 }),
+  def({ id: 'streak_30', title: 'Imparável', description: 'Use o Nimboo 30 dias seguidos.', tier: 'gold', icon: 'flame', stat: 'longest_streak', target: 30 }),
   def({ id: 'subtasks_1', title: 'Quebrando em pedaços', description: 'Crie uma subtarefa.', tier: 'bronze', icon: 'list', stat: 'subtasks', target: 1 }),
   def({ id: 'event_task_1', title: 'Agenda na mão', description: 'Transforme um evento da agenda em tarefa.', tier: 'bronze', icon: 'calendar', stat: 'event_tasks', target: 1 }),
   def({ id: 'assistant_1', title: 'Bate-papo', description: 'Peça algo ao assistente.', tier: 'bronze', icon: 'chat', stat: 'assistant_commands', target: 1 }),
   def({ id: 'assistant_25', title: 'Dupla dinâmica', description: 'Dê 25 pedidos ao assistente.', tier: 'silver', icon: 'chat', stat: 'assistant_commands', target: 25 }),
-  def({ id: 'voice_1', title: 'Fala, Mochi!', description: 'Use o microfone com o assistente.', tier: 'silver', icon: 'mic', stat: 'voice_used', target: 1 }),
+  def({ id: 'voice_1', title: 'Fala, Nimboo!', description: 'Use o microfone com o assistente.', tier: 'silver', icon: 'mic', stat: 'voice_used', target: 1 }),
   def({ id: 'collector', title: 'Colecionador', description: 'Use 3 personagens diferentes.', tier: 'silver', icon: 'people', stat: 'characters_used', target: 3 }),
-  def({ id: 'night_owl', title: 'Coruja', description: 'Use o Mochi de madrugada.', tier: 'bronze', icon: 'moon', stat: 'night_owl', target: 1, hidden: true }),
-  def({ id: 'early_bird', title: 'Madrugador', description: 'Use o Mochi antes das 7h.', tier: 'bronze', icon: 'sun', stat: 'early_bird', target: 1, hidden: true }),
+  def({ id: 'night_owl', title: 'Coruja', description: 'Use o Nimboo de madrugada.', tier: 'bronze', icon: 'moon', stat: 'night_owl', target: 1, hidden: true }),
+  def({ id: 'early_bird', title: 'Madrugador', description: 'Use o Nimboo antes das 7h.', tier: 'bronze', icon: 'sun', stat: 'early_bird', target: 1, hidden: true }),
 ];
 
 /** A platina: todas as outras. */
@@ -261,7 +261,7 @@ export interface BondSnapshot {
   unlockedCount: number;
   total: number;
   title: string;
-  /** Afeto persistido (0..1) para o Mochi lembrar do humor. */
+  /** Afeto persistido (0..1) para o Nimboo lembrar do humor. */
   affection: number;
 }
 

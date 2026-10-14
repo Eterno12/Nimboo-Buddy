@@ -14,7 +14,7 @@ export const NOTIFICATION_STATE = {
   APP: 7, // app da Microsoft Store em tela cheia
 } as const;
 
-/** Estados em que a ilha e o Mochi devem sair da frente. */
+/** Estados em que a ilha e o Nimboo devem sair da frente. */
 export function isFullscreenState(state: number): boolean {
   return (
     state === NOTIFICATION_STATE.BUSY ||
@@ -34,12 +34,12 @@ export function parseStateLine(line: string): number | null {
 export function watcherScript(parentPid: number, pollMs: number): string {
   return [
     "$ErrorActionPreference = 'Stop'",
-    `Add-Type -Namespace Mochi -Name Shell -MemberDefinition '[DllImport("shell32.dll")] public static extern int SHQueryUserNotificationState(out int state);'`,
+    `Add-Type -Namespace Nimboo -Name Shell -MemberDefinition '[DllImport("shell32.dll")] public static extern int SHQueryUserNotificationState(out int state);'`,
     '$last = -1',
     'while ($true) {',
     `  if (-not (Get-Process -Id ${Math.trunc(parentPid)} -ErrorAction SilentlyContinue)) { break }`,
     '  $s = 0',
-    '  [void][Mochi.Shell]::SHQueryUserNotificationState([ref]$s)',
+    '  [void][Nimboo.Shell]::SHQueryUserNotificationState([ref]$s)',
     '  if ($s -ne $last) { $last = $s; [Console]::Out.WriteLine("STATE $s"); [Console]::Out.Flush() }',
     `  Start-Sleep -Milliseconds ${Math.trunc(pollMs)}`,
     '}',

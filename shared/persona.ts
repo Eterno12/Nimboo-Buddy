@@ -34,7 +34,7 @@ const weekday = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'qu
 
 /** Instrução fixa do sistema: quem ele é, como fala, o que nunca faz e o formato das ações. */
 export function buildSystemPrompt(p: PersonaInput): string {
-  const label = CHARACTER_LABELS[p.character] ?? 'Mochi';
+  const label = CHARACTER_LABELS[p.character] ?? 'Nimboo';
   const date = `${weekday[p.now.getDay()]}, ${p.now.toLocaleDateString('pt-BR')}, ${p.now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   const parts = [
     `Você é ${p.name}, um pequeno personagem de desktop (um ${label}) que vive na tela da pessoa e a ajuda no dia a dia. Seu jeito: ${CHARACTER_TONES[p.character]}.`,

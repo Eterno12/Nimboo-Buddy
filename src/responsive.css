@@ -1,0 +1,176 @@
+/*
+ * Responsividade e textos longos. Carregado por último: só ajusta o que as telas já definem.
+ * Regras: texto de conteúdo quebra (nada de cortar o que a pessoa precisa ler), controles crescem com o
+ * texto, e as janelas estreitas empilham em vez de espremer.
+ */
+
+/* ---------- Texto longo quebra em vez de ser cortado ---------- */
+.tasks-undo-text,
+.focus-linked,
+.agenda-title,
+.day-card-highlights li span,
+.focus-complete {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.focus-complete {
+  height: auto;
+  min-height: 34px;
+  padding-block: 6px;
+}
+
+.task-due {
+  max-width: 100%;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+.settings,
+.settings-row > span,
+.assistant-msg p,
+.ach-body p,
+.ach-body h3,
+.week-card span {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Painel: rola quando a janela fica baixa em vez de cortar ---------- */
+.panel {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.panel > .tasks:last-child {
+  min-height: 260px;
+}
+
+/* ---------- Configurações: abas ---------- */
+.settings [hidden] {
+  display: none !important;
+}
+
+.settings-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0 8px;
+  background: var(--s-bg);
+  border-bottom: 1px solid var(--s-border);
+}
+
+.settings-tab {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--s-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--s-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-tab:hover {
+  background: var(--s-hover);
+}
+
+.settings-tab[aria-selected='true'] {
+  border-color: var(--s-accent);
+  background: var(--s-accent);
+  color: var(--s-accent-text);
+}
+
+.settings-group {
+  padding-bottom: 6px;
+}
+
+@media (max-width: 420px) {
+  .settings-row:not(.settings-check) {
+    flex-wrap: wrap;
+  }
+
+  .settings-row select,
+  .settings-row .settings-text {
+    max-width: 100%;
+    flex: 1 1 140px;
+  }
+
+  .settings-characters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Conquistas ---------- */
+@media (max-width: 520px) {
+  .ach-profile {
+    flex-wrap: wrap;
+  }
+
+  .ach-score {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+}
+
+@media (max-width: 420px) {
+  .week-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 340px) {
+  .week-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ach-title-row {
+    flex-wrap: wrap;
+  }
+
+  .ach-tile {
+    padding: 8px;
+  }
+}
+
+/* ---------- Assistente ---------- */
+@media (max-width: 420px) {
+  .assistant-head {
+    flex-wrap: wrap;
+  }
+
+  .assistant-head-actions {
+    width: 100%;
+    max-width: 100%;
+    justify-content: flex-start;
+  }
+
+  .assistant-msg {
+    max-width: 96%;
+  }
+
+  .assistant-form {
+    gap: 6px;
+  }
+}
+
+/* ---------- Notas: lista em cima e nota embaixo quando a janela é estreita ---------- */
+@media (max-width: 700px) {
+  .notes-app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(140px, 36%) minmax(0, 1fr);
+  }
+
+  .notes-side {
+    border-right: 0;
+    border-bottom: 1px solid var(--n-border);
+  }
+}

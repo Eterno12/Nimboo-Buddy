@@ -2,6 +2,9 @@
 
 import { WELLNESS_INTERVALS } from './wellness.ts';
 
+/** Nome do personagem original (e padrão do nome que a pessoa dá). O id interno continua `mochi`. */
+export const DEFAULT_MASCOT_NAME = 'Nimboo';
+
 export type PresentationMode = 'floating' | 'island';
 
 /** Modo com que o app SEMPRE abre, independentemente do que ficou salvo. */
@@ -25,7 +28,7 @@ export const SHORTCUT_PRESETS = [
 /** Atalhos globais para falar com o assistente (sempre diferentes dos do painel). `null` desliga. */
 export const ASSISTANT_SHORTCUT_PRESETS = ['Control+Alt+V', 'Control+Alt+A', 'Control+Shift+V'] as const;
 
-/** Paletas do Mochi. Cada uma é definida em `mascot.css` (`data-palette`). */
+/** Paletas do Nimboo. Cada uma é definida em `mascot.css` (`data-palette`). */
 export const MOCHI_COLORS = ['mint', 'peach', 'sky', 'lilac', 'lemon', 'rose'] as const;
 export type MochiColor = (typeof MOCHI_COLORS)[number];
 
@@ -35,7 +38,7 @@ export type CharacterId = (typeof CHARACTERS)[number];
 export const DEFAULT_CHARACTER: CharacterId = 'mochi';
 /** Nomes exibidos (painel, bandeja e leitores de tela): uma única fonte para o main e o renderer. */
 export const CHARACTER_LABELS: Record<CharacterId, string> = {
-  mochi: 'Mochi',
+  mochi: 'Nimboo',
   pineapple: 'Abacaxi',
   square: 'Quadrado',
   mushroom: 'Cogumelo',
@@ -59,7 +62,7 @@ export interface Settings {
   displayId: number | null;
   /** Tamanho da ilha (modo ilha). */
   islandScale: number;
-  /** Tamanho do Mochi solto (modo flutuante e Mochi no canto). */
+  /** Tamanho do Nimboo solto (modo flutuante e Nimboo no canto). */
   mochiScale: number;
   /** Segundos até a ilha recolhida se esconder (`0` = nunca). */
   hideDelaySec: number;
@@ -71,13 +74,13 @@ export interface Settings {
   soundEnabled: boolean;
   /** Volume dos sons (0 a 1). */
   soundVolume: number;
-  /** Balões de fala do Mochi. */
+  /** Balões de fala do Nimboo. */
   bubbles: boolean;
-  /** Esconder a ilha/Mochi enquanto há um app em tela cheia (jogo, vídeo, apresentação). */
+  /** Esconder a ilha/Nimboo enquanto há um app em tela cheia (jogo, vídeo, apresentação). */
   doNotDisturb: boolean;
   /** Personagem na área de trabalho. */
   character: CharacterId;
-  /** Cor do Mochi (só o personagem original tem paletas; os demais têm as próprias cores). */
+  /** Cor do Nimboo (só o personagem original tem paletas; os demais têm as próprias cores). */
   color: MochiColor;
   /** Tema do painel/configurações. */
   theme: ThemePreference;
@@ -89,7 +92,7 @@ export interface Settings {
   pomodoroCycle: boolean;
   /** Com o ciclo ligado, inicia a próxima etapa sozinho depois de uns segundos. */
   pomodoroAuto: boolean;
-  /** Lembretes de prazo das tarefas (balão, som e notificação se o Mochi estiver oculto). */
+  /** Lembretes de prazo das tarefas (balão, som e notificação se o Nimboo estiver oculto). */
   remindersEnabled: boolean;
   /** Aviso antecipado em minutos (0 = só na hora marcada). */
   reminderLeadMin: number;
@@ -99,7 +102,7 @@ export interface Settings {
   assistantLocalAi: boolean;
   /** Modelo do Ollama (ex.: "qwen2.5:3b"). */
   assistantModel: string;
-  /** Resumo do dia no primeiro uso da manhã (cartão nas tarefas + uma fala do Mochi). */
+  /** Resumo do dia no primeiro uso da manhã (cartão nas tarefas + uma fala do Nimboo). */
   routineMorning: boolean;
   /** Fechamento do dia (o que foi concluído, foco e pendências) a partir da hora escolhida. */
   routineEvening: boolean;
@@ -152,7 +155,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   mochiScale: 1,
   hideDelaySec: 3,
   launchAtLogin: false,
-  // Ctrl+Alt+M (de "Mochi"): Ctrl+Alt+Espaço costuma estar em uso por outros apps (ex.: Claude).
+  // Ctrl+Alt+M (de "Nimboo"): Ctrl+Alt+Espaço costuma estar em uso por outros apps (ex.: Claude).
   shortcut: 'Control+Alt+M',
   soundEnabled: true,
   soundVolume: 0.4,
@@ -176,7 +179,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   routineEveningHour: 18,
   routineLastMorning: null,
   routineLastEvening: null,
-  mascotName: 'Mochi',
+  mascotName: DEFAULT_MASCOT_NAME,
   wellnessWater: false,
   wellnessWaterMin: 60,
   wellnessPosture: false,
@@ -293,7 +296,10 @@ export function parseSettings(raw: unknown): Settings {
     if (typeof r.mascotName === 'string') {
       const name = r.mascotName.replace(/\s+/g, ' ').trim();
       // eslint-disable-next-line no-control-regex
-      if (name.length > 0 && [...name].length <= 20 && !/[\u0000-\u001f\u007f<>]/.test(name)) out.mascotName = name;
+      if (name.length > 0 && [...name].length <= 20 && !/[\u0000-\u001f\u007f<>]/.test(name)) {
+        // Instalações antigas guardaram o nome padrão anterior ("Mochi"): vira o nome atual do app.
+        out.mascotName = name === 'Mochi' ? DEFAULT_MASCOT_NAME : name;
+      }
     }
   }
   return out;

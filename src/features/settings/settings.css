@@ -39,7 +39,7 @@
   align-items: center;
   justify-content: center;
   width: 32px;
-  height: 32px;
+  min-height: 32px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -73,7 +73,7 @@
 
 .settings-chip {
   min-width: 46px;
-  height: 32px;
+  min-height: 32px;
   padding: 0 4px;
   border: 1px solid var(--s-border);
   border-radius: 10px;
@@ -102,7 +102,7 @@
 
 .settings-swatch {
   width: 34px;
-  height: 34px;
+  min-height: 34px;
   padding: 0;
   border: 2px solid var(--s-border);
   border-radius: 50%;
@@ -342,7 +342,7 @@
 
 .settings-text {
   width: 170px;
-  height: 30px;
+  min-height: 30px;
   padding: 0 8px;
   border: 1px solid var(--s-border);
   border-radius: 8px;

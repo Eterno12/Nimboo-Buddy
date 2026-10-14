@@ -64,7 +64,7 @@ const WELCOME =
 
 let nextId = 1;
 
-/** Janela de conversa com o Mochi: comandos locais, voz e perguntas (Wikipédia / IA local). */
+/** Janela de conversa com o Nimboo: comandos locais, voz e perguntas (Wikipédia / IA local). */
 export function AssistantView() {
   const { settings, update } = useSettings();
   const theme = useTheme(settings.theme);
@@ -227,6 +227,8 @@ export function AssistantView() {
       const r = await window.mochi.assistant.gemini.chat(requestId, { turns, context });
       activeChat.current = null;
       if (r.ok) {
+        // O main trocou de modelo porque o configurado não existe para essa chave: guarda a escolha.
+        if (r.model && r.model !== s.geminiModel) void update({ geminiModel: r.model });
         const parsed = parseActions(r.text);
         const text = parsed.text || 'Pronto!';
         setMessages((list) =>
@@ -236,7 +238,7 @@ export function AssistantView() {
                   ...m,
                   text,
                   streaming: false,
-                  source: { label: `Gemini (${s.geminiModel})` },
+                  source: { label: `Gemini (${r.model ?? s.geminiModel})` },
                   actions: parsed.actions.map((action) => ({ action, state: 'pending' as const })),
                 }
               : m,
@@ -264,7 +266,7 @@ export function AssistantView() {
       );
       react('idle');
     },
-    [react],
+    [react, update],
   );
 
   const stopChat = () => {
