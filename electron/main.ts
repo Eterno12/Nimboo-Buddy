@@ -467,14 +467,6 @@ if (!app.requestSingleInstanceLock()) {
       pendingPanelView = 'home';
       return view;
     });
-    ipcMain.on(IPC.windowControl, (event, action: unknown) => {
-      if (!trustedSender(event)) return;
-      const w = BrowserWindow.fromWebContents(event.sender);
-      if (!w || w.isDestroyed() || w === mascot) return;
-      if (action === 'minimize') w.minimize();
-      else if (action === 'maximize') (w.isMaximized() ? w.unmaximize() : w.maximize());
-      else if (action === 'close') w.close();
-    });
     ipcMain.on(IPC.panelOpenSettings, (event) => {
       if (trustedSender(event)) showPanel('settings');
     });

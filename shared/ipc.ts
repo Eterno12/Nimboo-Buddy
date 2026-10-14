@@ -54,7 +54,6 @@ export const IPC = {
   assistantHistoryClear: 'assistant:history-clear',
   assistantStartListen: 'assistant:start-listen',
   assistantTakePendingListen: 'assistant:take-pending-listen',
-  windowControl: 'window:control',
   mediaGet: 'media:get',
   mediaCommand: 'media:command',
   /** main -> renderer: o que está tocando mudou (MediaState). */
@@ -231,8 +230,6 @@ export interface MochiApi {
   onSummon(listener: () => void): () => void;
   /** Abre o painel já nas configurações (engrenagem da ilha). */
   openSettings(): void;
-  /** Botões da barra de título desenhada pela interface (janelas de vidro). */
-  windowControl(action: 'minimize' | 'maximize' | 'close'): void;
   /** Painel: tela inicial pedida por quem o abriu e mudanças de tela posteriores. */
   panel: {
     initialView(): Promise<PanelView>;
