@@ -90,6 +90,10 @@ No painel (modo flutuante) ou na ilha expandida (botão **Tarefas**).
 
 Com o Google Agenda conectado, cada evento que ainda não terminou tem o botão **→ Virar tarefa**: ele cria a tarefa com o mesmo título (e o horário do evento como prazo, com lembrete; eventos de dia inteiro ficam sem prazo). Depois aparece **✓ Tarefa** no lugar.
 
+### Tarefas completas
+
+Além de criar, concluir e excluir (com *Desfazer*): **duplo clique no título para editar**; **bolinha de prioridade** (clique avança: nenhuma, baixa, média, alta); **subtarefas** (botão **+**, quantas quiser, com contador `1/3`); **repetição** (todo dia, dias úteis, toda semana, todo mês — ao concluir, a próxima já aparece); **adiar** (+10 min, +1 h, amanhã 9h) pelo prazo; e **ordem manual** arrastando a tarefa (ou **Alt+↑/↓** no teclado).
+
 ### Notas
 
 Atalho **Notas** da ilha (ou *Notas* na bandeja): lista com busca à esquerda e o editor à direita, com **negrito, itálico, sublinhado, tachado, código, títulos, listas, listas de tarefas, citação, bloco de código, alinhamento, cor do texto, marca-texto e links**. Cada nota tem a cor do papel (amarelo, rosa, azul, verde, lilás, branco) e pode ser **fixada na área de trabalho** como uma folha flutuante (fora da barra de tarefas e sem ficar por cima dos outros aplicativos). A nota flutuante lembra o lugar e reabre com o app.

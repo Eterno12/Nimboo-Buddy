@@ -94,6 +94,20 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Tarefas completas: prioridade, repetição, subtarefas (parent_id, um nível) e ordem manual.
+    version: 5,
+    name: 'task_priority_recurrence_subtasks_position',
+    up(db) {
+      db.exec(`
+        ALTER TABLE tasks ADD COLUMN priority INTEGER NOT NULL DEFAULT 0 CHECK (priority BETWEEN 0 AND 3);
+        ALTER TABLE tasks ADD COLUMN recurrence TEXT CHECK (recurrence IN ('daily', 'weekdays', 'weekly', 'monthly'));
+        ALTER TABLE tasks ADD COLUMN parent_id TEXT;
+        ALTER TABLE tasks ADD COLUMN position REAL;
+        CREATE INDEX idx_tasks_parent ON tasks (parent_id) WHERE parent_id IS NOT NULL;
+      `);
+    },
+  },
 ];
 
 /** O banco foi criado por uma versão mais nova do app; não é seguro abri-lo. */

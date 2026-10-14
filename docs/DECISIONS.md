@@ -362,3 +362,18 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   Reconhecimento **offline** de verdade (Whisper local) ficou como evolução: exigiria baixar um modelo
   de 75–500 MB e uma dependência nativa/WASM.
 - **Teste:** `MOCHI_E2E_AI_FIXTURE` (só app não empacotado) troca a rede por um arquivo.
+
+## D38 — Tarefas completas: editar, prioridade, repetição, subtarefas e ordem manual (migração v5)
+- **Decisão:** a tarefa ganha `priority` (0–3), `recurrence` (`daily`/`weekdays`/`weekly`/`monthly`), `parentId`
+  (subtarefa, **um nível, várias por tarefa**, até 50) e `position` (ordem manual). Migração v5 com backup.
+- **Repetição:** a próxima ocorrência é criada **ao concluir** (não uma série): mesmo título/prioridade/repetição,
+  prazo seguinte na mesma hora local e **sempre depois de agora** (app fechado por dias não gera fila de
+  atrasadas), subtarefas copiadas e zeradas, sem `sourceRef`. Só tarefas com prazo repetem; subtarefas não repetem.
+- **Subtarefas:** concluir a principal conclui as subtarefas; excluir a principal apaga as subtarefas (e a
+  exclusão com "Desfazer" as esconde junto). Sob a principal aparecem ativas e concluídas, com contador `n/m`;
+  uma concluída sob principal ativa não entra em "Concluídas".
+- **Ordem:** `reorder(ids)` grava `position` das principais ativas; sem ordem manual vale a ordem anterior
+  (prazo, criação). Tarefas novas sem posição vão para o fim. Arrastar (HTML5) e **Alt+↑/↓** (teclado).
+- **Adiar:** sem coluna nova — "+10 min / +1 h / Amanhã 9h" são atalhos de `setDue` no editor de prazo.
+- **Interface:** duplo clique renomeia (Enter grava, Esc cancela); bolinha de prioridade (clique avança); ↻ marca
+  as que repetem. Cor da prioridade média é o token `--t-warn` (contraste verificado em `contrast.test.ts`).

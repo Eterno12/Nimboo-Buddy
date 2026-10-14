@@ -36,7 +36,7 @@ const { panel, island } = readTokens();
 
 for (const [name, t] of [['painel', panel], ['ilha', island]] as const) {
   test(`${name}: todos os tokens existem e são cores sólidas`, () => {
-    for (const k of ['--t-bg', '--t-text', '--t-muted', '--t-field-bg', '--t-field-border', '--t-accent', '--t-accent-text', '--t-danger', '--t-focus', '--t-scroll-thumb']) {
+    for (const k of ['--t-bg', '--t-text', '--t-muted', '--t-field-bg', '--t-field-border', '--t-accent', '--t-accent-text', '--t-danger', '--t-warn', '--t-focus', '--t-scroll-thumb']) {
       assert.match(t[k] ?? '', /^#[0-9a-f]{6}$/, k);
     }
   });
@@ -62,6 +62,8 @@ for (const [name, t] of [['painel', panel], ['ilha', island]] as const) {
       ['borda do campo/preenchimento', t['--t-field-border'], t['--t-field-bg']],
       ['anel de foco/fundo', t['--t-focus'], t['--t-bg']],
       ['barra de rolagem/fundo', t['--t-scroll-thumb'], t['--t-bg']],
+      ['prioridade média (bolinha)/fundo', t['--t-warn'], t['--t-bg']],
+      ['prioridade alta (bolinha)/fundo', t['--t-danger'], t['--t-bg']],
       ['botão/fundo', t['--t-accent'], t['--t-bg']],
       ['ícones (texto secundário)/fundo', t['--t-muted'], t['--t-bg']],
     ];

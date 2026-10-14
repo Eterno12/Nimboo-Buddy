@@ -15,6 +15,7 @@
   --t-accent: #25754a; /* verde-menta escurecido: texto branco >= 4,5:1 */
   --t-accent-text: #ffffff;
   --t-danger: #b3364f;
+  --t-warn: #9a6a14; /* prioridade média */
   --t-focus: #25754a;
   --t-scroll-thumb: #857b8e;
 
@@ -38,6 +39,7 @@
   --t-accent: #8fd9a8;
   --t-accent-text: #1f1a26;
   --t-danger: #ff9fb2;
+  --t-warn: #f0c36a;
   --t-focus: #8fd9a8;
   --t-scroll-thumb: #948b9f;
 }
@@ -551,10 +553,207 @@
   --t-accent: #8fd9a8;
   --t-accent-text: #1f1a26;
   --t-danger: #ff9fb2;
+  --t-warn: #f0c36a;
   --t-focus: #8fd9a8;
   --t-scroll-thumb: #948b9f;
 }
 
 .panel[data-theme='dark'] .tasks[data-variant='panel'] .tasks-due-input {
   color-scheme: dark;
+}
+
+
+/* ---------- Tarefas completas: editar, prioridade, repetição, subtarefas, arrastar ---------- */
+
+.task-rename {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--t-accent);
+  border-radius: 8px;
+  background: var(--t-field-bg);
+  color: var(--t-text);
+  font: inherit;
+}
+
+.task-repeat {
+  color: var(--t-accent);
+  font-weight: 700;
+}
+
+.task-subcount {
+  flex: none;
+  padding: 1px 7px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 999px;
+  color: var(--t-muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Prioridade: bolinha (vazia = sem prioridade; cheia e colorida conforme o nível). */
+.task-priority {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.task-priority span {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--t-muted);
+  border-radius: 50%;
+  opacity: 0.55;
+}
+
+.task:hover .task-priority span,
+.task-priority:focus-visible span {
+  opacity: 1;
+}
+
+.task-priority[data-priority='1'] span {
+  border-color: var(--t-muted);
+  background: var(--t-muted);
+  opacity: 1;
+}
+.task-priority[data-priority='2'] span {
+  border-color: var(--t-warn);
+  background: var(--t-warn);
+  opacity: 1;
+}
+.task-priority[data-priority='3'] span {
+  border-color: var(--t-danger);
+  background: var(--t-danger);
+  opacity: 1;
+}
+
+.task-priority:focus-visible,
+.task-addsub:focus-visible,
+.task-rename:focus-visible,
+.task-sub-input:focus-visible {
+  outline: 2px solid var(--t-focus);
+  outline-offset: 2px;
+}
+
+.task-addsub {
+  width: 28px;
+  opacity: 0.55;
+}
+.task:hover .task-addsub,
+.task-addsub:focus-visible,
+.task-addsub[aria-expanded='true'] {
+  opacity: 1;
+}
+
+/* Arrastar para reordenar */
+.task[draggable='true'] {
+  cursor: grab;
+}
+.task[data-dragging='true'] {
+  opacity: 0.45;
+}
+.task[data-over='true'] {
+  box-shadow: 0 -2px 0 0 var(--t-accent);
+}
+
+/* Subtarefas: recuadas, com a mesma linguagem das tarefas */
+.task-subs {
+  flex-basis: 100%;
+  padding: 0 0 4px 34px;
+}
+
+.task-subs ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  border-radius: 8px;
+}
+
+.task-sub:hover {
+  background: var(--t-hover);
+}
+
+.task-sub-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.task-sub[data-done='true'] .task-sub-title {
+  color: var(--t-muted);
+  text-decoration: line-through;
+}
+
+.task-sub-check {
+  width: 28px;
+  height: 28px;
+}
+
+.task-sub .task-circle {
+  width: 15px;
+  height: 15px;
+}
+
+.task-sub .task-circle[data-checked='true'] {
+  border-color: var(--t-accent);
+  background: var(--t-accent);
+}
+
+.task-subform {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.task-sub-input {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 8px;
+  background: var(--t-field-bg);
+  color: var(--t-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.task-snooze,
+.task-repeat-field {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--t-muted);
+  font-size: 12.5px;
+}
+
+.task-repeat-field select {
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--t-field-border);
+  border-radius: 8px;
+  background: var(--t-field-bg);
+  color: var(--t-text);
+  font: inherit;
+  font-size: 12.5px;
 }

@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import {
   COMPLETED_RETENTION_DAYS,
+  PRIORITY_LABEL,
+  RECURRENCE_LABEL,
+  TASK_RECURRENCES,
   TASK_TITLE_MAX,
   UNDO_WINDOW_MS,
   titleLength,
   validateTitle,
   type PendingRemoval,
   type Task,
+  type TaskPriority,
+  type TaskRecurrence,
   type TaskResult,
 } from '../../../shared/tasks';
 import { dueStatus, validateDue } from '../../../shared/tasks';
@@ -43,6 +48,13 @@ function Icon({ children }: { children: React.ReactNode }) {
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' });
 const formatDay = (iso: string | null) => (iso ? dateFormat.format(new Date(iso)) : '');
 
+const NEXT_PRIORITY: Record<TaskPriority, TaskPriority> = { 0: 1, 1: 2, 2: 3, 3: 0 };
+
+/** Amanhã às 9h (horário local), em ISO. */
+function tomorrowMorning(now: Date = new Date()): string {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0).toISOString();
+}
+
 /** Lista de tarefas: usada no painel (modo flutuante) e na ilha expandida. */
 export function TasksView({ variant, onBack }: TasksViewProps) {
   const tasks = useTasks();
@@ -58,6 +70,11 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
   /** Tarefa cujo prazo está sendo editado e o valor do campo. */
   const [editingDue, setEditingDue] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  /** Arrastar para reordenar: tarefa em movimento e a que está sob o ponteiro. */
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  /** Espelho síncrono de dragId (o soltar pode chegar antes de o React re-renderizar). */
+  const dragRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const undoRef = useRef<HTMLButtonElement | null>(null);
   const focusUndoNext = useRef(false);
@@ -70,7 +87,7 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
   /** Anuncia para leitores de tela (a alternância evita que texto repetido seja ignorado). */
   const announce = useCallback((text: string) => {
     announceTick.current += 1;
-    setAnnouncement(announceTick.current % 2 === 0 ? `${text} ` : text);
+    setAnnouncement(announceTick.current % 2 === 0 ? `${text} ` : text);
   }, []);
 
   // Foco automático ao abrir a tela; no painel, também sempre que a janela volta ao foco.
@@ -92,6 +109,31 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
     ? `O título tem ${overBy} ${overBy === 1 ? 'caractere' : 'caracteres'} a mais. O limite é ${TASK_TITLE_MAX}.`
     : null;
   const shownFormError = limitMessage ?? formError;
+
+  /** Principais ativas (na ordem) e, por tarefa-mãe, as subtarefas (ativas e concluídas). */
+  const { tops, subsByParent, hiddenCompleted } = useMemo(() => {
+    const activeIds = new Set(tasks.active.map((t) => t.id));
+    const everything = [...tasks.active, ...tasks.completed];
+    const byParent = new Map<string, Task[]>();
+    for (const t of everything) {
+      if (t.parentId && activeIds.has(t.parentId)) {
+        const list = byParent.get(t.parentId) ?? [];
+        list.push(t);
+        byParent.set(t.parentId, list);
+      }
+    }
+    for (const list of byParent.values()) {
+      list.sort((a, b) => Number(a.completed) - Number(b.completed) || a.createdAt.localeCompare(b.createdAt));
+    }
+    return {
+      // subtarefa cuja principal sumiu (retenção) volta a aparecer como tarefa comum
+      tops: tasks.active.filter((t) => !t.parentId || !activeIds.has(t.parentId)),
+      subsByParent: byParent,
+      // concluídas que já aparecem sob uma principal ativa não entram na lista de "Concluídas"
+      hiddenCompleted: new Set(tasks.completed.filter((t) => t.parentId && activeIds.has(t.parentId)).map((t) => t.id)),
+    };
+  }, [tasks.active, tasks.completed]);
+  const completedShown = tasks.completed.filter((t) => !hiddenCompleted.has(t.id));
 
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -182,7 +224,25 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
     await tasks.reload();
   };
 
-  // Foco depois de excluir (vai ao "Desfazer") e depois de desfazer (volta à tarefa).
+  /** Move a tarefa `id` para a posição de `targetId` (ou uma casa acima/abaixo) e grava a ordem. */
+  const reorder = async (id: string, targetIndex: number) => {
+    const ids = tops.map((t) => t.id);
+    const from = ids.indexOf(id);
+    if (from < 0) return;
+    const to = Math.max(0, Math.min(ids.length - 1, targetIndex));
+    if (to === from) return;
+    ids.splice(to, 0, ...ids.splice(from, 1));
+    const result = await tasks.reorder(ids);
+    if (result.ok) {
+      announce(`Tarefa movida para a posição ${to + 1} de ${ids.length}.`);
+      focusTaskId.current = id;
+    } else {
+      setOpError(result.error.message);
+    }
+    await tasks.reload();
+  };
+
+  // Foco depois de excluir (vai ao "Desfazer") e depois de desfazer/mover (volta à tarefa).
   useEffect(() => {
     if (focusUndoNext.current && tasks.pendingRemovals.length > 0) {
       focusUndoNext.current = false;
@@ -216,7 +276,7 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
           </button>
         )}
         <h2>Tarefas</h2>
-        {tasks.active.length > 0 && <span className="tasks-count">{tasks.active.length}</span>}
+        {tops.length > 0 && <span className="tasks-count">{tops.length}</span>}
       </header>
 
       <StorageNotice />
@@ -310,17 +370,79 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
         {isEmpty && <p className="tasks-empty">Nenhuma tarefa por enquanto. Que tal começar?</p>}
 
         <ul className="tasks-list" aria-label="Tarefas ativas">
-          {tasks.active.map((task) => (
+          {tops.map((task, index) => (
             <TaskRow
               key={task.id}
               task={task}
               busy={busy.has(task.id)}
+              subs={subsByParent.get(task.id) ?? []}
+              busyIds={busy}
+              position={{ index, total: tops.length }}
+              drag={{
+                dragging: dragId === task.id,
+                over: overId === task.id && dragId !== null && dragId !== task.id,
+                onStart: () => {
+                  dragRef.current = task.id;
+                  setDragId(task.id);
+                },
+                onOver: () => setOverId(task.id),
+                onDrop: () => {
+                  const from = dragRef.current;
+                  dragRef.current = null;
+                  setDragId(null);
+                  setOverId(null);
+                  if (from && from !== task.id) void reorder(from, index);
+                },
+                onEnd: () => {
+                  dragRef.current = null;
+                  setDragId(null);
+                  setOverId(null);
+                },
+                onMove: (delta) => void reorder(task.id, index + delta),
+              }}
               primary={{
                 label: 'Concluir tarefa',
                 kind: 'check',
                 onClick: () => void run(task, 'concluir', () => tasks.complete(task.id), `Tarefa concluída: ${task.title}`),
               }}
               onRemove={(row) => void remove(task, row)}
+              onRename={(title) => run(task, 'renomear', () => tasks.update(task.id, { title }), `Tarefa renomeada: ${title}`)}
+              onPriority={() =>
+                void run(
+                  task,
+                  'alterar a prioridade de',
+                  () => tasks.update(task.id, { priority: NEXT_PRIORITY[task.priority] }),
+                  `Prioridade: ${PRIORITY_LABEL[NEXT_PRIORITY[task.priority]]}`,
+                )
+              }
+              onRecurrence={(value) =>
+                void run(
+                  task,
+                  'alterar a repetição de',
+                  () => tasks.update(task.id, { recurrence: value }),
+                  value ? `Repete: ${RECURRENCE_LABEL[value]}` : 'Sem repetição',
+                )
+              }
+              onSnooze={(iso, label) =>
+                void run(task, 'adiar', () => tasks.setDue(task.id, iso), `Tarefa adiada: ${label}`)
+              }
+              onAddSub={(title) =>
+                run(
+                  task,
+                  'adicionar subtarefa em',
+                  () => tasks.create(title, null, null, { parentId: task.id }),
+                  `Subtarefa adicionada: ${title}`,
+                )
+              }
+              onToggleSub={(sub) =>
+                void run(
+                  sub,
+                  sub.completed ? 'reabrir' : 'concluir',
+                  () => (sub.completed ? tasks.reopen(sub.id) : tasks.complete(sub.id)),
+                  sub.completed ? `Subtarefa reaberta: ${sub.title}` : `Subtarefa concluída: ${sub.title}`,
+                )
+              }
+              onRemoveSub={(sub) => void remove(sub, null)}
               due={{
                 editing: editingDue === task.id,
                 value: editingDue === task.id ? editValue : '',
@@ -380,9 +502,9 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
         <button
           type="button"
           className="tasks-disclosure"
-          aria-expanded={showCompleted && tasks.completed.length > 0}
+          aria-expanded={showCompleted && completedShown.length > 0}
           aria-controls={completedId}
-          disabled={tasks.completed.length === 0}
+          disabled={completedShown.length === 0}
           onClick={() => setShowCompleted((v) => !v)}
         >
           <svg
@@ -390,21 +512,23 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
             width="14"
             height="14"
             aria-hidden="true"
-            data-open={showCompleted && tasks.completed.length > 0}
+            data-open={showCompleted && completedShown.length > 0}
           >
             <path d="M9 6l6 6-6 6" {...icon} />
           </svg>
-          Concluídas ({tasks.completed.length})
+          Concluídas ({completedShown.length})
         </button>
-        {showCompleted && tasks.completed.length > 0 && (
+        {showCompleted && completedShown.length > 0 && (
           <div id={completedId} className="tasks-completed-body">
             <ul className="tasks-list" aria-label="Tarefas concluídas">
-              {tasks.completed.map((task) => (
+              {completedShown.map((task) => (
                 <TaskRow
                   key={task.id}
                   task={task}
                   done
                   busy={busy.has(task.id)}
+                  subs={[]}
+                  busyIds={busy}
                   primary={{
                     label: 'Reabrir tarefa',
                     kind: 'undo',
@@ -426,8 +550,29 @@ interface TaskRowProps {
   task: Task;
   done?: boolean;
   busy: boolean;
+  /** Subtarefas (ativas e concluídas) desta tarefa. */
+  subs: Task[];
+  busyIds: ReadonlySet<string>;
+  /** Posição entre as principais ativas (habilita mover com Alt+setas). */
+  position?: { index: number; total: number };
+  drag?: {
+    dragging: boolean;
+    over: boolean;
+    onStart: () => void;
+    onOver: () => void;
+    onDrop: () => void;
+    onEnd: () => void;
+    onMove: (delta: number) => void;
+  };
   primary: { label: string; kind: 'check' | 'undo'; onClick: () => void };
   onRemove: (row: HTMLElement | null) => void;
+  onRename?: (title: string) => Promise<boolean | undefined>;
+  onPriority?: () => void;
+  onRecurrence?: (value: TaskRecurrence | null) => void;
+  onSnooze?: (iso: string, label: string) => void;
+  onAddSub?: (title: string) => Promise<boolean | undefined>;
+  onToggleSub?: (sub: Task) => void;
+  onRemoveSub?: (sub: Task) => void;
   /** Só tarefas ativas têm prazo editável. */
   due?: {
     editing: boolean;
@@ -439,20 +584,97 @@ interface TaskRowProps {
   };
 }
 
-function TaskRow({ task, done = false, busy, primary, onRemove, due }: TaskRowProps) {
+function TaskRow({
+  task,
+  done = false,
+  busy,
+  subs,
+  busyIds,
+  position,
+  drag,
+  primary,
+  onRemove,
+  onRename,
+  onPriority,
+  onRecurrence,
+  onSnooze,
+  onAddSub,
+  onToggleSub,
+  onRemoveSub,
+  due,
+}: TaskRowProps) {
   const ref = useRef<HTMLLIElement | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState('');
+  const [addingSub, setAddingSub] = useState(false);
+  const [subText, setSubText] = useState('');
   const status = dueStatus(task, new Date());
   const dueText = task.dueAt && !done ? formatDue(task.dueAt) : '';
+  const doneSubs = subs.filter((s) => s.completed).length;
+
+  const startRename = () => {
+    if (!onRename || done) return;
+    setName(task.title);
+    setRenaming(true);
+  };
+  const commitRename = async () => {
+    const next = name.trim();
+    setRenaming(false);
+    if (next !== '' && next !== task.title && onRename) await onRename(next);
+  };
+  const commitSub = async () => {
+    const text = subText.trim();
+    if (text === '' || !onAddSub) return;
+    const ok = await onAddSub(text);
+    if (ok) setSubText('');
+  };
+
   return (
-    <li className="task" ref={ref} data-task-id={task.id} data-done={done} data-busy={busy} data-due={status}>
+    <li
+      className="task"
+      ref={ref}
+      data-task-id={task.id}
+      data-done={done}
+      data-busy={busy}
+      data-due={status}
+      data-priority={task.priority}
+      data-dragging={drag?.dragging ?? false}
+      data-over={drag?.over ?? false}
+      draggable={!!drag && !renaming}
+      onDragStart={(e) => {
+        if (!drag) return;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', task.id);
+        drag.onStart();
+      }}
+      onDragOver={(e) => {
+        if (!drag) return;
+        e.preventDefault();
+        drag.onOver();
+      }}
+      onDrop={(e) => {
+        if (!drag) return;
+        e.preventDefault();
+        drag.onDrop();
+      }}
+      onDragEnd={() => drag?.onEnd()}
+    >
       <button
         type="button"
         className="task-primary"
         data-kind={primary.kind}
         onClick={primary.onClick}
+        onKeyDown={(e) => {
+          // Alt+↑/↓: mover a tarefa (alternativa de teclado ao arrastar)
+          if (drag && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault();
+            drag.onMove(e.key === 'ArrowUp' ? -1 : 1);
+          }
+        }}
         disabled={busy}
         aria-label={`${primary.label}: ${task.title}`}
-        title={primary.label}
+        aria-keyshortcuts={drag ? 'Alt+ArrowUp Alt+ArrowDown' : undefined}
+        title={drag ? `${primary.label} (Alt+↑/↓ move a tarefa)` : primary.label}
       >
         {primary.kind === 'check' ? (
           <span className="task-circle" aria-hidden="true" />
@@ -462,8 +684,58 @@ function TaskRow({ task, done = false, busy, primary, onRemove, due }: TaskRowPr
           </Icon>
         )}
       </button>
-      <span className="task-title">{task.title}</span>
+      {renaming ? (
+        <input
+          className="task-rename"
+          value={name}
+          maxLength={TASK_TITLE_MAX + 20}
+          aria-label={`Novo título de ${task.title}`}
+          autoFocus
+          onChange={(e) => setName(e.target.value)}
+          onBlur={() => void commitRename()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void commitRename();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              setRenaming(false);
+            }
+          }}
+        />
+      ) : (
+        <span
+          className="task-title"
+          onDoubleClick={startRename}
+          title={onRename && !done ? 'Duplo clique para editar' : undefined}
+        >
+          {task.recurrence && !done && (
+            <span className="task-repeat" role="img" aria-label={`Repete: ${RECURRENCE_LABEL[task.recurrence]}`} title={RECURRENCE_LABEL[task.recurrence]}>
+              ↻{' '}
+            </span>
+          )}
+          {task.title}
+        </span>
+      )}
+      {subs.length > 0 && !done && (
+        <span className="task-subcount" aria-label={`${doneSubs} de ${subs.length} subtarefas concluídas`}>
+          {doneSubs}/{subs.length}
+        </span>
+      )}
       {done && <span className="task-date">{formatDay(task.completedAt)}</span>}
+      {onPriority && !done && (
+        <button
+          type="button"
+          className="task-priority"
+          data-priority={task.priority}
+          onClick={onPriority}
+          disabled={busy}
+          aria-label={`Prioridade: ${PRIORITY_LABEL[task.priority]}. Alterar`}
+          title={`Prioridade: ${PRIORITY_LABEL[task.priority]}`}
+        >
+          <span aria-hidden="true" />
+        </button>
+      )}
       {due && !done && (
         <button
           type="button"
@@ -489,18 +761,34 @@ function TaskRow({ task, done = false, busy, primary, onRemove, due }: TaskRowPr
           )}
         </button>
       )}
+      {onAddSub && !done && (
+        <button
+          type="button"
+          className="tasks-icon-button task-addsub"
+          aria-expanded={addingSub}
+          aria-label={`Adicionar subtarefa em: ${task.title}`}
+          title="Adicionar subtarefa"
+          onClick={() => setAddingSub((v) => !v)}
+          disabled={busy}
+        >
+          <Icon>
+            <path d="M12 5v14M5 12h14" {...icon} />
+          </Icon>
+        </button>
+      )}
       <button
         type="button"
         className="tasks-icon-button task-remove"
         onClick={() => onRemove(ref.current)}
         disabled={busy}
         aria-label={`Excluir tarefa: ${task.title}`}
-        title="Excluir (dá para desfazer)"
+        title={subs.length > 0 ? 'Excluir com as subtarefas (dá para desfazer)' : 'Excluir (dá para desfazer)'}
       >
         <Icon>
           <path d="M6 6l12 12M18 6L6 18" {...icon} />
         </Icon>
       </button>
+
       {due?.editing && (
         <div className="task-due-editor">
           <input
@@ -521,7 +809,109 @@ function TaskRow({ task, done = false, busy, primary, onRemove, due }: TaskRowPr
               Sem prazo
             </button>
           )}
+          {onSnooze && (
+            <div className="task-snooze" role="group" aria-label="Adiar">
+              <span>Adiar:</span>
+              <button type="button" className="tasks-due-chip" onClick={() => onSnooze(new Date(Date.now() + 10 * 60_000).toISOString(), '+10 min')}>
+                +10 min
+              </button>
+              <button type="button" className="tasks-due-chip" onClick={() => onSnooze(new Date(Date.now() + 60 * 60_000).toISOString(), '+1 h')}>
+                +1 h
+              </button>
+              <button type="button" className="tasks-due-chip" onClick={() => onSnooze(tomorrowMorning(), 'amanhã às 9h')}>
+                Amanhã 9h
+              </button>
+            </div>
+          )}
+          {onRecurrence && (
+            <label className="task-repeat-field">
+              <span>Repetir:</span>
+              <select
+                value={task.recurrence ?? ''}
+                disabled={!task.dueAt}
+                onChange={(e) => onRecurrence((e.target.value || null) as TaskRecurrence | null)}
+                aria-label={`Repetição de ${task.title}`}
+              >
+                <option value="">Não repete</option>
+                {TASK_RECURRENCES.map((r) => (
+                  <option key={r} value={r}>
+                    {RECURRENCE_LABEL[r]}
+                  </option>
+                ))}
+              </select>
+              {!task.dueAt && <small>Defina um prazo para repetir.</small>}
+            </label>
+          )}
         </div>
+      )}
+
+      {!done && (subs.length > 0 || addingSub) && (
+        <div className="task-subs">
+          {subs.length > 0 && (
+            <ul aria-label={`Subtarefas de ${task.title}`}>
+              {subs.map((sub) => (
+                <li key={sub.id} className="task-sub" data-done={sub.completed} data-busy={busyIds.has(sub.id)}>
+                  <button
+                    type="button"
+                    className="task-primary task-sub-check"
+                    onClick={() => onToggleSub?.(sub)}
+                    disabled={busyIds.has(sub.id)}
+                    aria-label={`${sub.completed ? 'Reabrir' : 'Concluir'} subtarefa: ${sub.title}`}
+                    title={sub.completed ? 'Reabrir' : 'Concluir'}
+                  >
+                    <span className="task-circle" data-checked={sub.completed} aria-hidden="true" />
+                  </button>
+                  <span className="task-sub-title">{sub.title}</span>
+                  <button
+                    type="button"
+                    className="tasks-icon-button task-remove"
+                    onClick={() => onRemoveSub?.(sub)}
+                    disabled={busyIds.has(sub.id)}
+                    aria-label={`Excluir subtarefa: ${sub.title}`}
+                    title="Excluir subtarefa (dá para desfazer)"
+                  >
+                    <Icon>
+                      <path d="M6 6l12 12M18 6L6 18" {...icon} />
+                    </Icon>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {addingSub && (
+            <form
+              className="task-subform"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void commitSub();
+              }}
+            >
+              <input
+                className="task-sub-input"
+                value={subText}
+                maxLength={TASK_TITLE_MAX + 20}
+                placeholder="Nova subtarefa"
+                aria-label={`Nova subtarefa de ${task.title}`}
+                autoFocus
+                onChange={(e) => setSubText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setAddingSub(false);
+                    setSubText('');
+                  }
+                }}
+              />
+              <button type="submit" className="tasks-due-chip" disabled={subText.trim() === ''}>
+                Adicionar
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+      {position && position.total > 1 && (
+        <span className="sr-only">
+          Posição {position.index + 1} de {position.total}.
+        </span>
       )}
     </li>
   );

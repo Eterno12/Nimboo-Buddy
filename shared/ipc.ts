@@ -64,6 +64,8 @@ export const IPC = {
   tasksScheduleRemove: 'tasks:schedule-remove',
   tasksUndoRemove: 'tasks:undo-remove',
   tasksSetDue: 'tasks:set-due',
+  tasksUpdate: 'tasks:update',
+  tasksReorder: 'tasks:reorder',
   /** main -> renderer: lembrete de prazo (soon = faltam alguns minutos; due = chegou a hora). */
   tasksReminder: 'tasks:reminder',
   /** renderer -> main (invoke): aviso sobre o armazenamento (ou null) e sua dispensa. */

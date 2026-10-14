@@ -17,6 +17,7 @@
     "test:e2e:focus": "npm run build && node tests/e2e/focus-ui.e2e.mjs",
     "test:e2e:settings": "npm run build && node tests/e2e/settings-ui.e2e.mjs",
     "test:e2e:characters": "npm run build && node tests/e2e/characters-ui.e2e.mjs",
+    "test:e2e:tasks-complete": "npm run build && node tests/e2e/tasks-complete.e2e.mjs",
     "test:e2e:notes": "npm run build && node tests/e2e/notes-ui.e2e.mjs",
     "test:e2e:assistant": "npm run build && node tests/e2e/assistant-ui.e2e.mjs",
     "pack": "npm run build && electron-builder --win dir",

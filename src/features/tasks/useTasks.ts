@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { PendingRemoval, TaskSnapshot } from '../../../shared/tasks';
+import type { PendingRemoval, TaskExtra, TaskPatch, TaskSnapshot } from '../../../shared/tasks';
 
 type Status = 'loading' | 'ready' | 'error';
 
@@ -40,8 +40,10 @@ export function useTasks() {
     status,
     error,
     reload,
-    create: (title: string, dueAt?: string | null, sourceRef?: string | null) =>
-      api.create(title, dueAt ?? null, sourceRef ?? null),
+    create: (title: string, dueAt?: string | null, sourceRef?: string | null, extra?: TaskExtra) =>
+      api.create(title, dueAt ?? null, sourceRef ?? null, extra),
+    update: (id: string, patch: TaskPatch) => api.update(id, patch),
+    reorder: (ids: string[]) => api.reorder(ids),
     setDue: (id: string, dueAt: string | null) => api.setDue(id, dueAt),
     complete: (id: string) => api.complete(id),
     reopen: (id: string) => api.reopen(id),

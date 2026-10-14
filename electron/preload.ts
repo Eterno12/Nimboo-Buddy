@@ -45,9 +45,11 @@ const api: MochiApi = {
   islandClosed: () => ipcRenderer.send(IPC.islandClosed),
   tasks: {
     list: () => ipcRenderer.invoke(IPC.tasksList),
-    create: (title, dueAt, sourceRef) =>
-      ipcRenderer.invoke(IPC.tasksCreate, { title, dueAt: dueAt ?? null, sourceRef: sourceRef ?? null }),
+    create: (title, dueAt, sourceRef, extra) =>
+      ipcRenderer.invoke(IPC.tasksCreate, { title, dueAt: dueAt ?? null, sourceRef: sourceRef ?? null, extra: extra ?? {} }),
     setDue: (id, dueAt) => ipcRenderer.invoke(IPC.tasksSetDue, id, dueAt),
+    update: (id, patch) => ipcRenderer.invoke(IPC.tasksUpdate, id, patch),
+    reorder: (ids) => ipcRenderer.invoke(IPC.tasksReorder, ids),
     complete: (id) => ipcRenderer.invoke(IPC.tasksComplete, id),
     reopen: (id) => ipcRenderer.invoke(IPC.tasksReopen, id),
     scheduleRemove: (id) => ipcRenderer.invoke(IPC.tasksScheduleRemove, id),

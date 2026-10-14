@@ -7,7 +7,7 @@ M (1–2), G (2+).
 | # | Etapa | Tam. | Depende de | Decisão que preciso de você |
 |---|---|---|---|---|
 | 0 ✅ | **Higiene:** commits, instalador 0.4, `characters.css` separado, exportar/importar (JSON) | M | — | feito — resta dividir `SettingsView.tsx` e `main.ts` quando mexermos neles |
-| 1 | **Tarefas completas:** editar título, reordenar (arrastar), recorrência (diária/semanal/mensal), soneca "+10 min", prioridade e subtarefas | G | 0 | Recorrência: gerar a próxima ao concluir (recomendado) ou em série? |
+| 1 ✅ | **Tarefas completas:** editar título, reordenar (arrastar), recorrência (diária/dias úteis/semanal/mensal), adiar "+10 min", prioridade e várias subtarefas | G | 0 | feito (recorrência gera a próxima ao concluir; subtarefas de 1 nível, várias por tarefa) |
 | 2 | **Malha de ligações:** nota → tarefa, tarefa → nota, nota/tarefa anexada a evento da agenda | M | 1 | — |
 | 3 | **Rotina do dia:** resumo ao abrir e fechamento à noite (tarefas, eventos, atrasadas) | M | 1 | Horários do resumo (padrão: ao abrir; fechamento 18h)? |
 | 4 | **Vínculo e memória:** afeto/humor persistentes, dias de convivência, conquistas, nome do personagem | M | — | Quer conquistas visíveis (cartões) ou só falas? |

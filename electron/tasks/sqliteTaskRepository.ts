@@ -2,16 +2,24 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import {
   COMPLETED_RETENTION_DAYS,
+  SUBTASK_LIMIT,
   TASK_LIMIT,
   fail,
   isTaskId,
+  nextDue,
   ok,
   validateDue,
+  validatePriority,
+  validateRecurrence,
   validateSourceRef,
   validateTitle,
   type Task,
   type TaskChange,
+  type TaskExtra,
   type TaskLists,
+  type TaskPatch,
+  type TaskPriority,
+  type TaskRecurrence,
   type TaskRepository,
   type TaskResult,
 } from '../../shared/tasks.ts';
@@ -34,6 +42,10 @@ interface Row {
   updated_at: string;
   due_at: string | null;
   source_ref: string | null;
+  priority: number;
+  recurrence: string | null;
+  parent_id: string | null;
+  position: number | null;
 }
 
 const toTask = (r: Row): Task => ({
@@ -45,6 +57,10 @@ const toTask = (r: Row): Task => ({
   updatedAt: r.updated_at,
   dueAt: r.due_at ?? null,
   sourceRef: r.source_ref ?? null,
+  priority: (r.priority >= 0 && r.priority <= 3 ? r.priority : 0) as TaskPriority,
+  recurrence: (r.recurrence as TaskRecurrence | null) ?? null,
+  parentId: r.parent_id ?? null,
+  position: r.position ?? null,
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -147,6 +163,7 @@ export class SqliteTaskRepository implements TaskRepository {
     if (count > 0) this.notify({ type: 'purged', count });
     return count;
   }
+
   private guard<T>(fn: () => TaskResult<T>): TaskResult<T> {
     try {
       return fn();
@@ -156,12 +173,18 @@ export class SqliteTaskRepository implements TaskRepository {
     }
   }
 
+  private row(id: string): Row | undefined {
+    return this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as unknown as Row | undefined;
+  }
+
   async list(): Promise<TaskLists> {
     const cutoff = this.cutoff();
     const purged = this.purgeIfNeeded(cutoff);
     if (purged > 0) this.notify({ type: 'purged', count: purged });
     const rows = this.db
-      .prepare(`SELECT * FROM tasks WHERE ${NOT_EXPIRED_SQL} ORDER BY completed ASC, (due_at IS NULL) ASC, due_at ASC, created_at ASC, id ASC`)
+      .prepare(
+        `SELECT * FROM tasks WHERE ${NOT_EXPIRED_SQL} ORDER BY completed ASC, (position IS NULL) ASC, position ASC, (due_at IS NULL) ASC, due_at ASC, created_at ASC, id ASC`,
+      )
       .all(cutoff) as unknown as Row[];
     const tasks = rows.map(toTask);
     return {
@@ -189,6 +212,7 @@ export class SqliteTaskRepository implements TaskRepository {
     title: string,
     dueAt: string | null = null,
     sourceRef: string | null = null,
+    extra: TaskExtra = {},
   ): Promise<TaskResult<Task>> {
     const valid = validateTitle(title);
     if (!valid.ok) return valid;
@@ -196,6 +220,13 @@ export class SqliteTaskRepository implements TaskRepository {
     if (!due.ok) return due;
     const source = validateSourceRef(sourceRef);
     if (!source.ok) return source;
+    const priority = validatePriority(extra.priority ?? 0);
+    if (!priority.ok) return priority;
+    const recurrence = validateRecurrence(extra.recurrence ?? null);
+    if (!recurrence.ok) return recurrence;
+    const parentId = extra.parentId ?? null;
+    if (parentId !== null && !isTaskId(parentId)) return fail('invalid_id', 'Identificador de tarefa inválido.');
+
     const result = this.guard(() => {
       const task = this.transaction((): TaskResult<Task> & { existing?: boolean } => {
         this.purgeInside();
@@ -203,6 +234,14 @@ export class SqliteTaskRepository implements TaskRepository {
           // Idempotente: a mesma origem devolve a tarefa que já existe (sem criar outra nem avisar).
           const found = this.db.prepare('SELECT * FROM tasks WHERE source_ref = ?').get(source.value) as unknown as Row | undefined;
           if (found) return { ...ok(toTask(found)), existing: true };
+        }
+        if (parentId !== null) {
+          const parent = this.row(parentId);
+          if (!parent) return fail('not_found', 'A tarefa principal não existe mais.');
+          if (parent.parent_id !== null) return fail('invalid_field', 'Subtarefas não podem ter subtarefas.');
+          if (parent.completed === 1) return fail('invalid_field', 'A tarefa principal já está concluída.');
+          const count = this.db.prepare('SELECT COUNT(*) AS n FROM tasks WHERE parent_id = ?').get(parentId) as { n: number };
+          if (count.n >= SUBTASK_LIMIT) return fail('limit_reached', `No máximo ${SUBTASK_LIMIT} subtarefas por tarefa.`);
         }
         const total = this.db.prepare('SELECT COUNT(*) AS n FROM tasks').get() as { n: number };
         if (total.n >= TASK_LIMIT) return fail('limit_reached', 'Há tarefas demais guardadas. Exclua algumas.');
@@ -216,12 +255,13 @@ export class SqliteTaskRepository implements TaskRepository {
           updated_at: at,
           due_at: due.value,
           source_ref: source.value,
+          priority: priority.value,
+          // Subtarefas não repetem (a repetição é da tarefa principal).
+          recurrence: parentId === null ? recurrence.value : null,
+          parent_id: parentId,
+          position: null,
         };
-        this.db
-          .prepare(
-            'INSERT INTO tasks (id, title, completed, created_at, completed_at, updated_at, due_at, source_ref) VALUES (?, ?, 0, ?, NULL, ?, ?, ?)',
-          )
-          .run(row.id, row.title, row.created_at, row.updated_at, row.due_at, row.source_ref);
+        this.insert(row);
         return ok(toTask(row));
       });
       return task;
@@ -232,6 +272,25 @@ export class SqliteTaskRepository implements TaskRepository {
     return plain as TaskResult<Task>;
   }
 
+  private insert(row: Row): void {
+    this.db
+      .prepare(
+        'INSERT INTO tasks (id, title, completed, created_at, completed_at, updated_at, due_at, source_ref, priority, recurrence, parent_id, position) VALUES (?, ?, 0, ?, NULL, ?, ?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        row.id,
+        row.title,
+        row.created_at,
+        row.updated_at,
+        row.due_at,
+        row.source_ref,
+        row.priority,
+        row.recurrence,
+        row.parent_id,
+        row.position,
+      );
+  }
+
   /** Grava o prazo. Idempotente: mesmo prazo não muda nada nem avisa. */
   private writeDue(id: string, dueAt: string | null): TaskResult<Task> & { changed?: boolean } {
     if (!isTaskId(id)) return fail('invalid_id', 'Identificador de tarefa inválido.');
@@ -240,13 +299,12 @@ export class SqliteTaskRepository implements TaskRepository {
     return this.guard(() =>
       this.transaction((): TaskResult<Task> & { changed?: boolean } => {
         this.purgeInside();
-        const row = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as unknown as Row | undefined;
+        const row = this.row(id);
         if (!row) return fail('not_found', 'A tarefa não existe mais.');
         if ((row.due_at ?? null) === due.value) return { ...ok(toTask(row)), changed: false };
         const at = this.now().toISOString();
         this.db.prepare('UPDATE tasks SET due_at = ?, updated_at = ? WHERE id = ?').run(due.value, at, id);
-        const updated = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as unknown as Row;
-        return { ...ok(toTask(updated)), changed: true };
+        return { ...ok(toTask(this.row(id) as Row)), changed: true };
       }),
     );
   }
@@ -256,28 +314,139 @@ export class SqliteTaskRepository implements TaskRepository {
     if (result.ok && result.changed) this.notify({ type: 'updated', id });
     return result.ok ? ok(result.value) : result;
   }
-  /** Marca a conclusão (`true`) ou reabre (`false`). Idempotente. */
-  private setCompleted(id: string, completed: boolean): TaskResult<Task> & { changed?: boolean } {
+
+  async update(id: string, patch: TaskPatch): Promise<TaskResult<Task>> {
     if (!isTaskId(id)) return fail('invalid_id', 'Identificador de tarefa inválido.');
-    return this.guard(() =>
+    if (typeof patch !== 'object' || patch === null) return fail('invalid_field', 'Alteração inválida.');
+    const sets: string[] = [];
+    const values: (string | number | null)[] = [];
+    if (Object.prototype.hasOwnProperty.call(patch, 'title')) {
+      const title = validateTitle(patch.title);
+      if (!title.ok) return title;
+      sets.push('title = ?');
+      values.push(title.value);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'priority')) {
+      const priority = validatePriority(patch.priority);
+      if (!priority.ok) return priority;
+      sets.push('priority = ?');
+      values.push(priority.value);
+    }
+    let recurrenceTouched = false;
+    if (Object.prototype.hasOwnProperty.call(patch, 'recurrence')) {
+      const recurrence = validateRecurrence(patch.recurrence);
+      if (!recurrence.ok) return recurrence;
+      sets.push('recurrence = ?');
+      values.push(recurrence.value);
+      recurrenceTouched = true;
+    }
+    if (sets.length === 0) return this.get(id);
+
+    const result = this.guard(() =>
       this.transaction((): TaskResult<Task> & { changed?: boolean } => {
         this.purgeInside();
-        const row = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as unknown as Row | undefined;
+        const row = this.row(id);
+        if (!row) return fail('not_found', 'A tarefa não existe mais.');
+        if (recurrenceTouched && row.parent_id !== null && values[sets.indexOf('recurrence = ?')] !== null) {
+          return fail('invalid_field', 'Subtarefas não repetem.');
+        }
+        this.db
+          .prepare(`UPDATE tasks SET ${sets.join(', ')}, updated_at = ? WHERE id = ?`)
+          .run(...values, this.now().toISOString(), id);
+        return { ...ok(toTask(this.row(id) as Row)), changed: true };
+      }),
+    );
+    if (result.ok) this.notify({ type: 'updated', id });
+    return result.ok ? ok(result.value) : result;
+  }
+
+  async reorder(ids: string[]): Promise<TaskResult<null>> {
+    if (!Array.isArray(ids) || ids.length > TASK_LIMIT || !ids.every(isTaskId) || new Set(ids).size !== ids.length) {
+      return fail('invalid_id', 'Ordem inválida.');
+    }
+    const result = this.guard(() =>
+      this.transaction((): TaskResult<null> => {
+        const stmt = this.db.prepare('UPDATE tasks SET position = ? WHERE id = ? AND completed = 0 AND parent_id IS NULL');
+        ids.forEach((id, index) => stmt.run(index + 1, id));
+        return ok(null);
+      }),
+    );
+    if (result.ok) this.notify({ type: 'updated', id: ids[0] ?? '' });
+    return result;
+  }
+
+  /** Marca a conclusão (`true`) ou reabre (`false`). Idempotente. */
+  private setCompleted(
+    id: string,
+    completed: boolean,
+  ): TaskResult<Task> & { changed?: boolean; next?: string } {
+    if (!isTaskId(id)) return fail('invalid_id', 'Identificador de tarefa inválido.');
+    return this.guard(() =>
+      this.transaction((): TaskResult<Task> & { changed?: boolean; next?: string } => {
+        this.purgeInside();
+        const row = this.row(id);
         if (!row) return fail('not_found', 'A tarefa não existe mais.');
         if ((row.completed === 1) === completed) return { ...ok(toTask(row)), changed: false };
         const at = this.now().toISOString();
         this.db
           .prepare('UPDATE tasks SET completed = ?, completed_at = ?, updated_at = ? WHERE id = ?')
           .run(completed ? 1 : 0, completed ? at : null, at, id);
-        const updated = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as unknown as Row;
-        return { ...ok(toTask(updated)), changed: true };
+        let next: string | undefined;
+        if (completed && row.parent_id === null) {
+          // Concluir a principal conclui as subtarefas em aberto.
+          this.db
+            .prepare('UPDATE tasks SET completed = 1, completed_at = ?, updated_at = ? WHERE parent_id = ? AND completed = 0')
+            .run(at, at, id);
+          // Repetição: a próxima ocorrência nasce já com o novo prazo (e subtarefas zeradas).
+          if (row.recurrence && row.due_at) {
+            next = this.spawnNext(row, at);
+          }
+        }
+        return { ...ok(toTask(this.row(id) as Row)), changed: true, next };
       }),
     );
   }
 
+  /** Cria a próxima ocorrência de uma tarefa que se repete (dentro de uma transação). */
+  private spawnNext(row: Row, at: string): string {
+    const due = nextDue(row.due_at as string, row.recurrence as TaskRecurrence, this.now());
+    const nextRow: Row = {
+      ...row,
+      id: this.newId(),
+      completed: 0,
+      completed_at: null,
+      created_at: at,
+      updated_at: at,
+      due_at: due,
+      source_ref: null,
+    };
+    this.insert(nextRow);
+    const subs = this.db
+      .prepare('SELECT * FROM tasks WHERE parent_id = ? ORDER BY created_at ASC, id ASC')
+      .all(row.id) as unknown as Row[];
+    for (const sub of subs) {
+      this.insert({
+        ...sub,
+        id: this.newId(),
+        completed: 0,
+        completed_at: null,
+        created_at: at,
+        updated_at: at,
+        due_at: null,
+        source_ref: null,
+        parent_id: nextRow.id,
+        position: null,
+      });
+    }
+    return nextRow.id;
+  }
+
   async complete(id: string): Promise<TaskResult<Task>> {
     const result = this.setCompleted(id, true);
-    if (result.ok && result.changed) this.notify({ type: 'completed', id });
+    if (result.ok && result.changed) {
+      this.notify({ type: 'completed', id });
+      if (result.next) this.notify({ type: 'created', id: result.next });
+    }
     return result.ok ? ok(result.value) : result;
   }
 
@@ -291,6 +460,8 @@ export class SqliteTaskRepository implements TaskRepository {
     if (!isTaskId(id)) return fail('invalid_id', 'Identificador de tarefa inválido.');
     const result = this.guard(() =>
       this.transaction((): TaskResult<null> => {
+        // As subtarefas vão junto com a principal.
+        this.db.prepare('DELETE FROM tasks WHERE parent_id = ?').run(id);
         const r = this.db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
         return Number(r.changes) === 0 ? fail('not_found', 'A tarefa não existe mais.') : ok(null);
       }),

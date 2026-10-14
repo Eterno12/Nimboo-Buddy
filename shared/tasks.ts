@@ -28,7 +28,31 @@ export interface Task {
    * Serve para o botão "Virar tarefa" não duplicar e para os lembretes não avisarem duas vezes.
    */
   sourceRef: string | null;
+  /** 0 = sem prioridade, 1 = baixa, 2 = média, 3 = alta. */
+  priority: TaskPriority;
+  /** Repetição: ao concluir, a próxima ocorrência nasce com o prazo seguinte. */
+  recurrence: TaskRecurrence | null;
+  /** Subtarefa: id da tarefa-mãe (só um nível). `null` = tarefa principal. */
+  parentId: string | null;
+  /** Ordem manual (menor primeiro); `null` = ainda sem ordem manual. */
+  position: number | null;
 }
+
+export type TaskPriority = 0 | 1 | 2 | 3;
+export const TASK_PRIORITIES: readonly TaskPriority[] = [0, 1, 2, 3];
+export const PRIORITY_LABEL: Record<TaskPriority, string> = { 0: 'Sem prioridade', 1: 'Baixa', 2: 'Média', 3: 'Alta' };
+
+export const TASK_RECURRENCES = ['daily', 'weekdays', 'weekly', 'monthly'] as const;
+export type TaskRecurrence = (typeof TASK_RECURRENCES)[number];
+export const RECURRENCE_LABEL: Record<TaskRecurrence, string> = {
+  daily: 'Todo dia',
+  weekdays: 'Dias úteis',
+  weekly: 'Toda semana',
+  monthly: 'Todo mês',
+};
+
+/** Subtarefas por tarefa (limite de segurança). */
+export const SUBTASK_LIMIT = 50;
 
 export interface TaskLists {
   /** Em ordem de criação (a mais antiga primeiro). */
@@ -56,6 +80,7 @@ export type TaskErrorCode =
   | 'invalid_id'
   | 'invalid_due'
   | 'invalid_source'
+  | 'invalid_field'
   | 'not_found'
   | 'limit_reached'
   | 'storage';
@@ -87,12 +112,82 @@ export interface TaskRepository {
    * Cria uma tarefa. Com `sourceRef`, é idempotente: se já existe uma tarefa (ativa ou concluída
    * ainda guardada) com a mesma origem, devolve ela em vez de criar outra.
    */
-  create(title: string, dueAt?: string | null, sourceRef?: string | null): Promise<TaskResult<Task>>;
+  create(
+    title: string,
+    dueAt?: string | null,
+    sourceRef?: string | null,
+    extra?: TaskExtra,
+  ): Promise<TaskResult<Task>>;
   /** Define (ou remove, com `null`) o prazo. */
   setDue(id: string, dueAt: string | null): Promise<TaskResult<Task>>;
+  /** Altera título, prioridade e/ou repetição (só os campos presentes). */
+  update(id: string, patch: TaskPatch): Promise<TaskResult<Task>>;
+  /** Ordem manual das tarefas principais ativas (ids na ordem desejada). */
+  reorder(ids: string[]): Promise<TaskResult<null>>;
+  /** Conclui; se repete, cria a próxima ocorrência. Concluir a principal conclui as subtarefas. */
   complete(id: string): Promise<TaskResult<Task>>;
   reopen(id: string): Promise<TaskResult<Task>>;
+  /** Exclui a tarefa e as suas subtarefas. */
   remove(id: string): Promise<TaskResult<null>>;
+}
+
+/** Campos opcionais na criação. */
+export interface TaskExtra {
+  parentId?: string | null;
+  priority?: number;
+  recurrence?: string | null;
+}
+
+/** Campos editáveis (os ausentes não mudam). */
+export interface TaskPatch {
+  title?: string;
+  priority?: number;
+  recurrence?: string | null;
+}
+
+export function validatePriority(input: unknown): TaskResult<TaskPriority> {
+  return input === 0 || input === 1 || input === 2 || input === 3
+    ? ok(input)
+    : fail('invalid_field', 'Prioridade inválida.');
+}
+
+export function validateRecurrence(input: unknown): TaskResult<TaskRecurrence | null> {
+  if (input === null || input === undefined) return ok(null);
+  return typeof input === 'string' && (TASK_RECURRENCES as readonly string[]).includes(input)
+    ? ok(input as TaskRecurrence)
+    : fail('invalid_field', 'Repetição inválida.');
+}
+
+/**
+ * Próximo prazo de uma tarefa que se repete, mantendo a hora local, e SEMPRE depois de `now`
+ * (se o app ficou fechado por dias, não gera ocorrências atrasadas em fila).
+ */
+export function nextDue(dueIso: string, recurrence: TaskRecurrence, now: Date = new Date()): string {
+  const base = new Date(dueIso);
+  const at = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate(), base.getHours(), base.getMinutes(), base.getSeconds());
+  let cursor = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  let months = 0;
+  for (let i = 0; i < 4000; i++) {
+    let candidate: Date;
+    if (recurrence === 'monthly') {
+      months += 1;
+      const first = new Date(base.getFullYear(), base.getMonth() + months, 1);
+      const last = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+      // dia 31 em mês curto: usa o último dia do mês
+      candidate = at(new Date(first.getFullYear(), first.getMonth(), Math.min(base.getDate(), last)));
+    } else {
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + (recurrence === 'weekly' ? 7 : 1));
+      if (recurrence === 'weekdays') {
+        while (cursor.getDay() === 0 || cursor.getDay() === 6) {
+          cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1);
+        }
+      }
+      candidate = at(cursor);
+    }
+    if (candidate.getTime() > now.getTime()) return candidate.toISOString();
+  }
+  return base.toISOString();
 }
 
 /** Mudanças confirmadas no armazenamento (usadas para avisar as janelas). */
@@ -183,7 +278,16 @@ export interface TaskReminder {
 export interface TasksApi {
   list(): Promise<TaskResult<TaskSnapshot>>;
   /** `sourceRef` (ex.: id de um evento da agenda) torna a criação idempotente: não duplica. */
-  create(title: string, dueAt?: string | null, sourceRef?: string | null): Promise<TaskResult<Task>>;
+  create(
+    title: string,
+    dueAt?: string | null,
+    sourceRef?: string | null,
+    extra?: TaskExtra,
+  ): Promise<TaskResult<Task>>;
+  /** Altera título, prioridade e/ou repetição. */
+  update(id: string, patch: TaskPatch): Promise<TaskResult<Task>>;
+  /** Ordem manual das tarefas principais ativas. */
+  reorder(ids: string[]): Promise<TaskResult<null>>;
   /** Define (ou remove, com `null`) o prazo de uma tarefa. */
   setDue(id: string, dueAt: string | null): Promise<TaskResult<Task>>;
   complete(id: string): Promise<TaskResult<Task>>;

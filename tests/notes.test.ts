@@ -192,7 +192,7 @@ test('banco: a migração v4 cria a tabela de notas e preserva as tarefas existe
   const file = path.join(dir, 'mochi.db');
   try {
     const v3 = openDatabase(file, { migrations: MIGRATIONS.slice(0, 3) });
-    await new SqliteTaskRepository(v3).create('antiga');
+    v3.prepare("INSERT INTO tasks (id, title, completed, created_at, completed_at, updated_at) VALUES ('44444444-4444-4444-8444-444444444444', 'antiga', 0, '2026-01-01T00:00:00.000Z', NULL, '2026-01-01T00:00:00.000Z')").run();
     v3.close();
     const db = openDatabase(file);
     try {

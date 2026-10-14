@@ -46,6 +46,8 @@ const CHANNELS = [
   IPC.tasksScheduleRemove,
   IPC.tasksUndoRemove,
   IPC.tasksSetDue,
+  IPC.tasksUpdate,
+  IPC.tasksReorder,
   IPC.tasksNotice,
   IPC.tasksDismissNotice,
 ];
@@ -168,14 +170,25 @@ export function startTasksService({ dbPath, isAppUrl, onTasksChanged }: TasksSer
   // Aceita só o título (texto) ou { title, dueAt }; tudo é validado pelo repositório.
   handle<Task>(IPC.tasksCreate, ({ repo: r }, arg) => {
     if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
-      const { title, dueAt, sourceRef } = arg as { title?: unknown; dueAt?: unknown; sourceRef?: unknown };
-      return r.create(title as string, (dueAt ?? null) as string | null, (sourceRef ?? null) as string | null);
+      const { title, dueAt, sourceRef, extra } = arg as {
+        title?: unknown;
+        dueAt?: unknown;
+        sourceRef?: unknown;
+        extra?: unknown;
+      };
+      const safeExtra = typeof extra === 'object' && extra !== null && !Array.isArray(extra) ? (extra as object) : {};
+      return r.create(title as string, (dueAt ?? null) as string | null, (sourceRef ?? null) as string | null, safeExtra);
     }
     return r.create(arg as string);
   });
   handle<Task>(IPC.tasksSetDue, async (ctx, id, dueAt) =>
     gone<Task>(ctx, id) ?? ctx.repo.setDue(id as string, (dueAt ?? null) as string | null),
   );
+  handle<Task>(IPC.tasksUpdate, async (ctx, id, patch) =>
+    gone<Task>(ctx, id) ??
+    ctx.repo.update(id as string, typeof patch === 'object' && patch !== null && !Array.isArray(patch) ? (patch as object) : {}),
+  );
+  handle<null>(IPC.tasksReorder, ({ repo: r }, ids) => r.reorder(ids as string[]));
   handle<Task>(IPC.tasksComplete, async (ctx, id) => gone<Task>(ctx, id) ?? ctx.repo.complete(id as string));
   handle<Task>(IPC.tasksReopen, async (ctx, id) => gone<Task>(ctx, id) ?? ctx.repo.reopen(id as string));
   handle<PendingRemoval>(IPC.tasksScheduleRemove, ({ scheduler: s }, id) => s.schedule(id as string));

@@ -47,7 +47,7 @@ test('banco: cria arquivo, aplica migrações e configura WAL', () => {
     const cols = t.db.prepare('PRAGMA table_info(tasks)').all() as { name: string; notnull: number }[];
     assert.deepEqual(
       cols.map((c) => c.name),
-      ['id', 'title', 'completed', 'created_at', 'completed_at', 'updated_at', 'due_at', 'source_ref'],
+      ['id', 'title', 'completed', 'created_at', 'completed_at', 'updated_at', 'due_at', 'source_ref', 'priority', 'recurrence', 'parent_id', 'position'],
     );
     assert.equal((t.db.prepare('PRAGMA journal_mode').get() as { journal_mode: string }).journal_mode, 'wal');
     assert.equal((t.db.prepare('PRAGMA integrity_check').get() as { integrity_check: string }).integrity_check, 'ok');

@@ -121,9 +121,11 @@ export class RemovalScheduler {
       pendingRemovals.push({ task, expiresAt: new Date(entry.expiresAt).toISOString() });
     }
     pendingRemovals.sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
+    // Subtarefas de uma tarefa pendente de exclusÃ£o somem junto (a exclusÃ£o apaga todas).
+    const hidden = (t: Task) => this.entries.has(t.id) || (t.parentId !== null && this.entries.has(t.parentId));
     return {
-      active: lists.active.filter((t) => !this.entries.has(t.id)),
-      completed: lists.completed.filter((t) => !this.entries.has(t.id)),
+      active: lists.active.filter((t) => !hidden(t)),
+      completed: lists.completed.filter((t) => !hidden(t)),
       pendingRemovals,
     };
   }

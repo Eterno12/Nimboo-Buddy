@@ -309,6 +309,13 @@ electron/main.ts            submenu "Personagem" (radio) no menu da bandeja/cont
 - `electron/assistantService.ts`: IPC `assistant:*`, janela, voz (`speech.ts`), conhecimento (`assistantAi.ts`: Wikipédia + Ollama). Contratos em `shared/assistantApi.ts`.
 - Preferências: `assistantWeb`, `assistantLocalAi`, `assistantModel` (todas desligadas por padrão). Ver D37.
 
+## 17. Tarefas completas
+
+- `shared/tasks.ts`: `priority`, `recurrence`, `parentId`, `position`, `TaskPatch`/`TaskExtra`, `nextDue` (puro, testado).
+- `electron/tasks/sqliteTaskRepository.ts`: `update`, `reorder`, `create(..., extra)`, `complete` com `spawnNext` (repetição) e conclusão em cascata; `remove` apaga as subtarefas. `removalScheduler.snapshot` esconde subtarefas de pendentes.
+- IPC `tasks:update` e `tasks:reorder`; `useTasks` expõe `update`/`reorder`/`create(..., extra)`.
+- `TasksView.tsx`: agrupa principais × subtarefas (`useMemo`), `TaskRow` com edição, prioridade, repetição, adiar, subtarefas e arrastar/Alt+setas. Ver D38.
+
 ## 11. Foco evoluído, prazos/lembretes e empacotamento
 
 - **Foco:** `shared/focus.ts` (tipos, `nextStep`, validação) → `FocusTimer` (ciclo, tarefa, `configure`) →
