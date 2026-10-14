@@ -29,7 +29,11 @@ export function createSettingsStore(filePath: string, debounceMs = 300): Setting
       return parseSettings(DEFAULT_SETTINGS);
     }
     try {
-      return parseSettings(JSON.parse(text));
+      const raw: unknown = JSON.parse(text);
+      const parsed = parseSettings(raw);
+      // Arquivo anterior à introdução guiada: quem já usa o app não a vê de novo.
+      if (typeof raw === 'object' && raw !== null && !('onboardingDone' in raw)) parsed.onboardingDone = true;
+      return parsed;
     } catch {
       try {
         fs.renameSync(filePath, `${filePath}.bak`);

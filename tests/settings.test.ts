@@ -194,3 +194,16 @@ test('tema: padrão automático; só auto/claro/escuro são aceitos; auto segue 
   assert.equal(resolveTheme('dark', false), 'dark');
   assert.equal(resolveTheme('light', true), 'light');
 });
+test('introdução guiada: arquivo antigo (sem o campo) conta como vista; instalação nova não', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mochi-onb-'));
+  try {
+    const file = path.join(dir, 'settings.json');
+    assert.equal(createSettingsStore(file).get().onboardingDone, false, 'sem arquivo');
+    fs.writeFileSync(file, JSON.stringify({ version: 3, character: 'cactus' }));
+    assert.equal(createSettingsStore(file).get().onboardingDone, true, 'arquivo antigo');
+    fs.writeFileSync(file, JSON.stringify({ version: 3, onboardingDone: false }));
+    assert.equal(createSettingsStore(file).get().onboardingDone, false, 'campo explícito vale');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
