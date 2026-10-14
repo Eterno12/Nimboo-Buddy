@@ -1,0 +1,821 @@
+/* Componentes de interface: mesma linguagem em todas as cenas (bordas finas, cinzas, raio generoso). */
+.ui-card {
+  background: linear-gradient(180deg, #121212 0%, #0a0a0a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 28px;
+  box-shadow:
+    0 40px 100px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--white);
+}
+
+.ln {
+  height: 9px;
+  border-radius: 5px;
+  background: #222;
+  transform-origin: 0 50%;
+}
+
+.kicker {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--g2);
+}
+
+.due {
+  margin-left: auto;
+  font-size: 15px;
+  color: #6f6f6f;
+  font-variant-numeric: tabular-nums;
+}
+
+.cb {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #6a6a6a;
+  border-radius: 7px;
+}
+
+.cb svg path {
+  fill: none;
+  stroke: #050505;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+}
+
+.cb.on {
+  background: #fff;
+  border-color: #fff;
+}
+
+.cb.on svg path {
+  stroke-dashoffset: 0;
+}
+
+svg .track {
+  fill: none;
+  stroke: #1f1f1f;
+}
+
+svg .prog {
+  fill: none;
+  stroke: #ffffff;
+  stroke-linecap: round;
+}
+
+.ib-ring,
+.big-ring,
+.mini-ring,
+.o-ring {
+  transform: rotate(-90deg);
+  display: block;
+}
+
+/* ---- Área de trabalho ---- */
+.desktop {
+  position: absolute;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: radial-gradient(120% 90% at 70% 0%, #161616 0%, #080808 60%);
+  box-shadow:
+    0 40px 120px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.desktop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse at 60% 30%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse at 60% 30%, #000 0%, transparent 75%);
+}
+
+#desktop {
+  left: 210px;
+  top: 400px;
+  width: 1500px;
+  height: 610px;
+}
+
+#desktop2 {
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  border: 0;
+  border-radius: 0;
+}
+
+.win {
+  position: absolute;
+  overflow: hidden;
+  background: #0e0e0e;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.win-a {
+  left: 4.7%;
+  top: 9.8%;
+  width: 37.3%;
+  height: 59%;
+}
+
+.win-b {
+  left: 54%;
+  top: 11.5%;
+  width: 36%;
+  height: 62%;
+}
+
+.win-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 15px;
+  color: #9a9a9a;
+}
+
+.win-bar i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #444;
+}
+
+.win-bar span {
+  margin-left: 10px;
+}
+
+.win-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 24px;
+}
+
+.doc-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #e6e6e6;
+  margin-bottom: 4px;
+}
+
+.mail {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0 16px;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 16px;
+  color: #7a7a7a;
+}
+
+.mail b {
+  width: 64px;
+  font-weight: 500;
+  color: #d0d0d0;
+}
+
+.taskbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 10, 10, 0.92);
+}
+
+.taskbar .tb-start {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: #e8e8e8;
+}
+
+.taskbar .ico {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #343434;
+}
+
+.taskbar .clock {
+  margin-left: auto;
+  font-size: 14px;
+  color: #8a8a8a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Ilha de controle (cena 3) ---- */
+#ctrlIsland {
+  position: absolute;
+  left: 860px;
+  top: 290px;
+  width: 800px;
+  height: 500px;
+  padding: 26px 28px;
+  box-sizing: border-box;
+}
+
+.ib-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+}
+
+.ui-mark {
+  display: grid;
+  place-items: center;
+}
+
+.ib-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.ib-tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+}
+
+.ib-tabs span {
+  padding: 6px 15px;
+  border-radius: 999px;
+  font-size: 15px;
+  color: var(--g2);
+}
+
+.ib-tabs .on {
+  background: #fff;
+  color: #050505;
+  font-weight: 500;
+}
+
+.ib-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 16px;
+  height: 380px;
+  margin-top: 22px;
+}
+
+.ib-sec {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.ib-tasks {
+  grid-row: 1 / span 2;
+}
+
+.ib-sec h4 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--g2);
+}
+
+.ib-tasks header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.count {
+  position: relative;
+  width: 70px;
+  height: 18px;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--g1);
+  text-align: right;
+}
+
+.count span {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.count .c2 {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.ib-tasks ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 60px;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 19px;
+}
+
+.task .tt {
+  color: #ececec;
+}
+
+.strike {
+  position: absolute;
+  left: 36px;
+  top: 50%;
+  width: 124px;
+  height: 1.5px;
+  background: #fff;
+  transform-origin: 0 50%;
+}
+
+.ib-focus-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.ib-time {
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ib-sub {
+  font-size: 14px;
+  color: var(--g2);
+}
+
+.ib-focus h4 {
+  margin-bottom: 4px;
+}
+
+.note-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #e8e8e8;
+}
+
+.ib-notes .ln + .ln {
+  margin-top: 10px;
+}
+
+#burst {
+  position: absolute;
+  left: 540px;
+  top: 640px;
+}
+
+#burst span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: rotate(var(--a)) translateY(-130px);
+}
+
+#burst i {
+  display: block;
+  width: 3px;
+  height: 26px;
+  margin: -13px 0 0 -1.5px;
+  border-radius: 2px;
+  background: #fff;
+  transform-origin: 50% 100%;
+}
+
+/* ---- Foco (cena 4) ---- */
+#focusCard {
+  position: absolute;
+  left: 580px;
+  top: 400px;
+  width: 760px;
+  height: 470px;
+  padding: 30px 36px;
+  box-sizing: border-box;
+}
+
+.fc-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 18px;
+}
+
+.pill {
+  padding: 5px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fc-task {
+  color: var(--g1);
+}
+
+.fc-session {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  font-size: 15px;
+  color: #7a7a7a;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dots b {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid #555;
+  box-sizing: border-box;
+}
+
+.dots b.on {
+  background: #fff;
+  border-color: #fff;
+}
+
+.fc-body {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  margin-top: 26px;
+}
+
+.fc-ring {
+  position: relative;
+  flex: none;
+  width: 300px;
+  height: 300px;
+}
+
+.fc-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.fc-time {
+  font-size: 76px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.fc-label {
+  margin-top: 8px;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #7a7a7a;
+}
+
+.fc-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+}
+
+.fc-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fc-stat span {
+  font-size: 14px;
+  color: #7a7a7a;
+}
+
+.fc-stat b {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.fc-ctrls {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn.solid {
+  background: #fff;
+  border-color: #fff;
+}
+
+.float {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 20px;
+}
+
+.float.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 22px;
+}
+
+.float p {
+  margin: 0;
+  font-size: 19px;
+  color: #ececec;
+}
+
+#note4 {
+  left: 150px;
+  top: 360px;
+  width: 330px;
+  padding: 22px 24px;
+}
+
+#note4 .note-title {
+  margin: 8px 0 16px;
+}
+
+#note4 .ln + .ln {
+  margin-top: 10px;
+}
+
+#rem4 {
+  left: 1420px;
+  top: 420px;
+  width: 360px;
+  height: 96px;
+}
+
+#rem4 .kicker {
+  display: block;
+  margin-bottom: 2px;
+}
+
+#chip4 {
+  left: 1400px;
+  top: 700px;
+  width: 400px;
+  height: 76px;
+}
+
+/* ---- Ilha compacta e conversa (cena 5) ---- */
+#scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(5, 5, 5, 0.92) 0%, rgba(5, 5, 5, 0.6) 45%, transparent 75%);
+}
+
+#island5 {
+  position: absolute;
+  left: 760px;
+  top: 44px;
+  width: 400px;
+  height: 64px;
+  border-radius: 32px;
+  overflow: hidden;
+}
+
+.pill-row {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.pill-row .mini-ring .prog {
+  stroke-dashoffset: 18 !important;
+}
+
+.pill-time {
+  margin-left: auto;
+  color: var(--g1);
+  font-variant-numeric: tabular-nums;
+}
+
+.open-body {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 620px;
+  height: 400px;
+  box-sizing: border-box;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.chat-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 18px;
+}
+
+.chat-head .online {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--g2);
+}
+
+.msg {
+  max-width: 76%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.msg.me {
+  align-self: flex-end;
+  background: #fff;
+  color: #050505;
+  border-bottom-right-radius: 6px;
+}
+
+.msg.bot {
+  align-self: flex-start;
+  min-height: 24px;
+  min-width: 380px;
+  background: #161616;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom-left-radius: 6px;
+}
+
+.note-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+  padding: 12px 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.24);
+  border-radius: 14px;
+  font-size: 16px;
+  color: var(--g1);
+}
+
+#cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  opacity: 0;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+}
+
+/* ---- Órbita (cena 6) ---- */
+.orb {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.orb-c {
+  visibility: hidden;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  font-size: 18px;
+}
+
+.orb-chip {
+  padding: 14px 20px;
+  border-radius: 16px;
+}
+
+.orb-chip .done {
+  color: #8a8a8a;
+  text-decoration: line-through;
+}
+
+.orb-ring {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.orb-ring svg {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+}
+
+.orb-ring .prog {
+  stroke-dashoffset: 70 !important;
+}
+
+.orb-ring span {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.orb-note {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 210px;
+  padding: 16px 18px;
+  border-radius: 16px;
+}
+
+.orb-note p {
+  margin: 0;
+  font-size: 17px;
+}
+
+.orb-note .ln {
+  width: 100%;
+}
+
+.orb-pill {
+  padding: 12px 20px;
+  border-radius: 999px;
+}
+
+.orb-pill i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.orb-pill span {
+  color: var(--g1);
+  font-variant-numeric: tabular-nums;
+}

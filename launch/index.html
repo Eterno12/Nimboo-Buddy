@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nimboo — Launch Film</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/ui.css">
+<link rel="stylesheet" href="css/controls.css">
+</head>
+<body>
+<div id="app">
+  <div id="viewport">
+    <!-- Composição 1920×1080: tudo que é "filme" vive aqui dentro; os controles ficam fora. -->
+    <div id="stage">
+      <div id="camera">
+        <section class="scene" id="s2"></section>
+        <section class="scene" id="s3"></section>
+        <section class="scene" id="s4"></section>
+        <section class="scene" id="s5"></section>
+        <section class="scene" id="s6"></section>
+        <div class="layer" id="brandLayer"></div>
+        <div class="layer" id="actorLayer"></div>
+        <div class="layer" id="fxLayer"></div>
+      </div>
+      <div id="vignette"></div>
+    </div>
+  </div>
+  <div id="controls"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/mascot.js"></script>
+<script src="js/components.js"></script>
+<script src="js/anims.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/controls.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
