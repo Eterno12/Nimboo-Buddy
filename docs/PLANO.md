@@ -15,7 +15,7 @@ M (1–2), G (2+).
 | 6 ✅ | **Estatísticas:** semana de foco, tarefas concluídas, sequência | P | 1, 4 | feito (seção "Sua semana" na janela de conquistas: cartões + barras; "minha semana" no assistente) |
 | 7 ✅ | **Contexto:** reações a hora/dia (madrugada, fim de semana), comemoração ao concluir tarefa difícil | P | 4 | feito (falas por dia da semana/madrugada; tarefa difícil = prioridade alta, atrasada, 2+ subtarefas ou 3+ dias parada) |
 | 8 ✅ | **Assistente+:** mais comandos (adiar, fixar nota, "o que tenho amanhã?"), histórico local apagável, atalho global para falar | M | 1–2 | feito (histórico visível e apagável, ligado por padrão; atalho opcional Ctrl+Alt+V/A ou Ctrl+Shift+V, desligado por padrão) |
-| 9 | **Voz:** resposta falada (TTS do Windows) por personagem; **reconhecimento offline** (Whisper local) | G | 8 | Aceita baixar um modelo (75–500 MB) por escolha sua dentro do app? |
+| 9 ✅ | **Voz:** resposta falada (TTS do Windows) por personagem; **reconhecimento offline** (Whisper local) | G | 8 | encerrada por decisão sua: o personagem **não fala**; fica só com os sons e balões que já existem (sem TTS, sem Whisper, sem download) |
 | 10 | **IA com ações:** o Ollama propõe ações e você confirma por cartão | M | 8 | — |
 | 11 | **Agenda:** várias agendas iCal; notificações do Windows com botões (Concluir / Adiar) | M | 1 | Quantas agendas? (sugiro até 5) |
 | 12 | **Primeira execução guiada** (personagem, agenda, voz/IA) | M | 4, 9 | — |

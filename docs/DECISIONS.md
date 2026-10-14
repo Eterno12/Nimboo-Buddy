@@ -471,3 +471,11 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   o registro falha em silêncio (logado).
 - **Limite:** o atalho depende da permissão de fala do Windows como o microfone da janela; não foi exercitado
   com uma fala real.
+
+## D46 — Sem voz falada para o personagem (Etapa 9 encerrada)
+- **Decisão (do usuário):** o personagem não ganha voz falada. Continua só com os sons sintetizados (D23, D29) e
+  os balões de texto. Ficam de fora: resposta falada (TTS do Windows) e reconhecimento offline (Whisper local),
+  portanto **nenhum modelo é baixado** e não há nova superfície de rede.
+- **O que permanece:** o microfone do assistente usa o reconhecimento de fala do Windows (D37), só para ditar o
+  pedido; isso não muda.
+- **Reabrir:** se um dia quiser, a etapa volta como opcional (TTS desligado por padrão).
