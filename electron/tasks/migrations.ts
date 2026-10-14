@@ -122,6 +122,23 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Vínculo com o Mochi: contadores (JSON em `bond_kv`: stats, days, affection) e conquistas desbloqueadas.
+    version: 7,
+    name: 'bond_and_achievements',
+    up(db) {
+      db.exec(`
+        CREATE TABLE bond_kv (
+          key   TEXT NOT NULL PRIMARY KEY,
+          value TEXT NOT NULL
+        ) STRICT;
+        CREATE TABLE achievements (
+          id          TEXT NOT NULL PRIMARY KEY,
+          unlocked_at TEXT NOT NULL
+        ) STRICT;
+      `);
+    },
+  },
 ];
 
 /** O banco foi criado por uma versão mais nova do app; não é seguro abri-lo. */

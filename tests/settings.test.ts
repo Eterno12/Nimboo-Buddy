@@ -7,6 +7,13 @@ import { DEFAULT_SETTINGS, parseSettings } from '../shared/settings.ts';
 import { resolveTheme } from '../src/features/settings/useTheme.ts';
 import { createSettingsStore } from '../electron/settingsStore.ts';
 
+test('parseSettings: nome do personagem é aparado e limitado', () => {
+  assert.equal(parseSettings({ version: 3, mascotName: '  Bolinho   Doce ' }).mascotName, 'Bolinho Doce');
+  for (const bad of ['', '   ', 'x'.repeat(21), '<b>oi</b>', 'a\u0007b', 42, null]) {
+    assert.equal(parseSettings({ version: 3, mascotName: bad }).mascotName, DEFAULT_SETTINGS.mascotName, String(bad));
+  }
+});
+
 test('parseSettings: entradas inválidas viram padrão', () => {
   for (const bad of [null, undefined, 42, 'x', [], {}, { version: 2 }]) {
     assert.deepEqual(parseSettings(bad), DEFAULT_SETTINGS);

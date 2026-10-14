@@ -147,6 +147,17 @@ export async function runAssistantCommand(cmd: AssistantCommand, now: Date = new
       return { text: `Suas notas mais recentes:\n${lines.join('\n')}`, openNoteId: r.value[0].id };
     }
 
+    case 'achievements': {
+      const snap = await api.bond.get();
+      api.bond.open();
+      if (!snap) return { text: 'Abri a janela de conquistas pra você.' };
+      const days = snap.stats.days_total ?? 0;
+      return {
+        text: `Abri suas conquistas! Você tem ${snap.unlockedCount} de ${snap.total} (${snap.points} pontos), ${days} ${days === 1 ? 'dia' : 'dias'} de amizade — ${snap.title}.`,
+        happy: true,
+      };
+    }
+
     case 'summary': {
       const [list, cal, stats, snap] = await Promise.all([
         api.tasks.list(),

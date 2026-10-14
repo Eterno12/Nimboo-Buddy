@@ -76,6 +76,9 @@ export interface MascotController {
   debugSet(state: MascotState): void;
   /** Troca a personalidade (ritmos) do personagem; vale a partir do próximo temporizador. */
   setTraits(traits: CharacterTraits): void;
+  /** Volta ao afeto guardado de outra sessão (o humor persiste entre aberturas do app). */
+  restoreAffection(value: number): void;
+  getAffection(): number;
 }
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
@@ -265,6 +268,10 @@ export function createMascotController(onChange: (s: MascotSnapshot) => void): M
       if (snap.hop) emit({ hop: false });
     },
     debugSet: (state) => enter(state, true),
+    restoreAffection: (value) => {
+      if (typeof value === 'number' && Number.isFinite(value)) setAffection(value);
+    },
+    getAffection: () => affection,
     setTraits(next) {
       traits = next;
       // O contador de sono já armado usa o ritmo anterior: rearma só se estiver em repouso.

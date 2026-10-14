@@ -33,6 +33,7 @@ export type SoundName =
   | 'breakDone'
   | 'preview'
   | 'reminder'
+  | 'achievement'
   // uma assinatura sonora curta para cada animação do Mochi
   | 'happy'
   | 'curious'
@@ -86,6 +87,14 @@ export const SOUNDS: Record<SoundName, readonly Note[]> = {
   preview: [bell(0, 587.33, 0.2, 0.36), bell(0.12, 880, 0.3, 0.32)],
   // lembrete de prazo: três notas curtas e claras (G5 C6 E6), mais "presentes" que os demais, ainda suaves
   reminder: [bell(0, 783.99, 0.18, 0.4), bell(0.14, 1046.5, 0.18, 0.4), bell(0.28, 1318.51, 0.4, 0.38)],
+  // conquista: arpejo ascendente curto (C5 E5 G5 C6) e um sino final mais longo (E6)
+  achievement: [
+    bell(0, 523.25, 0.16, 0.34),
+    bell(0.09, 659.25, 0.16, 0.34),
+    bell(0.18, 783.99, 0.18, 0.34),
+    bell(0.28, 1046.5, 0.3, 0.34),
+    bell(0.42, 1318.51, 0.7, 0.3),
+  ],
   // ----- animações -----
   happy: [bell(0, 783.99, 0.1, 0.3), bell(0.07, 1046.5, 0.16, 0.28)],
   curious: [{ at: 0, freq: 520, dur: 0.16, gain: 0.3, wave: 'sine', glideTo: 780 }],

@@ -22,6 +22,8 @@ interface NotesServiceOptions {
   db: DatabaseSync;
   /** URL de origem das páginas do app (servidor de desenvolvimento) ou `file://`. */
   isAppUrl(url: string): boolean;
+  /** Uma nota foi criada (conquistas). */
+  onCreated?(): void;
   /** O tema escuro está em uso (para a janela nascer com o fundo certo). */
   isDark(): boolean;
 }
@@ -34,7 +36,7 @@ const BOUNDS_SAVE_DELAY_MS = 500;
  * Notas: IPC tipado sobre o repositório SQLite + as janelas flutuantes (uma por nota fixada) e a janela
  * de gerenciamento. Só o processo principal toca o banco; as janelas recebem a mudança por evento.
  */
-export function startNotesService({ db, isAppUrl, isDark }: NotesServiceOptions): NotesService {
+export function startNotesService({ db, isAppUrl, isDark, onCreated }: NotesServiceOptions): NotesService {
   const floating = new Map<string, BrowserWindow>();
   /** Janelas que o próprio serviço está fechando (não devem desafixar a nota). */
   const closing = new Set<string>();
@@ -55,6 +57,7 @@ export function startNotesService({ db, isAppUrl, isDark }: NotesServiceOptions)
   const repo = new SqliteNotesRepository(db, {
     onChange: (change) => {
       broadcast(change);
+      if (change.type === 'created') onCreated?.();
       if (change.type === 'removed') closeFloating(change.id);
       else if (change.type === 'updated' && change.fields.includes('pinned')) void syncFloating(change.id);
     },

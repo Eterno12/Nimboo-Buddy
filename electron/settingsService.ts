@@ -32,6 +32,7 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'routineEveningHour',
   'routineLastMorning',
   'routineLastEvening',
+  'mascotName',
 ];
 
 export interface SettingsService {

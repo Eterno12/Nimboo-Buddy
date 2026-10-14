@@ -322,6 +322,12 @@ electron/main.ts            submenu "Personagem" (radio) no menu da bandeja/cont
 - `useRoutine` (renderer): combina tarefas, agenda e foco do dia; `DaySummaryCard` nas tarefas; `MascotView` anuncia (fala curta, 1x por dia e execucao).
 - Preferencias `routineMorning`/`routineEvening`/`routineEveningHour` e as datas `routineLast*` (gravadas ao dispensar). Ver D40.
 
+## 19. Vínculo e conquistas
+
+- `shared/achievements.ts` (puro): definições, `applyBondEvent`, `progressOf`, `buildSnapshot`. `electron/bond/bondEngine.ts` (sem Electron) aplica, avalia, persiste e avisa; `bondStore.ts` guarda no SQLite (v7).
+- `electron/bondService.ts`: IPC (`bondGet`, `bondEvent`, `bondSaveAffection`, `bondOpen`, difusão `bondChanged`), janela de conquistas e fila de avisos (`createToastWindow`). `main.ts` liga os eventos (tarefas, notas, foco, personagem, abrir).
+- Renderer: `src/features/bond/` (`AchievementsView`, `ToastView`, `useBond`, `AchievementIcon`); rotas `#achievements` e `#toast=<id>`. Ver D41.
+
 ## 11. Foco evoluído, prazos/lembretes e empacotamento
 
 - **Foco:** `shared/focus.ts` (tipos, `nextStep`, validação) → `FocusTimer` (ciclo, tarefa, `configure`) →

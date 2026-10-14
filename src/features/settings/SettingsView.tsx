@@ -208,6 +208,8 @@ export function SettingsView({ onBack }: SettingsViewProps) {
   };
   const [modelDraft, setModelDraft] = useState(settings.assistantModel);
   useEffect(() => setModelDraft(settings.assistantModel), [settings.assistantModel]);
+  const [nameDraft, setNameDraft] = useState(settings.mascotName);
+  useEffect(() => setNameDraft(settings.mascotName), [settings.mascotName]);
   const resetAll = () =>
     set({
       islandScale: DEFAULT_SETTINGS.islandScale,
@@ -346,6 +348,25 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           {characterInfo(settings.character).tagline}. A troca vale na hora, com o mesmo som e as mesmas
           animações.
         </p>
+        <label className="settings-row">
+          <span>Nome do seu personagem</span>
+          <input
+            className="settings-text"
+            type="text"
+            data-testid="mascot-name"
+            value={nameDraft}
+            maxLength={20}
+            onChange={(e) => setNameDraft(e.target.value)}
+            onBlur={() => {
+              const name = nameDraft.replace(/\s+/g, ' ').trim();
+              if (name && name !== settings.mascotName) set({ mascotName: name });
+              else setNameDraft(settings.mascotName);
+            }}
+          />
+        </label>
+        <button type="button" className="settings-small" onClick={() => window.mochi.bond.open()}>
+          Ver conquistas
+        </button>
       </fieldset>
 
       <fieldset className="settings-group">

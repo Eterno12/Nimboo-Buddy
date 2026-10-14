@@ -136,6 +136,13 @@ test('robustez: entradas estranhas nunca lançam e comandos vazios viram pergunt
 });
 
 
+test('conquistas: formas de pedir e sem confundir com criar algo', () => {
+  for (const s of ['minhas conquistas', 'conquistas', 'mostrar conquistas', 'ver meus troféus', 'quais são minhas conquistas?']) {
+    assert.deepEqual(parse(s), { kind: 'achievements' }, s);
+  }
+  assert.equal(parse('crie uma tarefa para ver as conquistas').kind, 'task.create');
+});
+
 test('resumo do dia: várias formas de pedir', () => {
   for (const s of ['resumo do dia', 'como foi o meu dia?', 'resumo de hoje', 'fechamento', 'como está o meu dia', 'resumo']) {
     assert.deepEqual(parse(s), { kind: 'summary' }, s);

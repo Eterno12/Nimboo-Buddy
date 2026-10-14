@@ -104,6 +104,10 @@ Além de criar, concluir e excluir (com *Desfazer*): **duplo clique no título p
 
 No primeiro uso da manhã o Mochi mostra um **resumo** (tarefas que pedem atenção, atrasadas, eventos e o próximo) — um cartão no topo das tarefas e uma fala curta. No fim do dia (padrão 18h) vem o **fechamento**: o que você concluiu, o foco do dia e o que ficou pendente. Cada um aparece uma vez por dia e dá para dispensar; ligue/desligue e escolha a hora em *Configurações > Rotina do dia*. Também dá para perguntar ao assistente: *"resumo do dia"*.
 
+### Vínculo e conquistas
+
+O Mochi lembra de você: o humor dele **persiste** entre aberturas do app, e ele conta os **dias juntos** e a sequência de dias seguidos. As **conquistas** funcionam como troféus de Steam/PSN (bronze, prata, ouro e platina, algumas secretas): ao liberar uma, um aviso aparece no canto da tela com um som curto (não aparece com apps em tela cheia). Veja tudo em *bandeja > Conquistas*, em *Configurações > Personagem > Ver conquistas* ou perguntando ao assistente: *"minhas conquistas"*. Você também pode dar um **nome** ao personagem em *Configurações > Personagem*.
+
 ### Notas
 
 Atalho **Notas** da ilha (ou *Notas* na bandeja): lista com busca à esquerda e o editor à direita, com **negrito, itálico, sublinhado, tachado, código, títulos, listas, listas de tarefas, citação, bloco de código, alinhamento, cor do texto, marca-texto e links**. Cada nota tem a cor do papel (amarelo, rosa, azul, verde, lilás, branco) e pode ser **fixada na área de trabalho** como uma folha flutuante (fora da barra de tarefas e sem ficar por cima dos outros aplicativos). A nota flutuante lembra o lugar e reabre com o app.

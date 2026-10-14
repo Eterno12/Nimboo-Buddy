@@ -97,6 +97,26 @@ export function MascotView() {
   }, [settings.soundEnabled, settings.soundVolume, character]);
   useEffect(() => setTraits(character.traits), [character, setTraits]);
 
+  // O humor do Mochi sobrevive ao app: volta ao afeto guardado e o salva de minuto em minuto.
+  const { restoreAffection, getAffection } = mascot;
+  useEffect(() => {
+    let alive = true;
+    void window.mochi.bond
+      .get()
+      .then((s) => {
+        if (alive && s) restoreAffection(s.affection);
+      })
+      .catch(() => undefined);
+    const timer = window.setInterval(() => window.mochi.bond.saveAffection(getAffection()), 60_000);
+    const onHide = () => window.mochi.bond.saveAffection(getAffection());
+    window.addEventListener('beforeunload', onHide);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      window.removeEventListener('beforeunload', onHide);
+    };
+  }, [restoreAffection, getAffection]);
+
   // Campo de tarefa com foco ou com rascunho: a ilha não recolhe por inatividade.
   const { hold } = useDraft();
   const { setHold } = island;
@@ -354,7 +374,10 @@ export function MascotView() {
     if (draggable) window.mochi.endDrag();
     if (p.dragging) release();
     else if (inIsland) island.toggle();
-    else pet();
+    else {
+      pet();
+      window.mochi.bond.event('pet');
+    }
   };
 
   // Aguarda o main informar a apresentação; a janela é transparente, então nada aparece.

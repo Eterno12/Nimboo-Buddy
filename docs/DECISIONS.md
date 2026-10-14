@@ -404,3 +404,24 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   padrão, desligável em Configurações > Rotina do dia.
 - **Limite:** o fechamento "chega" enquanto o app está aberto; se o Mochi está escondido, a fala vem quando a ilha
   aparecer de novo (o cartão já está nas tarefas).
+
+## D41 — Vínculo e conquistas: afeto persistente, dias juntos e troféus (migração v7)
+- **Decisão:** `shared/achievements.ts` (puro, testado) guarda as regras: contadores (`stats`), dias juntos e
+  sequência, 24 conquistas em 4 níveis (bronze 10 / prata 25 / ouro 50 / platina 100 pontos), 2 secretas
+  ("???" até liberar) e a platina por completar todas. `applyBondEvent` é um redutor sem efeitos colaterais.
+- **Onde vive:** só o processo principal (`BondEngine` + `SqliteBondStore`, tabelas `bond_kv` e `achievements`
+  no mesmo SQLite das tarefas, migração v7 com backup). A interface só lê (`bond.get/onChange`) e envia cinco
+  eventos que nascem nela (`pet`, `assistant`, `voice`, `event_task`, `subtask`); os demais (tarefa criada/
+  concluída, nota criada, foco concluído, troca de personagem, abrir o app) vêm dos próprios serviços.
+  Qualquer outro tipo enviado pela interface é descartado (`RENDERER_EVENTS`).
+- **Aviso estilo Steam/PSN:** janela transparente, sem foco e que ignora o mouse (`toast=<id>`), no canto da
+  tela, 5,6 s, com som próprio (`achievement`, no timbre do personagem). Fila: um por vez. Com app em tela cheia
+  os avisos são descartados (a conquista continua valendo) — mesma regra do "não incomodar".
+- **Tela de conquistas:** perfil (personagem, nome, dias juntos, sequência, título de amizade, pontos),
+  barra geral, filtros Todas/Conquistadas/Bloqueadas, cartões com medalha por nível e barra de progresso.
+  Abre pela bandeja, pelas Configurações ou pelo assistente ("minhas conquistas").
+- **Afeto persistente:** o humor do Mochi volta ao valor guardado e é salvo a cada minuto (e ao fechar).
+- **Nome do personagem:** preferência `mascotName` (1–20 caracteres, sem `<>` nem controle; inválido volta a
+  "Mochi"), usada no assistente e nas conquistas.
+- **Limites:** o horário da madrugada (0–4 h) e do "cedo" (5–6 h) usa o relógio local; dias sem abrir o app
+  zeram a sequência; importar dados não traz conquistas (ficam por instalação).

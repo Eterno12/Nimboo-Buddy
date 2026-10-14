@@ -21,6 +21,7 @@ import { startTasksService, type TasksService } from './tasksService';
 import { startNotesService, type NotesService } from './notesService';
 import { startAssistantService, type AssistantService } from './assistantService';
 import { startDataService, type DataService } from './dataService';
+import { startBondService, type BondService } from './bondService';
 import { startFocusService, type FocusService } from './focusService';
 import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
@@ -42,6 +43,7 @@ let calendar: CalendarService | null = null;
 let notes: NotesService | null = null;
 let assistant: AssistantService | null = null;
 let dataService: DataService | null = null;
+let bond: BondService | null = null;
 let focusLog: FocusLog | null = null;
 /** Eventos da agenda e quais já viraram tarefa: o lembrete passa a ser o da tarefa (sem aviso duplo). */
 let agendaEvents: CalendarEvent[] = [];
@@ -202,6 +204,7 @@ function applySettingsChange(previous: Settings, next: Settings): void {
   if (previous.shortcut !== next.shortcut) applyShortcut(next.shortcut);
   if (previous.launchAtLogin !== next.launchAtLogin) applyLaunchAtLogin(next.launchAtLogin);
   if (previous.doNotDisturb !== next.doNotDisturb) applyDoNotDisturb(next.doNotDisturb);
+  if (previous.character !== next.character) bond?.record({ type: 'character', id: next.character });
   focus?.configure(focusConfigOf(next));
   const reminderConfig = { enabled: next.remindersEnabled, leadMinutes: next.reminderLeadMin };
   reminders?.setConfig(reminderConfig);
@@ -251,6 +254,7 @@ function buildMenu(): Menu {
     { label: 'Mostrar painel', click: () => showPanel() },
     { label: 'Notas', click: () => notes?.openManager() },
     { label: 'Assistente', click: () => assistant?.openWindow() },
+    { label: 'Conquistas', click: () => bond?.openWindow() },
     { label: 'Configurações', click: () => showPanel('settings') },
     { label: 'Personagem', submenu: characterItems },
     { label: mascotVisible ? 'Ocultar mascote' : 'Mostrar mascote', click: toggleMascot },
@@ -350,6 +354,10 @@ if (!app.requestSingleInstanceLock()) {
         linkedEventIds = new Set(sourceRefs);
         syncEventReminders();
       },
+      onChange: (change) => {
+        if (change.type === 'created') bond?.record({ type: 'task_created' });
+        else if (change.type === 'completed') bond?.record({ type: 'task_completed' });
+      },
     });
     const database = tasks.database();
     if (database) {
@@ -361,7 +369,20 @@ if (!app.requestSingleInstanceLock()) {
           const preference = settingsStore?.get().theme ?? 'auto';
           return preference === 'dark' || (preference === 'auto' && nativeTheme.shouldUseDarkColors);
         },
+        onCreated: () => bond?.record({ type: 'note_created' }),
       });
+      // Vinculo e conquistas (mesmo SQLite): contadores, dias juntos e avisos de conquista.
+      bond = startBondService({
+        db: database,
+        isAppUrl,
+        isDark: () => {
+          const preference = settingsStore?.get().theme ?? 'auto';
+          return preference === 'dark' || (preference === 'auto' && nativeTheme.shouldUseDarkColors);
+        },
+        canToast: () => !hiddenByFullscreen,
+      });
+      bond.record({ type: 'open' });
+      bond.record({ type: 'character', id: settings.get().character });
       focusLog = new FocusLog(database);
       try {
         focusLog.purge();
@@ -426,7 +447,8 @@ if (!app.requestSingleInstanceLock()) {
       isAppUrl,
       config: focusConfigOf(startup),
       getLog: () => focusLog,
-      onFinished: (kind) => {
+      onFinished: (kind, minutes) => {
+        if (kind === 'focus') bond?.record({ type: 'focus_finished', minutes });
         const visible = !!mascot && !mascot.isDestroyed() && mascot.isVisible();
         if (!visible && Notification.isSupported()) {
           new Notification({
@@ -457,6 +479,7 @@ if (!app.requestSingleInstanceLock()) {
     notes?.close();
     assistant?.close();
     dataService?.close();
+    bond?.close();
     tasks?.close();
     tray?.destroy();
   });

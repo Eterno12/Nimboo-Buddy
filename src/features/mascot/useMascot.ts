@@ -34,6 +34,8 @@ export function useMascot() {
       grab: () => ref.current?.grab(),
       release: () => ref.current?.release(),
       endHop: () => ref.current?.endHop(),
+      restoreAffection: (v: number) => ref.current?.restoreAffection(v),
+      getAffection: () => ref.current?.getAffection() ?? 0.5,
       setTraits: (t: Parameters<MascotController['setTraits']>[0]) => ref.current?.setTraits(t),
       debugSet: (s: Parameters<MascotController['debugSet']>[0]) => ref.current?.debugSet(s),
     }),

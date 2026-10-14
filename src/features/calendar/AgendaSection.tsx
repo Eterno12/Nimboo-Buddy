@@ -63,6 +63,7 @@ export function AgendaSection({ variant }: AgendaSectionProps) {
     const result = await tasks.create(data.title, data.dueAt, data.sourceRef);
     setBusy(null);
     if (!result.ok) setProblem(result.error.message);
+    else window.mochi.bond.event('event_task');
   };
 
   const toggle = () => {

@@ -13,6 +13,7 @@ export type AssistantCommand =
   | { kind: 'list.agenda' }
   | { kind: 'list.notes' }
   | { kind: 'summary' }
+  | { kind: 'achievements' }
   | { kind: 'focus.start'; minutes: number | null }
   | { kind: 'focus.pause' }
   | { kind: 'focus.resume' }
@@ -256,8 +257,11 @@ export function parseAssistantCommand(input: string, now: Date = new Date()): As
   if (/^(?:abrir|abra|mostrar|mostre|ver|veja)\s+(?:as\s+|a\s+|minhas\s+|minha\s+|janela\s+de\s+)*(?:notas|nota|anotacoes)[ .!]*$/.test(fb)) return { kind: 'open.notes' };
   if (/^(?:abrir|abra|mostrar|mostre|ir para|va para)\s+(?:as\s+|a\s+|minhas\s+)*(?:configuracoes|configuracao|ajustes|preferencias)[ .!]*$/.test(fb)) return { kind: 'open.settings' };
 
+  // ---- Conquistas / vínculo ----
+  if (/^(?:(?:mostr\w*|abr\w*|ver|quais (?:sao )?)\s*)?(?:(?:as |os |meus |minhas )?(?:minhas? )?(?:conquistas?|trofeus?|medalhas?))[ ?!.]*$|\bminhas? (?:conquistas?|trofeus?)\b/.test(fb) && !/\b(?:cri\w*|adicion\w*|anot\w*|lembr\w*)\b/.test(fb)) return { kind: 'achievements' };
+
   // ---- Resumo / fechamento do dia ----
-  const makes = /\b(?:cri\w*|adicion\w*|nov[ao]|anot\w*|lembr\w*|faca|fazer)\b/.test(fb);
+  const makes =/\b(?:cri\w*|adicion\w*|nov[ao]|anot\w*|lembr\w*|faca|fazer)\b/.test(fb);
   if (!makes && /^(?:resumo|resuma)(?: do dia| de hoje| da manha)?[ ?!.]*$|\bcomo foi (?:o meu |meu |o )?dia\b|^(?:fechamento|fechar o dia)[ ?!.]*$|\bresumo d[eo] (?:meu )?dia\b|\bresumo de hoje\b|^(?:como (?:esta|ta) (?:o )?(?:meu )?dia)[ ?!.]*$/.test(fb)) return { kind: 'summary' };
 
   // ---- Listas ----

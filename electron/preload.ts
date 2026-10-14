@@ -3,6 +3,7 @@ import { IPC, type CursorPoint, type MochiApi, type SettingsSnapshot } from '../
 import type { Entrance, PresentationState } from '../shared/presentation';
 import type { FocusKind, FocusState } from '../shared/focus';
 import { EMPTY_CALENDAR, type CalendarState } from '../shared/calendar';
+import type { BondSnapshot } from '../shared/achievements';
 
 /** Sanitiza o que vem do main antes de entregar à página. */
 function asPresentation(value: unknown): PresentationState {
@@ -92,6 +93,13 @@ const api: MochiApi = {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
     update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
     onChange: (listener) => listen<[SettingsSnapshot]>(IPC.settingsChanged, (s) => listener(s)),
+  },
+  bond: {
+    get: () => ipcRenderer.invoke(IPC.bondGet),
+    event: (type) => ipcRenderer.send(IPC.bondEvent, { type }),
+    saveAffection: (value) => ipcRenderer.send(IPC.bondSaveAffection, value),
+    open: () => ipcRenderer.send(IPC.bondOpen),
+    onChange: (listener) => listen<[BondSnapshot]>(IPC.bondChanged, (s) => listener(s)),
   },
   data: {
     export: () => ipcRenderer.invoke(IPC.dataExport),

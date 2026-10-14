@@ -97,6 +97,61 @@ export function createAssistantWindow(dark: boolean): BrowserWindow {
   win.once('ready-to-show', () => win.show());
   return win;
 }
+
+/** Janela das conquistas (perfil de vínculo e lista de troféus). */
+export function createAchievementsWindow(dark: boolean): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 560,
+    height: 700,
+    minWidth: 420,
+    minHeight: 460,
+    title: 'Conquistas — Mochi',
+    autoHideMenuBar: true,
+    show: false,
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
+    webPreferences: secureWebPreferences(),
+  });
+  lockNavigation(win);
+  loadRenderer(win, 'achievements');
+  win.once('ready-to-show', () => win.show());
+  return win;
+}
+
+/**
+ * Aviso de conquista (estilo "troféu"): cartão sem borda no canto inferior direito, por cima de tudo,
+ * sem tirar o foco de quem está trabalhando e sem aparecer na barra de tarefas.
+ */
+export function createToastWindow(achievementId: string, workArea: Rect): BrowserWindow {
+  const width = 380;
+  const height = 104;
+  const win = new BrowserWindow({
+    width,
+    height,
+    x: workArea.x + workArea.width - width - 16,
+    y: workArea.y + workArea.height - height - 16,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    focusable: false,
+    alwaysOnTop: true,
+    show: false,
+    webPreferences: secureWebPreferences(),
+  });
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setIgnoreMouseEvents(true);
+  lockNavigation(win);
+  loadRenderer(win, `toast=${achievementId}`);
+  win.once('ready-to-show', () => win.showInactive());
+  return win;
+}
+
 /** Cor de fundo das janelas de nota (igual à do papel em notes.css; a janela nasce já pintada). */
 const NOTE_PAPER: Record<string, string> = {
   yellow: '#fff3a8',

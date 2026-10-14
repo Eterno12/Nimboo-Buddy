@@ -20,7 +20,8 @@
     "test:e2e:tasks-complete": "npm run build && node tests/e2e/tasks-complete.e2e.mjs",
     "test:e2e:links": "npm run build && node tests/e2e/links-ui.e2e.mjs",
     "test:e2e:routine": "npm run build && node tests/e2e/routine-ui.e2e.mjs",
-    "test:e2e:notes": "npm run build && node tests/e2e/notes-ui.e2e.mjs",
+    "test:e2e:achievements": "npm run build && node tests/e2e/achievements-ui.e2e.mjs",
+    "test:e2e:notes":"npm run build && node tests/e2e/notes-ui.e2e.mjs",
     "test:e2e:assistant": "npm run build && node tests/e2e/assistant-ui.e2e.mjs",
     "pack": "npm run build && electron-builder --win dir",
     "dist": "npm run build && electron-builder --win nsis"

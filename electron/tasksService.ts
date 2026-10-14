@@ -34,6 +34,8 @@ interface TasksServiceOptions {
    * (sourceRef) de todas as tarefas visíveis, ativas ou concluídas (lembretes de eventos da agenda).
    */
   onTasksChanged?(tasks: Task[], sourceRefs: string[]): void;
+  /** Cada mudanca confirmada (criada, concluida...), para quem acompanha o uso (conquistas). */
+  onChange?(change: TaskChange): void;
 }
 
 const STORAGE_DOWN = () => fail<never>('storage', 'As tarefas não estão disponíveis agora.');
@@ -56,7 +58,7 @@ const CHANNELS = [
  * Liga o repositório SQLite ao IPC. O banco só existe no processo principal; o
  * renderer chama operações específicas e tipadas, e é avisado das mudanças.
  */
-export function startTasksService({ dbPath, isAppUrl, onTasksChanged }: TasksServiceOptions): TasksService {
+export function startTasksService({ dbPath, isAppUrl, onTasksChanged, onChange }: TasksServiceOptions): TasksService {
   let db: DatabaseSync | null = null;
   let repo: SqliteTaskRepository | null = null;
   let scheduler: RemovalScheduler | null = null;
@@ -80,6 +82,13 @@ export function startTasksService({ dbPath, isAppUrl, onTasksChanged }: TasksSer
       }
     }
     publish();
+    if (change && onChange) {
+      try {
+        onChange(change);
+      } catch (error) {
+        console.error('Falha ao avisar o acompanhamento de uso:', error);
+      }
+    }
   };
 
   /** Entrega as tarefas visíveis a quem agenda lembretes (nunca falha a operação já confirmada). */

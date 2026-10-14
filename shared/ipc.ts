@@ -2,6 +2,7 @@ import type { IslandExtent, PresentationState } from './presentation';
 import type { TasksApi } from './tasks';
 import type { NotesApi } from './notes';
 import type { AssistantApi } from './assistantApi';
+import type { BondSnapshot } from './achievements';
 import type { FocusApi } from './focus';
 import type { Settings } from './settings';
 import type { CalendarResult, CalendarState } from './calendar';
@@ -35,6 +36,12 @@ export const IPC = {
   /** renderer -> main (invoke): ajusta até onde a forma da ilha aberta se estende. */
   islandExtent: 'island:extent',
   /** renderer -> main (invoke): operações de tarefas (cada uma é específica e tipada). */
+  bondGet: 'bond:get',
+  bondEvent: 'bond:event',
+  bondSaveAffection: 'bond:save-affection',
+  bondOpen: 'bond:open',
+  /** main -> renderer: o vinculo/conquistas mudou (snapshot). */
+  bondChanged: 'bond:changed',
   dataExport: 'data:export',
   dataImport: 'data:import',
   assistantOpen: 'assistant:open',
@@ -156,7 +163,17 @@ export interface MochiApi {
   tasks: TasksApi;
   notes: NotesApi;
   assistant: AssistantApi;
-  /** Exportar/importar tarefas e notas (arquivo JSON, pelo diÃ¡logo do Windows). */
+  /** Vinculo com o Mochi: conquistas, dias juntos e afeto. */
+  bond: {
+    get(): Promise<BondSnapshot>;
+    /** Eventos da interface (carinho, assistente, voz, evento->tarefa, subtarefa). */
+    event(type: 'pet' | 'assistant' | 'voice' | 'event_task' | 'subtask'): void;
+    saveAffection(value: number): void;
+    /** Abre a janela de conquistas. */
+    open(): void;
+    onChange(listener: (snapshot: BondSnapshot) => void): () => void;
+  };
+  /** Exportar/importar tarefas e notas (arquivo JSON, pelo diálogo do Windows). */
   data: {
     export(): Promise<{ ok: boolean; message: string }>;
     import(): Promise<{ ok: boolean; message: string }>;

@@ -435,14 +435,16 @@ export function TasksView({ variant, onBack }: TasksViewProps) {
               onSnooze={(iso, label) =>
                 void run(task, 'adiar', () => tasks.setDue(task.id, iso), `Tarefa adiada: ${label}`)
               }
-              onAddSub={(title) =>
-                run(
+              onAddSub={async (title) => {
+                const ok = await run(
                   task,
                   'adicionar subtarefa em',
                   () => tasks.create(title, null, null, { parentId: task.id }),
                   `Subtarefa adicionada: ${title}`,
-                )
-              }
+                );
+                if (ok) window.mochi.bond.event('subtask');
+                return ok;
+              }}
               onToggleSub={(sub) =>
                 void run(
                   sub,

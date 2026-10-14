@@ -131,6 +131,7 @@ export function AssistantView() {
           react(answer.ok ? 'happy' : 'idle');
         } else {
           const reply = await runAssistantCommand(command);
+          if (command.kind !== 'greeting') window.mochi.bond.event('assistant');
           if (reply.awaitNote) setAwaitingNote(true);
           push({ role: 'assistant', text: reply.text, undo: reply.undo, openNoteId: reply.openNoteId });
           history.current.push({ role: 'assistant', content: reply.text });
@@ -159,6 +160,7 @@ export function AssistantView() {
     setListening(false);
     react('idle', 0);
     if (r.ok) {
+      window.mochi.bond.event('voice');
       setInput((current) => (current.trim() ? `${current.trim()} ${r.text}` : r.text));
       inputRef.current?.focus();
     } else if (r.code !== 'canceled') {
@@ -218,7 +220,7 @@ export function AssistantView() {
           />
         </div>
         <div>
-          <h1>Assistente</h1>
+          <h1>{settings.mascotName}</h1>
           <p>{listening ? 'Ouvindo… fale agora' : busy ? 'Pensando…' : 'Pergunte ou peça algo'}</p>
         </div>
       </header>

@@ -103,6 +103,8 @@ export interface Settings {
   /** Dia (AAAA-MM-DD) em que o resumo/fechamento já foi visto ou dispensado; `null` = nunca. */
   routineLastMorning: string | null;
   routineLastEvening: string | null;
+  /** Nome que a pessoa deu ao personagem (aparece no assistente e nas conquistas). */
+  mascotName: string;
 }
 
 /** Antecedências oferecidas para o lembrete de prazo (minutos). */
@@ -144,6 +146,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   routineEveningHour: 18,
   routineLastMorning: null,
   routineLastEvening: null,
+  mascotName: 'Mochi',
 });
 
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -224,6 +227,11 @@ export function parseSettings(raw: unknown): Settings {
     if (isFiniteNumber(r.routineEveningHour)) out.routineEveningHour = nearestOf(ROUTINE_EVENING_HOURS, r.routineEveningHour);
     if (typeof r.routineLastMorning === 'string' && DAY_KEY_RE.test(r.routineLastMorning)) out.routineLastMorning = r.routineLastMorning;
     if (typeof r.routineLastEvening === 'string' && DAY_KEY_RE.test(r.routineLastEvening)) out.routineLastEvening = r.routineLastEvening;
+    if (typeof r.mascotName === 'string') {
+      const name = r.mascotName.replace(/\s+/g, ' ').trim();
+      // eslint-disable-next-line no-control-regex
+      if (name.length > 0 && [...name].length <= 20 && !/[\u0000-\u001f\u007f<>]/.test(name)) out.mascotName = name;
+    }
   }
   return out;
 }

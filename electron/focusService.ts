@@ -22,7 +22,7 @@ interface FocusServiceOptions {
   /** URL de origem das páginas do app (servidor de desenvolvimento) ou `file://`. */
   isAppUrl(url: string): boolean;
   /** Uma sessão terminou sozinha (o main decide como avisar: ilha, notificação). */
-  onFinished(kind: FocusKind): void;
+  onFinished(kind: FocusKind, minutes: number): void;
   /** Registro das sessões concluídas (pode não existir se o banco não abriu). */
   getLog(): FocusLog | null;
   config?: FocusConfig;
@@ -85,7 +85,7 @@ export function startFocusService({ isAppUrl, onFinished, getLog, config }: Focu
       record(session);
       send(IPC.focusFinished, kind);
       try {
-        onFinished(kind);
+        onFinished(kind, session.minutes);
       } catch (error) {
         console.error('Falha ao avisar o fim da sessão de foco:', error);
       }
