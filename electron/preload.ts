@@ -163,6 +163,9 @@ const api: MochiApi = {
       }),
     onOpen: (listener) => listen<[unknown]>(IPC.notesOpen, (id) => listener(typeof id === 'string' ? id : null)),
   },
+  support: {
+    openLogs: () => ipcRenderer.send(IPC.logOpenFolder),
+  },
   reminder: {
     get: (token) => ipcRenderer.invoke(IPC.reminderGet, token),
     act: (token, action) => ipcRenderer.send(IPC.reminderAct, token, action),

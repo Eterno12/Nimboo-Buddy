@@ -583,3 +583,12 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   Dispensar; some em 30 s. Substitui a notificação nativa, que no Windows não aceita botões pelo Electron.
   "Adiar" reapresenta o aviso depois; o prazo da tarefa não muda. Respeita app em tela cheia.
 - **Limite:** o aviso aparece mesmo com o mascote visível (além do balão).
+
+## D54 — Registro local de erros e instalador 0.5.0
+- **Registro:** `userData/logs/nimboo.log` (rodízio em 512 KB, um `.1`). Grava exceções e rejeições do main,
+  `console.error/warn` e quedas de processos. Só local, nada é enviado; Configurações > Geral > Diagnóstico abre a pasta.
+- **Instalador 0.5.0** gerado sem assinatura (`Get-AuthenticodeSignature` = NotSigned): o Windows mostra o aviso
+  do SmartScreen na primeira instalação. Assinar exige certificado de código (pago); `electron-builder` usa
+  `CSC_LINK`/`CSC_KEY_PASSWORD` automaticamente se existirem.
+- **Atualização automática: adiada.** Exigiria um servidor/Releases e uma verificação de rede periódica; só com
+  decisão explícita (fonte da atualização) e opt-in.

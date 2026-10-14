@@ -5,6 +5,7 @@ import {
   BrowserWindow,
   globalShortcut,
   ipcMain,
+  shell,
   Menu,
   nativeTheme,
   Notification,
@@ -30,6 +31,7 @@ import { startMediaService, type MediaService } from './mediaService';
 import { startFocusService, type FocusService } from './focusService';
 import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
+import { createLogFile, describe } from './logFile';
 import { ReminderScheduler, type Reminder } from './reminders';
 import { startReminderToasts, type ReminderSource, type ReminderToasts } from './reminderToast';
 import { FocusLog } from './focus/focusLog';
@@ -383,6 +385,20 @@ function adoptLegacyUserData(): void {
 }
 adoptLegacyUserData();
 
+// Registro local de erros (nada é enviado): erros do processo principal, falhas de processos e console.error/warn.
+const logFile = createLogFile(path.join(app.getPath('userData'), 'logs'));
+process.on('uncaughtExceptionMonitor', (error) => logFile.write('error', `Exceção não tratada: ${describe(error)}`));
+process.on('unhandledRejection', (reason) => logFile.write('error', `Promessa rejeitada: ${describe(reason)}`));
+for (const level of ['error', 'warn'] as const) {
+  const original = console[level].bind(console);
+  console[level] = (...args: unknown[]) => {
+    original(...args);
+    logFile.write(level, args.map(describe).join(' '));
+  };
+}
+app.on('render-process-gone', (_event, _contents, details) => logFile.write('error', `Janela encerrou (${details.reason}, código ${details.exitCode})`));
+app.on('child-process-gone', (_event, details) => logFile.write('error', `Processo ${details.type} encerrou (${details.reason})`));
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -392,6 +408,10 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+    ipcMain.on(IPC.logOpenFolder, (event) => {
+      if (!isAppUrl(event.senderFrame?.url ?? '')) return;
+      void shell.openPath(path.dirname(logFile.file));
+    });
     registerDragHandlers();
     const settings = createSettingsStore(path.join(app.getPath('userData'), 'settings.json'));
     settingsStore = settings;

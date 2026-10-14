@@ -20,7 +20,7 @@ M (1–2), G (2+).
 | 11 ✅ | **Agenda:** várias agendas iCal; notificações com botões (Concluir / Adiar) | M | 1 | feito (até 5 agendas; aviso próprio no canto da tela, porque o Electron não suporta botões nas notificações nativas do Windows) |
 | 12 ✅ | **Primeira execução guiada** (personagem, agenda, voz/IA) | M | 4, 9 | — |
 | 13 | **Acessibilidade e multi-monitor:** teclado na ilha, leitor de tela, DPI 125/150 %, 2º monitor | M | — | Você testa em outro monitor comigo? |
-| 14 | **Distribuição:** assinatura de código, atualização automática, log de erros local | G | todas | Você tem/quer certificado de código? |
+| 14 ◐ | **Distribuição:** assinatura de código, atualização automática, log de erros local | G | todas | parcial: log local e instalador 0.5.0 (sem assinatura) feitos; assinatura e atualização automática dependem de decisão (certificado e onde hospedar) |
 | 15 | **Opcionais grandes:** nota atrás dos apps (WorkerW), sincronização/mobile (S1–S13), criar evento no Google (OAuth) | G | — | Só se quiser; são os mais arriscados |
 
 ## Ordem sugerida

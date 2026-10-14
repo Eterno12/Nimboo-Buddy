@@ -1,6 +1,6 @@
 {
   "name": "nimboo-desktop",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Nimboo Desktop - bichinho virtual para a área de trabalho",
   "author": "Nimboo",
@@ -24,7 +24,7 @@
     "test:e2e:history": "npm run build && node tests/e2e/assistant-history.e2e.mjs",
     "test:e2e:welcome": "npm run build && node tests/e2e/welcome-ui.e2e.mjs",
     "test:e2e:media": "npm run build && node tests/e2e/media-ui.e2e.mjs",
-    "test:e2e:gemini":"npm run build && node tests/e2e/gemini-ui.e2e.mjs",
+    "test:e2e:gemini": "npm run build && node tests/e2e/gemini-ui.e2e.mjs",
     "test:e2e:wellness": "npm run build && node tests/e2e/wellness-ui.e2e.mjs",
     "test:e2e:notes": "npm run build && node tests/e2e/notes-ui.e2e.mjs",
     "test:e2e:assistant": "npm run build && node tests/e2e/assistant-ui.e2e.mjs",

@@ -117,6 +117,7 @@ export const IPC = {
   /** main -> renderer: pedido de alternar a ilha vindo do menu (alternativa ao clique). */
   islandToggle: 'island:toggle',
   /** Agenda (iCal): estado, endereço (só entra, nunca sai), remoção e atualização. */
+  logOpenFolder: 'log:open-folder',
   reminderGet: 'reminder:get',
   reminderAct: 'reminder:act',
   calendarGet: 'calendar:get',
@@ -222,6 +223,10 @@ export interface MochiApi {
     get(): Promise<SettingsSnapshot>;
     update(patch: Partial<Omit<Settings, 'version'>>): Promise<SettingsSnapshot>;
     onChange(listener: (snapshot: SettingsSnapshot) => void): () => void;
+  };
+  /** Suporte: abre a pasta do registro local de erros. */
+  support: {
+    openLogs(): void;
   };
   /** Aviso de lembrete com botões (janela própria no canto da tela). */
   reminder: {

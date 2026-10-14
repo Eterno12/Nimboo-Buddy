@@ -1025,6 +1025,16 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </p>
       </fieldset>
 
+      <fieldset className="settings-group" hidden={tab !== 'general'}>
+        <legend>Diagnóstico</legend>
+        <div className="settings-chips">
+          <button type="button" className="settings-small" onClick={() => window.mochi.support.openLogs()}>
+            Abrir pasta do registro de erros
+          </button>
+        </div>
+        <p className="settings-hint">O registro fica só neste computador (nada é enviado). Mande o arquivo se precisar de ajuda.</p>
+      </fieldset>
+
       <div className="settings-footer" hidden={tab !== 'general'}>
         <button type="button" className="settings-small" onClick={resetAll}>
           Restaurar padrões
