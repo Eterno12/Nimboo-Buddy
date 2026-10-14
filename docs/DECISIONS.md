@@ -545,3 +545,13 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   usa um arquivo no lugar do Windows).
 - **Também nesta rodada:** a tela de conquistas rola; a linha da tarefa agrupa os botões à direita e o título
   tem largura mínima (subtarefas não espremem mais o texto; os botões descem para uma segunda linha).
+
+## D50 — Primeira execução guiada (etapa 12)
+- **Decisão:** janela própria `#welcome` (560×640) com 5 passos: boas-vindas, personagem (8 com prévia), nome,
+  recursos (balões, resumo do dia, player, bem-estar) e dicas. Nimboo reage a cada passo com as animações
+  existentes e há confete no final. Tudo opcional: "Pular" e fechar pelo X também contam como vista.
+- **Quando abre:** `onboardingDone=false` (padrão). Execuções com `--user-data-dir` (testes) não abrem, salvo
+  `MOCHI_E2E_ONBOARDING=1`. Reabrir: bandeja > "Rever introdução".
+- **Escolhas** usam as preferências já existentes (personagem, mascotName, bubbles, routine*, mediaPlayer,
+  wellness*); nada novo vai para rede. Gemini e agenda ficam em Configurações (exigem chave/endereço).
+- **Limite:** quem já usa o app e não tem `onboardingDone` salvo vê a introdução uma vez.

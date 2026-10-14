@@ -15,7 +15,7 @@ import {
 } from 'electron';
 import { IPC, type PanelView, type SettingsSnapshot } from '../shared/ipc';
 import { CHARACTERS, CHARACTER_LABELS, type CharacterId, type Settings } from '../shared/settings';
-import { createPanelWindow } from './windows';
+import { createPanelWindow, createWelcomeWindow } from './windows';
 import { createTray } from './tray';
 import { createSettingsStore, type SettingsStore } from './settingsStore';
 import { createWindowModeManager, type WindowModeManager } from './windowMode';
@@ -50,6 +50,27 @@ let assistant: AssistantService | null = null;
 let dataService: DataService | null = null;
 let bond: BondService | null = null;
 let media: MediaService | null = null;
+let welcomeWin: BrowserWindow | null = null;
+
+/** Primeira execução guiada: uma janela de boas-vindas. Fechar (concluir ou não) marca como vista. */
+function openWelcome(): void {
+  if (welcomeWin && !welcomeWin.isDestroyed()) {
+    welcomeWin.show();
+    welcomeWin.focus();
+    return;
+  }
+  const preference = settingsStore?.get().theme ?? 'auto';
+  const dark = preference === 'dark' || (preference === 'auto' && nativeTheme.shouldUseDarkColors);
+  const win = createWelcomeWindow(dark);
+  welcomeWin = win;
+  win.on('closed', () => {
+    welcomeWin = null;
+    if (settingsStore && !settingsStore.get().onboardingDone) {
+      settingsStore.update({ onboardingDone: true });
+      settingsService?.broadcast();
+    }
+  });
+}
 let focusLog: FocusLog | null = null;
 /** Eventos da agenda e quais já viraram tarefa: o lembrete passa a ser o da tarefa (sem aviso duplo). */
 let agendaEvents: CalendarEvent[] = [];
@@ -273,6 +294,7 @@ function buildMenu(): Menu {
     { label: 'Notas', click: () => notes?.openManager() },
     { label: 'Assistente', click: () => assistant?.openWindow() },
     { label: 'Conquistas', click: () => bond?.openWindow() },
+    { label: 'Rever introdução', click: () => openWelcome() },
     { label: 'Configurações', click: () => showPanel('settings') },
     { label: 'Personagem', submenu: characterItems },
     { label: mascotVisible ? 'Ocultar mascote' : 'Mostrar mascote', click: toggleMascot },
@@ -475,6 +497,10 @@ if (!app.requestSingleInstanceLock()) {
 
     // Player de música: lê o que toca no Windows (só enquanto a preferência estiver ligada).
     media = startMediaService({ isAppUrl, enabled: initial.mediaPlayer });
+
+    // Primeira execução: só em instalação nova (execuções isoladas de teste pulam, salvo pedido).
+    const isolated = process.argv.some((a) => a.startsWith('--user-data-dir'));
+    if (!initial.onboardingDone && (!isolated || process.env.MOCHI_E2E_ONBOARDING === '1')) openWelcome();
 
     // Assistente: janela de conversa, voz (Windows) e conhecimento opcional (Wikipédia / IA local).
     const assistantHistory = database ? new AssistantHistory(database) : null;

@@ -48,6 +48,7 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'assistantContext',
   'mediaPlayer',
   'mediaReact',
+  'onboardingDone',
 ];
 
 export interface SettingsService {

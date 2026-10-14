@@ -138,6 +138,8 @@ export interface Settings {
   mediaPlayer: boolean;
   /** O personagem reage à música (balança) enquanto algo toca. */
   mediaReact: boolean;
+  /** A introdução da primeira execução já foi vista (ou dispensada). */
+  onboardingDone: boolean;
 }
 
 /** Nome de modelo do Gemini aceito (letras minúsculas, números, ponto e hífen). */
@@ -199,6 +201,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   assistantContext: false,
   mediaPlayer: true,
   mediaReact: true,
+  onboardingDone: false,
 });
 
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -281,6 +284,7 @@ export function parseSettings(raw: unknown): Settings {
     if (typeof r.routineLastEvening === 'string' && DAY_KEY_RE.test(r.routineLastEvening)) out.routineLastEvening = r.routineLastEvening;
     if (typeof r.mediaPlayer === 'boolean') out.mediaPlayer = r.mediaPlayer;
     if (typeof r.mediaReact === 'boolean') out.mediaReact = r.mediaReact;
+    if (typeof r.onboardingDone === 'boolean') out.onboardingDone = r.onboardingDone;
     if (typeof r.assistantGemini === 'boolean') out.assistantGemini = r.assistantGemini;
     if (typeof r.assistantContext === 'boolean') out.assistantContext = r.assistantContext;
     if (typeof r.geminiModel === 'string' && GEMINI_MODEL_RE.test(r.geminiModel.trim())) out.geminiModel = r.geminiModel.trim();

@@ -100,6 +100,26 @@ export function createAssistantWindow(dark: boolean): BrowserWindow {
   return win;
 }
 
+/** Janela de boas-vindas (primeira execução guiada). */
+export function createWelcomeWindow(dark: boolean): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 560,
+    height: 640,
+    minWidth: 400,
+    minHeight: 520,
+    title: 'Bem-vindo — Nimboo',
+    autoHideMenuBar: true,
+    show: false,
+    center: true,
+    backgroundColor: dark ? '#342b3f' : '#fdf8f3',
+    webPreferences: secureWebPreferences(),
+  });
+  lockNavigation(win);
+  loadRenderer(win, 'welcome');
+  win.once('ready-to-show', () => win.show());
+  return win;
+}
+
 /** Janela das conquistas (perfil de vínculo e lista de troféus). */
 export function createAchievementsWindow(dark: boolean): BrowserWindow {
   const win = new BrowserWindow({
