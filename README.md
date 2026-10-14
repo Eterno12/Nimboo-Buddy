@@ -11,7 +11,12 @@ tarefas, foco, notas, agenda e música.
 
 `Windows 10/11` · `Electron 44` · `React 19` · `TypeScript` · `SQLite local` · `100% offline por padrão`
 
+**[⬇ Baixar o instalador (Windows)](https://github.com/Eterno12/Nimboo-Buddy/releases/latest)**
+
 </div>
+
+> O instalador não tem assinatura digital: se o Windows mostrar "O Windows protegeu o computador",
+> clique em **Mais informações → Executar assim mesmo**. Não precisa de administrador.
 
 ---
 
