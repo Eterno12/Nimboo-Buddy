@@ -15,6 +15,10 @@ export type AssistantCommand =
   | { kind: 'summary' }
   | { kind: 'achievements' }
   | { kind: 'stats' }
+  | { kind: 'task.postpone'; query: string; dueAt: string | null; whenLabel: string | null; minutes: number | null }
+  | { kind: 'note.pin'; query: string; pinned: boolean }
+  | { kind: 'list.tomorrow' }
+  | { kind: 'history.clear' }
   | { kind: 'focus.start'; minutes: number | null }
   | { kind: 'focus.pause' }
   | { kind: 'focus.resume' }
@@ -264,9 +268,47 @@ export function parseAssistantCommand(input: string, now: Date = new Date()): As
   // ---- Estatísticas da semana ----
   if (/^(?:(?:mostr\w*|ver|abr\w*|quais (?:sao )?)\s*)?(?:(?:minha|a|as|minhas) )?(?:semana|estatisticas?|numeros|desempenho)(?: da semana| de foco)?[ ?!.]*$|\bcomo foi (?:a |minha )?(?:minha )?semana\b/.test(fb) && !/\b(?:cri\w*|adicion\w*|anot\w*|lembr\w*)\b/.test(fb)) return { kind: 'stats' };
 
+  // ---- Histórico da conversa ----
+  if (/^(?:apag\w+|limp\w+|delet\w+|exclu\w+|esquec\w+)\s+(?:(?:o|a|todo|toda|meu|minha|nosso|nossa)\s+)*(?:historico|conversa|chat)(?:\s+(?:da conversa|do assistente|todo|toda|inteiro|inteira))?[ ?!.]*$/.test(fb)) {
+    return { kind: 'history.clear' };
+  }
+
+  // ---- Adiar tarefa ----
+  const postpone = /^(?:adie|adiar|adia|empurre|empurrar|remarque|remarcar)\s+(?:a\s+|essa\s+|esta\s+)?(?:tarefa\s+)?(.+)$/d.exec(fb);
+  if (postpone) {
+    const raw = group(body, postpone, 1);
+    const rel = /\b(?:em|por|mais)\s+(\d{1,3})\s*(min|minutos?|h|horas?)\b/d.exec(fold(raw));
+    if (rel && rel.indices) {
+      const n = Number(rel[1]);
+      const minutes = /^h/.test(rel[2]) ? n * 60 : n;
+      const [start, end] = rel.indices[0] ?? [0, 0];
+      const query = clean(trimEnd(stripSpans(raw, [{ start, end }])));
+      if (query && minutes >= 1 && minutes <= 24 * 60) {
+        return { kind: 'task.postpone', query, dueAt: null, whenLabel: `${n} ${/^h/.test(rel[2]) ? (n === 1 ? 'hora' : 'horas') : 'min'}`, minutes };
+      }
+    }
+    const when = parseWhen(raw, now);
+    const query = clean(trimEnd(stripSpans(raw, when.spans)));
+    if (query) return { kind: 'task.postpone', query, dueAt: when.dueAt, whenLabel: when.label, minutes: null };
+  }
+
+  // ---- Fixar / soltar nota ----
+  const pin = /^(?:fixe|fixar|fixa|prenda|prender|destaque|destacar)\s+(?:a\s+|essa\s+|esta\s+)?(?:nota\s+)?(.+?)(?:\s+na\s+(?:area\s+de\s+trabalho|tela))?[ .!]*$/d.exec(fb);
+  const unpin = /^(?:solte|soltar|solta|desafixe|desafixar|desprenda|desprender)\s+(?:a\s+|essa\s+|esta\s+)?(?:nota\s+)?(.+?)(?:\s+da\s+(?:area\s+de\s+trabalho|tela))?[ .!]*$/d.exec(fb);
+  const pinMatch = pin ?? unpin;
+  if (pinMatch && !/\b(?:foco|pomodoro)\b/.test(fb)) {
+    const query = clean(trimEnd(group(body, pinMatch, 1)));
+    if (query) return { kind: 'note.pin', query, pinned: pin !== null };
+  }
+
   // ---- Resumo / fechamento do dia ----
   const makes =/\b(?:cri\w*|adicion\w*|nov[ao]|anot\w*|lembr\w*|faca|fazer)\b/.test(fb);
   if (!makes && /^(?:resumo|resuma)(?: do dia| de hoje| da manha)?[ ?!.]*$|\bcomo foi (?:o meu |meu |o )?dia\b|^(?:fechamento|fechar o dia)[ ?!.]*$|\bresumo d[eo] (?:meu )?dia\b|\bresumo de hoje\b|^(?:como (?:esta|ta) (?:o )?(?:meu )?dia)[ ?!.]*$/.test(fb)) return { kind: 'summary' };
+
+  // ---- O que tenho amanhã ----
+  if (!makes && /\bamanha\b/.test(fb) && /\b(?:o que|quais|qual|agenda|compromissos?|eventos?|tarefas?|tenho|tem|vai ter|ver|mostr\w*)\b/.test(fb) && !/^(?:me\s+)?lembr/.test(fb)) {
+    return { kind: 'list.tomorrow' };
+  }
 
   // ---- Listas ----
   if (/\b(?:agenda|compromissos?|eventos?|reunioes?)\b/.test(fb) && /\b(?:hoje|agenda|quais|o que|que|mostr|list|ver|tenho|tem)\b/.test(fb) && !/\b(?:cri|adicion|nov[ao])\b/.test(fb)) {
@@ -317,6 +359,28 @@ export function parseAssistantCommand(input: string, now: Date = new Date()): As
   return { kind: 'ask', question: original };
 }
 
+/** Escolhe o que melhor combina com o trecho dito (por título; sem acentos e sem maiúsculas). */
+export function matchTasks<T extends { title: string }>(items: T[], query: string): T[] {
+  const q = fold(query).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!q) return [];
+  const words = q.split(' ').filter((w) => w.length > 2);
+  const scored = items.map((task) => {
+    const title = fold(task.title).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    let score = 0;
+    if (title === q) score = 100;
+    else if (title.includes(q)) score = 80;
+    else if (q.includes(title) && title.length > 2) score = 60;
+    else if (words.length > 0) {
+      const hit = words.filter((w) => title.includes(w)).length;
+      if (hit === words.length) score = 50;
+      else if (hit > 0 && hit / words.length >= 0.6) score = 30;
+    }
+    return { task, score };
+  });
+  const best = Math.max(0, ...scored.map((s) => s.score));
+  return best === 0 ? [] : scored.filter((s) => s.score === best).map((s) => s.task);
+}
+
 export const ASSISTANT_HELP = [
   'Posso fazer isto por você:',
   '• “Crie uma nota escrito comprar pão e leite”',
@@ -324,6 +388,10 @@ export const ASSISTANT_HELP = [
   '• “Adicione enviar relatório nas tarefas”',
   '• “Quais são minhas tarefas?” / “O que tenho hoje?”',
   '• “Concluir tarefa enviar relatório”',
+  '• “Adiar enviar relatório para amanhã às 10h” / “…em 1 hora”',
+  '• “Fixar a nota lista de compras” / “Soltar a nota …”',
+  '• “O que tenho amanhã?” / “Minha semana” / “Minhas conquistas”',
+  '• “Apagar histórico” (limpa a conversa guardada)',
   '• “Iniciar foco de 25 minutos” / “Pausar foco”',
   '• “Mudar para o cacto”',
   'Outras perguntas eu procuro na Wikipédia (se você ativar) ou respondo com a IA local.',

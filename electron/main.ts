@@ -20,6 +20,7 @@ import { createWindowModeManager, type WindowModeManager } from './windowMode';
 import { startTasksService, type TasksService } from './tasksService';
 import { startNotesService, type NotesService } from './notesService';
 import { startAssistantService, type AssistantService } from './assistantService';
+import { AssistantHistory } from './assistant/historyStore';
 import { startDataService, type DataService } from './dataService';
 import { startBondService, type BondService } from './bondService';
 import { startFocusService, type FocusService } from './focusService';
@@ -118,16 +119,25 @@ function onGlobalShortcut(): void {
 }
 
 /** (Re)registra o atalho global. `null` desliga. Falha (atalho em uso por outro app) não é erro fatal. */
-function applyShortcut(accelerator: string | null): void {
+function applyShortcut(accelerator: string | null, assistantAccelerator: string | null = null): void {
   globalShortcut.unregisterAll();
   shortcutActive = false;
-  if (!accelerator) return;
-  try {
-    globalShortcut.register(accelerator, onGlobalShortcut);
-    // Confere pelo estado real: o retorno de `register` nem sempre reflete o registro no Windows.
-    shortcutActive = globalShortcut.isRegistered(accelerator);
-  } catch (error) {
-    console.error('Não foi possível registrar o atalho global:', error);
+  if (accelerator) {
+    try {
+      globalShortcut.register(accelerator, onGlobalShortcut);
+      // Confere pelo estado real: o retorno de `register` nem sempre reflete o registro no Windows.
+      shortcutActive = globalShortcut.isRegistered(accelerator);
+    } catch (error) {
+      console.error('Não foi possível registrar o atalho global:', error);
+    }
+  }
+  // Atalho para falar com o assistente (opcional; abre a janela já ouvindo).
+  if (assistantAccelerator && assistantAccelerator !== accelerator) {
+    try {
+      globalShortcut.register(assistantAccelerator, () => assistant?.openWindow({ listen: true }));
+    } catch (error) {
+      console.error('Não foi possível registrar o atalho do assistente:', error);
+    }
   }
 }
 
@@ -201,7 +211,9 @@ function applySettingsChange(previous: Settings, next: Settings): void {
   if (previous.islandScale !== next.islandScale || previous.mochiScale !== next.mochiScale) {
     windowMode?.refreshLayout();
   }
-  if (previous.shortcut !== next.shortcut) applyShortcut(next.shortcut);
+  if (previous.shortcut !== next.shortcut || previous.assistantShortcut !== next.assistantShortcut) {
+    applyShortcut(next.shortcut, next.assistantShortcut);
+  }
   if (previous.launchAtLogin !== next.launchAtLogin) applyLaunchAtLogin(next.launchAtLogin);
   if (previous.doNotDisturb !== next.doNotDisturb) applyDoNotDisturb(next.doNotDisturb);
   if (previous.character !== next.character) bond?.record({ type: 'character', id: next.character });
@@ -416,7 +428,7 @@ if (!app.requestSingleInstanceLock()) {
       onChanged: applySettingsChange,
     });
     const initial = settings.get();
-    applyShortcut(initial.shortcut);
+    applyShortcut(initial.shortcut, initial.assistantShortcut);
     applyLaunchAtLogin(initial.launchAtLogin);
     applyDoNotDisturb(initial.doNotDisturb);
 
@@ -433,8 +445,10 @@ if (!app.requestSingleInstanceLock()) {
     dataService = startDataService({ database: () => tasks?.database() ?? null, isAppUrl });
 
     // Assistente: janela de conversa, voz (Windows) e conhecimento opcional (Wikipédia / IA local).
+    const assistantHistory = database ? new AssistantHistory(database) : null;
     assistant = startAssistantService({
       isAppUrl,
+      getHistory: () => assistantHistory,
       settings: () => settings.get(),
       isDark: () => {
         const preference = settings.get().theme;

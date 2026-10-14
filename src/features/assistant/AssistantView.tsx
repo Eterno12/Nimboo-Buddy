@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { parseAssistantCommand } from '../../../shared/assistant';
 import type { AssistantAiAnswer, AssistantAiStatus, AssistantChatTurn } from '../../../shared/assistantApi';
 import { Mascot } from '../mascot/Mascot';
@@ -20,6 +20,8 @@ interface Message {
   openNoteId?: string;
   /** Botões extras (ativar fontes, baixar modelo, abrir ajustes de voz). */
   buttons?: { id: string; label: string }[];
+  /** Veio do histórico guardado (conversas anteriores). */
+  fromHistory?: boolean;
 }
 
 const SUGGESTIONS = [
@@ -60,10 +62,50 @@ export function AssistantView() {
 
   useEffect(() => window.mochi.assistant.onPullProgress((p) => setPull(p)), []);
 
+  // Histórico: as conversas anteriores aparecem no topo e cada mensagem nova é guardada (se ligado).
+  const historyOn = useRef(settings.assistantHistory);
+  historyOn.current = settings.assistantHistory;
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void window.mochi.assistant.history
+      .list()
+      .then((list) => {
+        if (!alive || list.length === 0) return;
+        const old: Message[] = list.map((e) => ({
+          id: nextId++,
+          role: e.role,
+          text: e.text,
+          source: e.source,
+          fromHistory: true,
+        }));
+        setMessages((cur) => [...old, ...cur]);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const push = useCallback((m: Omit<Message, 'id'>) => {
     const msg = { ...m, id: nextId++ };
     setMessages((list) => [...list, msg]);
+    if (historyOn.current && !m.fromHistory) {
+      window.mochi.assistant.history.add([{ role: m.role, text: m.text, source: m.source }]);
+    }
     return msg.id;
+  }, []);
+
+  /** Apaga a conversa guardada e a que está na tela; o assistente recomeça do zero. */
+  const clearHistory = useCallback(async () => {
+    await window.mochi.assistant.history.clear();
+    history.current = [];
+    setConfirmClear(false);
+    setMessages([
+      { id: nextId++, role: 'assistant', text: WELCOME },
+      { id: nextId++, role: 'assistant', text: 'Pronto! Apaguei o histórico da conversa.' },
+    ]);
   }, []);
 
   const answerAsk = useCallback(
@@ -120,6 +162,10 @@ export function AssistantView() {
           // Se a pessoa disse um comando em vez do texto, obedece o comando.
           if (command.kind === 'ask' || command.kind === 'greeting') command = { kind: 'note.create', text };
         }
+        if (command.kind === 'history.clear') {
+          await clearHistory();
+          return;
+        }
         if (command.kind === 'ask') {
           const [answer, status] = await Promise.all([
             window.mochi.assistant.ask(text, history.current.slice(0, -1)),
@@ -146,7 +192,7 @@ export function AssistantView() {
         inputRef.current?.focus();
       }
     },
-    [input, busy, awaitingNote, push, react, answerAsk],
+    [input, busy, awaitingNote, push, react, answerAsk, clearHistory],
   );
 
   const toggleListen = async () => {
@@ -171,6 +217,26 @@ export function AssistantView() {
       });
     }
   };
+
+  // Atalho global: a janela abre (ou já está aberta) e começa a ouvir.
+  const listenRef = useRef<() => void>(() => undefined);
+  listenRef.current = () => {
+    if (!listening) void toggleListen();
+  };
+  useEffect(() => {
+    let alive = true;
+    void window.mochi.assistant
+      .takePendingListen()
+      .then((pending) => {
+        if (alive && pending) window.setTimeout(() => listenRef.current(), 400);
+      })
+      .catch(() => undefined);
+    const off = window.mochi.assistant.onStartListen(() => listenRef.current());
+    return () => {
+      alive = false;
+      off();
+    };
+  }, []);
 
   const onButton = async (id: string) => {
     if (id === 'enable-web') {
@@ -219,15 +285,38 @@ export function AssistantView() {
             uid="assist"
           />
         </div>
-        <div>
+        <div className="assistant-head-text">
           <h1>{settings.mascotName}</h1>
           <p>{listening ? 'Ouvindo… fale agora' : busy ? 'Pensando…' : 'Pergunte ou peça algo'}</p>
+        </div>
+        <div className="assistant-head-actions">
+          {confirmClear ? (
+            <>
+              <span>Apagar a conversa guardada?</span>
+              <button type="button" className="assistant-danger" data-testid="history-confirm" onClick={() => void clearHistory()}>
+                Apagar
+              </button>
+              <button type="button" onClick={() => setConfirmClear(false)}>
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <button type="button" data-testid="history-clear" onClick={() => setConfirmClear(true)}>
+              Apagar histórico
+            </button>
+          )}
         </div>
       </header>
 
       <div className="assistant-list" ref={listRef} role="log" aria-live="polite" aria-label="Conversa">
-        {messages.map((m) => (
-          <div key={m.id} className="assistant-msg" data-role={m.role}>
+        {messages.map((m, i) => (
+          <Fragment key={m.id}>
+          {!m.fromHistory && i > 0 && messages[i - 1].fromHistory && (
+            <p className="assistant-divider" role="separator">
+              Conversa de agora
+            </p>
+          )}
+          <div className="assistant-msg" data-role={m.role} data-history={m.fromHistory ? 'true' : undefined}>
             <p>{m.text}</p>
             {m.source && (
               <p className="assistant-source">
@@ -262,6 +351,7 @@ export function AssistantView() {
               </div>
             )}
           </div>
+          </Fragment>
         ))}
         {busy && (
           <div className="assistant-msg" data-role="assistant" aria-hidden="true">
@@ -276,7 +366,7 @@ export function AssistantView() {
             <progress max={1} value={pull.fraction ?? undefined} />
           </div>
         )}
-        {messages.length === 1 && (
+        {messages.filter((m) => !m.fromHistory).length === 1 && (
           <div className="assistant-suggest" aria-label="Sugestões">
             {SUGGESTIONS.map((s) => (
               <button key={s} type="button" onClick={() => void send(s)}>

@@ -139,6 +139,23 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Histórico da conversa com o assistente (visível e apagável pela pessoa).
+    version: 8,
+    name: 'assistant_history',
+    up(db) {
+      db.exec(`
+        CREATE TABLE assistant_history (
+          seq   INTEGER PRIMARY KEY AUTOINCREMENT,
+          role  TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+          text  TEXT NOT NULL,
+          label TEXT,
+          url   TEXT,
+          at    TEXT NOT NULL
+        );
+      `);
+    },
+  },
 ];
 
 /** O banco foi criado por uma versão mais nova do app; não é seguro abri-lo. */

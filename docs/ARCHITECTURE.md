@@ -333,6 +333,11 @@ electron/main.ts            submenu "Personagem" (radio) no menu da bandeja/cont
 - `shared/wellness.ts` (puro, relógio injetável): `dueNudge` (o mais atrasado, intervalo mínimo de 2 min entre lembretes, bloqueio adia sem perder o vencimento), `commitNudge`, `restartKind`, falas em rodízio.
 - `useWellness` (renderer, na janela do mascote): confere a cada 30 s; só confirma o lembrete se o balão foi mostrado. Preferências `wellness*` (padrão desligado). Ver D42.
 
+## 23. Assistente+ (histórico e atalho)
+
+- `shared/assistant.ts`: comandos `task.postpone`, `note.pin`, `list.tomorrow`, `history.clear`; `matchTasks` genérico. Execução em `assistantActions.ts` (mesmas APIs da interface).
+- `electron/assistant/historyStore.ts` (`AssistantHistory`, tabela v8) servido por `assistantService` (`assistantHistoryList/Add/Clear`); `AssistantView` carrega, guarda cada mensagem e apaga. Atalho: `main.ts applyShortcut(accel, assistantAccel)` → `assistant.openWindow({listen:true})` → `assistantTakePendingListen`/`assistantStartListen`. Ver D45.
+
 ## 22. Contexto e tarefa difícil
 
 - `personality.ts`: `Line.days`/`Line.late` filtram as frases pelo relógio local. `shared/celebration.ts` (`hardReason`); `tasksService` calcula o motivo ao concluir e o envia em `tasksCompleted`; `MascotView` reage. Ver D44.

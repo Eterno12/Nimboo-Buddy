@@ -22,6 +22,9 @@ export const SHORTCUT_PRESETS = [
   'Control+Alt+J',
 ] as const;
 
+/** Atalhos globais para falar com o assistente (sempre diferentes dos do painel). `null` desliga. */
+export const ASSISTANT_SHORTCUT_PRESETS = ['Control+Alt+V', 'Control+Alt+A', 'Control+Shift+V'] as const;
+
 /** Paletas do Mochi. Cada uma é definida em `mascot.css` (`data-palette`). */
 export const MOCHI_COLORS = ['mint', 'peach', 'sky', 'lilac', 'lemon', 'rose'] as const;
 export type MochiColor = (typeof MOCHI_COLORS)[number];
@@ -116,6 +119,10 @@ export interface Settings {
   wellnessEyesMin: number;
   /** Ao terminar uma sessão de foco, sugere levantar e alongar. */
   wellnessStretch: boolean;
+  /** Guarda a conversa do assistente neste computador (visível e apagável). */
+  assistantHistory: boolean;
+  /** Atalho global que abre o assistente já ouvindo; `null` = desligado. */
+  assistantShortcut: string | null;
 }
 
 /** Antecedências oferecidas para o lembrete de prazo (minutos). */
@@ -164,6 +171,8 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   wellnessEyes: false,
   wellnessEyesMin: 20,
   wellnessStretch: false,
+  assistantHistory: true,
+  assistantShortcut: null,
 });
 
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -244,6 +253,11 @@ export function parseSettings(raw: unknown): Settings {
     if (isFiniteNumber(r.routineEveningHour)) out.routineEveningHour = nearestOf(ROUTINE_EVENING_HOURS, r.routineEveningHour);
     if (typeof r.routineLastMorning === 'string' && DAY_KEY_RE.test(r.routineLastMorning)) out.routineLastMorning = r.routineLastMorning;
     if (typeof r.routineLastEvening === 'string' && DAY_KEY_RE.test(r.routineLastEvening)) out.routineLastEvening = r.routineLastEvening;
+    if (typeof r.assistantHistory === 'boolean') out.assistantHistory = r.assistantHistory;
+    if (r.assistantShortcut === null) out.assistantShortcut = null;
+    else if (typeof r.assistantShortcut === 'string' && (ASSISTANT_SHORTCUT_PRESETS as readonly string[]).includes(r.assistantShortcut)) {
+      out.assistantShortcut = r.assistantShortcut;
+    }
     if (typeof r.wellnessWater === 'boolean') out.wellnessWater = r.wellnessWater;
     if (typeof r.wellnessPosture === 'boolean') out.wellnessPosture = r.wellnessPosture;
     if (typeof r.wellnessEyes === 'boolean') out.wellnessEyes = r.wellnessEyes;

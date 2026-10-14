@@ -14,9 +14,11 @@ import {
   type FetchLike,
 } from './assistantAi';
 import { createAssistantWindow } from './windows';
+import type { AssistantHistory } from './assistant/historyStore';
 
 export interface AssistantService {
-  openWindow(): void;
+  /** `listen`: abre já ouvindo o microfone (atalho global). */
+  openWindow(options?: { listen?: boolean }): void;
   close(): void;
 }
 
@@ -24,6 +26,8 @@ interface AssistantServiceOptions {
   isAppUrl(url: string): boolean;
   settings(): Settings;
   isDark(): boolean;
+  /** Histórico da conversa (ausente se o banco não abriu). */
+  getHistory?(): AssistantHistory | null;
 }
 
 const MAX_QUESTION = 1000;
@@ -50,7 +54,7 @@ function fixtureFetch(file: string): FetchLike {
  * Assistente: janela de conversa, voz (Windows) e conhecimento opcional (Wikipédia / IA local). A rede é
  * usada só aqui no processo principal e só quando a pessoa liga a opção correspondente.
  */
-export function startAssistantService({ isAppUrl, settings, isDark }: AssistantServiceOptions): AssistantService {
+export function startAssistantService({ isAppUrl, settings, isDark, getHistory }: AssistantServiceOptions): AssistantService {
   const fixtureFile = !app.isPackaged ? process.env.MOCHI_E2E_AI_FIXTURE : undefined;
   const fetcher: FetchLike = fixtureFile ? fixtureFetch(fixtureFile) : electronFetch;
   let win: BrowserWindow | null = null;
@@ -64,22 +68,61 @@ export function startAssistantService({ isAppUrl, settings, isDark }: AssistantS
     return isAppUrl(event.senderFrame?.url ?? '');
   };
 
-  const openWindow = () => {
+  /** O atalho abriu a janela pedindo para ouvir; a interface lê isto ao montar. */
+  let pendingListen = false;
+
+  const openWindow = (options?: { listen?: boolean }) => {
     if (win && !win.isDestroyed()) {
       if (win.isMinimized()) win.restore();
       win.show();
       win.focus();
+      if (options?.listen) win.webContents.send(IPC.assistantStartListen);
       return;
     }
+    pendingListen = options?.listen === true;
     win = createAssistantWindow(isDark());
     win.on('closed', () => {
       listener.cancel();
+      pendingListen = false;
       win = null;
     });
   };
 
   ipcMain.on(IPC.assistantOpen, (event) => {
     if (trusted(event)) openWindow();
+  });
+
+  ipcMain.handle(IPC.assistantTakePendingListen, (event): boolean => {
+    if (!trusted(event)) return false;
+    const was = pendingListen;
+    pendingListen = false;
+    return was;
+  });
+
+  ipcMain.handle(IPC.assistantHistoryList, (event) => {
+    if (!trusted(event)) return [];
+    try {
+      return getHistory?.()?.list() ?? [];
+    } catch (error) {
+      console.error('Falha ao ler o histórico do assistente:', error);
+      return [];
+    }
+  });
+  ipcMain.on(IPC.assistantHistoryAdd, (event, entries: unknown) => {
+    if (!trusted(event) || !settings().assistantHistory) return;
+    try {
+      getHistory?.()?.add(entries);
+    } catch (error) {
+      console.error('Falha ao guardar o histórico do assistente:', error);
+    }
+  });
+  ipcMain.handle(IPC.assistantHistoryClear, (event) => {
+    if (!trusted(event)) return;
+    try {
+      getHistory?.()?.clear();
+    } catch (error) {
+      console.error('Falha ao apagar o histórico do assistente:', error);
+    }
   });
 
   ipcMain.handle(IPC.assistantListen, async (event): Promise<SpeechOutcome> => {
@@ -162,9 +205,18 @@ export function startAssistantService({ isAppUrl, settings, isDark }: AssistantS
     close() {
       listener.cancel();
       ipcMain.removeAllListeners(IPC.assistantOpen);
+      ipcMain.removeAllListeners(IPC.assistantHistoryAdd);
       ipcMain.removeAllListeners(IPC.assistantListenCancel);
       ipcMain.removeAllListeners(IPC.assistantOpenSpeechSettings);
-      for (const channel of [IPC.assistantListen, IPC.assistantAiStatus, IPC.assistantAsk, IPC.assistantPullModel]) {
+      for (const channel of [
+        IPC.assistantListen,
+        IPC.assistantAiStatus,
+        IPC.assistantAsk,
+        IPC.assistantPullModel,
+        IPC.assistantTakePendingListen,
+        IPC.assistantHistoryList,
+        IPC.assistantHistoryClear,
+      ]) {
         ipcMain.removeHandler(channel);
       }
       if (win && !win.isDestroyed()) win.destroy();

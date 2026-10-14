@@ -454,3 +454,20 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   subtarefas ou criada há 3+ dias. Subtarefas nunca disparam. O main calcula o motivo ao concluir e o envia junto
   do evento; a interface toca o som de conquista e fala uma frase própria (56 caracteres).
 - **Tom:** nunca cobra: "atrasada, mas resolvida!" comemora, não aponta o atraso.
+
+## D45 — Assistente+: novos comandos, histórico visível e atalho para falar (migração v8)
+- **Comandos:** "adiar X para amanhã às 10h" / "em 2 horas" / sem prazo (amanhã 9h), com *Desfazer* que devolve o
+  prazo anterior; "fixar/soltar a nota X"; "o que tenho amanhã?" (agenda + tarefas com prazo amanhã);
+  "apagar histórico". Mesmo casamento por título das tarefas (`matchTasks`, agora genérico e em `shared/`);
+  se houver mais de uma candidata, o assistente pede para escolher.
+- **Histórico:** tabela `assistant_history` (só texto: papel, texto, fonte, hora; no máximo 200 mensagens, as
+  antigas saem sozinhas; fonte só com `http(s)`). **Ligado por padrão** e sempre **visível**: ao abrir a
+  janela as conversas anteriores aparecem no topo com o separador "Conversa de agora". Apagar: botão na janela
+  (com confirmação), comando falado/escrito e botão nas Configurações. Desligar a preferência para de guardar
+  (o que já existe continua visível até apagar). Nada sai do computador.
+- **Atalho para falar:** opcional, **desligado por padrão**, lista fechada (Ctrl+Alt+V, Ctrl+Alt+A,
+  Ctrl+Shift+V; nunca igual ao do painel). Abre a janela do assistente e começa a ouvir (o pedido é lido pela
+  interface ao montar, ou chega por evento se a janela já estava aberta). Se outro app já usa a combinação,
+  o registro falha em silêncio (logado).
+- **Limite:** o atalho depende da permissão de fala do Windows como o microfone da janela; não foi exercitado
+  com uma fala real.

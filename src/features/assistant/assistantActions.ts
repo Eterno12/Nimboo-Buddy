@@ -1,4 +1,4 @@
-import { ASSISTANT_HELP, fold, type AssistantCommand } from '../../../shared/assistant';
+import { ASSISTANT_HELP, matchTasks, type AssistantCommand } from '../../../shared/assistant';
 import { todaysAgenda, eventTimeLabel } from '../../../shared/calendar';
 import { CHARACTER_LABELS } from '../../../shared/settings';
 import { buildRoutine, routineText } from '../../../shared/routine';
@@ -39,27 +39,6 @@ export function textToDoc(text: string): NoteDoc {
   return { type: 'doc', content: paragraphs.length > 0 ? paragraphs : [{ type: 'paragraph' }] };
 }
 
-/** Escolhe a tarefa que melhor combina com o trecho dito (sem acentos e sem maiúsculas). */
-export function matchTasks(tasks: Task[], query: string): Task[] {
-  const q = fold(query).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!q) return [];
-  const words = q.split(' ').filter((w) => w.length > 2);
-  const scored = tasks.map((task) => {
-    const title = fold(task.title).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
-    let score = 0;
-    if (title === q) score = 100;
-    else if (title.includes(q)) score = 80;
-    else if (q.includes(title) && title.length > 2) score = 60;
-    else if (words.length > 0) {
-      const hit = words.filter((w) => title.includes(w)).length;
-      if (hit === words.length) score = 50;
-      else if (hit > 0 && hit / words.length >= 0.6) score = 30;
-    }
-    return { task, score };
-  });
-  const best = Math.max(0, ...scored.map((s) => s.score));
-  return best === 0 ? [] : scored.filter((s) => s.score === best).map((s) => s.task);
-}
 
 const dueText = (task: Task) => (task.dueAt ? ` — ${dueFormat.format(new Date(task.dueAt))}` : '');
 
@@ -120,6 +99,86 @@ export async function runAssistantCommand(cmd: AssistantCommand, now: Date = new
         },
       };
     }
+
+    case 'task.postpone': {
+      const list = await api.tasks.list();
+      if (!list.ok) return { text: `${SORRY} ${list.error.message}` };
+      const found = matchTasks(list.value.active, cmd.query);
+      if (found.length === 0) return { text: `Não achei nenhuma tarefa parecida com “${cmd.query}”.` };
+      if (found.length > 1) {
+        return { text: `Achei mais de uma:\n${found.slice(0, 5).map((t) => `• ${t.title}`).join('\n')}\nDiga qual delas.` };
+      }
+      const task = found[0];
+      let dueAt = cmd.dueAt;
+      let label = cmd.whenLabel;
+      if (cmd.minutes !== null) {
+        dueAt = new Date(now.getTime() + cmd.minutes * 60_000).toISOString();
+      } else if (!dueAt) {
+        dueAt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0).toISOString();
+        label = 'amanhã às 09:00';
+      }
+      const previous = task.dueAt;
+      const r = await api.tasks.setDue(task.id, dueAt);
+      if (!r.ok) return { text: `${SORRY} ${r.error.message}` };
+      return {
+        text: `Adiei “${task.title}” para ${cmd.minutes !== null ? `daqui a ${label}` : (label ?? dueFormat.format(new Date(dueAt)))}.`,
+        happy: true,
+        undo: async () => {
+          await api.tasks.setDue(task.id, previous);
+        },
+      };
+    }
+
+    case 'note.pin': {
+      const r = await api.notes.list();
+      if (!r.ok) return { text: `${SORRY} ${r.error.message}` };
+      const found = matchTasks(r.value, cmd.query);
+      if (found.length === 0) return { text: `Não achei nenhuma nota parecida com “${cmd.query}”.` };
+      if (found.length > 1) {
+        return { text: `Achei mais de uma:\n${found.slice(0, 5).map((n) => `• ${n.title}`).join('\n')}\nDiga qual delas.` };
+      }
+      const note = found[0];
+      const u = await api.notes.update(note.id, { pinned: cmd.pinned });
+      if (!u.ok) return { text: `${SORRY} ${u.error.message}` };
+      return {
+        text: cmd.pinned ? `Fixei a nota “${note.title}” na sua área de trabalho.` : `Soltei a nota “${note.title}”. Ela continua guardada.`,
+        happy: cmd.pinned,
+        undo: async () => {
+          await api.notes.update(note.id, { pinned: !cmd.pinned });
+        },
+      };
+    }
+
+    case 'list.tomorrow': {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+      const [tasks, cal] = await Promise.all([api.tasks.list(), api.calendar.get()]);
+      const due = tasks.ok
+        ? tasks.value.active.filter((t) => {
+            if (!t.dueAt) return false;
+            const d = new Date(t.dueAt).getTime();
+            return d >= start.getTime() && d < end.getTime();
+          })
+        : [];
+      const events = cal.configured
+        ? todaysAgenda(cal.events, new Date(start.getFullYear(), start.getMonth(), start.getDate(), 12))
+        : [];
+      if (due.length === 0 && events.length === 0) {
+        return { text: `Amanhã está livre${cal.configured ? '' : ' (a agenda ainda não está conectada)'}. Bom descanso!` };
+      }
+      const parts: string[] = [];
+      if (events.length > 0) {
+        parts.push(`Agenda de amanhã:\n${events.slice(0, 6).map((e) => `• ${eventTimeLabel(e)} — ${e.title}`).join('\n')}`);
+      }
+      if (due.length > 0) {
+        parts.push(`Tarefas com prazo amanhã:\n${due.slice(0, 6).map((t) => `• ${t.title}${dueText(t)}`).join('\n')}`);
+      }
+      return { text: parts.join('\n\n') };
+    }
+
+    case 'history.clear':
+      // tratado pela janela do assistente (apaga e confirma); aqui só por segurança
+      return { text: 'Para apagar a conversa guardada, use o botão “Apagar histórico”.' };
 
     case 'list.tasks': {
       const list = await api.tasks.list();

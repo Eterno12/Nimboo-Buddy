@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Mascot } from '../mascot/Mascot';
 import { characterInfo } from '../mascot/characters';
 import {
+  ASSISTANT_SHORTCUT_PRESETS,
   CHARACTERS,
   DEFAULT_SETTINGS,
   HIDE_DELAYS_SEC,
@@ -561,8 +562,39 @@ export function SettingsView({ onBack }: SettingsViewProps) {
             }}
           />
         </label>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.assistantHistory}
+            onChange={(e) => set({ assistantHistory: e.target.checked })}
+          />
+          <span>
+            Guardar o histórico da conversa
+            <small>Só neste computador, até 200 mensagens. Aparece na janela do assistente e dá para apagar.</small>
+          </span>
+        </label>
+        <div className="settings-row">
+          <span>Atalho para falar com o assistente</span>
+          <select
+            aria-label="Atalho para falar com o assistente"
+            data-testid="assistant-shortcut"
+            value={settings.assistantShortcut ?? ''}
+            onChange={(e) => set({ assistantShortcut: e.target.value === '' ? null : e.target.value })}
+          >
+            <option value="">Desligado</option>
+            {ASSISTANT_SHORTCUT_PRESETS.map((s) => (
+              <option key={s} value={s}>
+                {s.replace('Control', 'Ctrl')}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="button" className="settings-small" onClick={() => void window.mochi.assistant.history.clear()}>
+          Apagar histórico agora
+        </button>
         <p className="settings-hint">
-          O microfone usa o reconhecimento de fala do Windows (Configurações &gt; Privacidade &gt; Fala).
+          O microfone usa o reconhecimento de fala do Windows (Configurações &gt; Privacidade &gt; Fala). O atalho
+          abre o assistente já ouvindo.
         </p>
       </fieldset>
       <fieldset className="settings-group">

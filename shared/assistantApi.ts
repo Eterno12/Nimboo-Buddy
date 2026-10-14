@@ -28,9 +28,32 @@ export interface PullProgressEvent {
   fraction: number | null;
 }
 
+/** Uma mensagem guardada da conversa (só texto; botões e "desfazer" não são guardados). */
+export interface HistoryEntry {
+  role: 'user' | 'assistant';
+  text: string;
+  source?: { label: string; url?: string };
+  /** ISO 8601. */
+  at: string;
+}
+
+/** Quantas mensagens a conversa guarda (as mais antigas saem sozinhas). */
+export const HISTORY_LIMIT = 200;
+export const HISTORY_TEXT_MAX = 2000;
+
 export interface AssistantApi {
   /** Abre (ou traz à frente) a janela do assistente. */
   open(): void;
+  /** Histórico da conversa neste computador. */
+  history: {
+    list(): Promise<HistoryEntry[]>;
+    add(entries: Omit<HistoryEntry, 'at'>[]): void;
+    clear(): Promise<void>;
+  };
+  /** O atalho global pediu para ouvir (janela já aberta). */
+  onStartListen(listener: () => void): () => void;
+  /** A janela acabou de abrir por causa do atalho? Lê e limpa o pedido. */
+  takePendingListen(): Promise<boolean>;
   /** Ouve uma frase pelo microfone (Windows) e devolve o texto. */
   listen(): Promise<SpeechOutcome>;
   cancelListen(): void;

@@ -40,6 +40,8 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'wellnessEyes',
   'wellnessEyesMin',
   'wellnessStretch',
+  'assistantHistory',
+  'assistantShortcut',
 ];
 
 export interface SettingsService {

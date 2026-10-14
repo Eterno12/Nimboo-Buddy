@@ -111,6 +111,13 @@ const api: MochiApi = {
   },
   assistant: {
     open: () => ipcRenderer.send(IPC.assistantOpen),
+    history: {
+      list: () => ipcRenderer.invoke(IPC.assistantHistoryList),
+      add: (entries) => ipcRenderer.send(IPC.assistantHistoryAdd, entries),
+      clear: () => ipcRenderer.invoke(IPC.assistantHistoryClear),
+    },
+    onStartListen: (listener) => listen<[]>(IPC.assistantStartListen, () => listener()),
+    takePendingListen: () => ipcRenderer.invoke(IPC.assistantTakePendingListen),
     listen: () => ipcRenderer.invoke(IPC.assistantListen),
     cancelListen: () => ipcRenderer.send(IPC.assistantListenCancel),
     openSpeechSettings: () => ipcRenderer.send(IPC.assistantOpenSpeechSettings),
