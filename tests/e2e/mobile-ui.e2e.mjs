@@ -158,6 +158,37 @@ try {
     assert.deepEqual(rows, ['Estudar capítulo 4', 'Resumo']);
   });
 
+  await step('Foco: iniciar, pausar, retomar; a sessão sobrevive a recarregar; cancelar volta ao repouso', async () => {
+    await click(page, 'tab-focus');
+    await page.waitFor(`document.querySelector('[data-testid="screen-focus"]')?.dataset.status === 'idle'`, 'foco em repouso');
+    assert.match(await page.ev(`document.querySelector('[data-testid="focus-clock"]').textContent`), /^25:00$/);
+    await page.ev(`[...document.querySelectorAll('[role="radio"].chip-btn')].find((b) => b.textContent === '15 min').click()`);
+    await page.waitFor(`document.querySelector('[data-testid="focus-clock"]').textContent === '15:00'`, 'duração 15 min');
+    await click(page, 'focus-start');
+    await page.waitFor(`document.querySelector('[data-testid="screen-focus"]').dataset.status === 'running'`, 'rodando');
+    await sleep(1300);
+    const tick = await page.ev(`document.querySelector('[data-testid="focus-clock"]').textContent`);
+    assert.match(tick, /^14:5\d$/, `relógio andou: ${tick}`);
+
+    await click(page, 'focus-pause');
+    await page.waitFor(`document.querySelector('[data-testid="screen-focus"]').dataset.status === 'paused'`, 'pausado');
+    const frozen = await page.ev(`document.querySelector('[data-testid="focus-clock"]').textContent`);
+    await sleep(1200);
+    assert.equal(await page.ev(`document.querySelector('[data-testid="focus-clock"]').textContent`), frozen, 'pausado não anda');
+    await click(page, 'focus-resume');
+    await page.waitFor(`document.querySelector('[data-testid="screen-focus"]').dataset.status === 'running'`, 'retomado');
+
+    await sleep(600); // gravação do estado
+    await page.call('Page.reload');
+    await page.waitFor(`!!document.querySelector('[data-testid="screen-today"]')`, 'recarregou', 15000);
+    await click(page, 'tab-focus');
+    await page.waitFor(`document.querySelector('[data-testid="screen-focus"]')?.dataset.status === 'running'`, 'sessão restaurada', 8000);
+
+    await click(page, 'focus-cancel');
+    await page.waitFor(`document.querySelector('[data-testid="screen-focus"]').dataset.status === 'idle'`, 'repouso');
+    assert.match(await page.ev(`document.querySelector('[data-testid="focus-today"]').textContent`), /0 sessões · 0 min/);
+  });
+
   await step('Hoje reflete as tarefas e recarregar a página não perde nada (banco persistido)', async () => {
     await sleep(600);
     await page.call('Page.reload');

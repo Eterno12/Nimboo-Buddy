@@ -138,6 +138,43 @@ export class FocusTimer {
     return focusOk(this.getState());
   }
 
+  /**
+   * Retoma uma sessão guardada (o app foi fechado no meio). Em andamento: continua pelo horário real e, se o
+   * horário já passou, conclui na hora com o instante em que realmente terminou. Pausada: mantém o restante.
+   * Estado inválido ou em repouso é ignorado.
+   */
+  restore(saved: FocusState): void {
+    if (this.state.status === 'running' || this.state.status === 'paused') return;
+    if (saved.status !== 'running' && saved.status !== 'paused') return;
+    if (saved.kind !== 'focus' && saved.kind !== 'break') return;
+    if (!Number.isFinite(saved.durationMs) || saved.durationMs <= 0) return;
+    if (!Number.isFinite(saved.remainingMs) || saved.remainingMs < 0) return;
+    const task = validateFocusTask(saved.task);
+    if (!task.ok) return;
+    const cycleCount = Number.isInteger(saved.cycleCount) && saved.cycleCount >= 0 ? Math.min(saved.cycleCount, POMODORO_EVERY) : 0;
+    this.longBreak = saved.kind === 'break' && this.config.cycle && cycleCount >= POMODORO_EVERY;
+    const base: FocusState = {
+      status: saved.status,
+      kind: saved.kind,
+      durationMs: saved.durationMs,
+      endsAt: null,
+      remainingMs: saved.remainingMs,
+      task: saved.kind === 'focus' ? task.value : null,
+      cycleCount,
+      cycleEnabled: this.config.cycle,
+      next: null,
+    };
+    if (saved.status === 'paused') {
+      this.set(base);
+      return;
+    }
+    if (typeof saved.endsAt !== 'number' || !Number.isFinite(saved.endsAt)) return;
+    this.set({ ...base, endsAt: saved.endsAt, remainingMs: Math.max(0, saved.endsAt - this.now()) });
+    const left = saved.endsAt - this.now();
+    if (left > EPSILON_MS) this.schedule(left);
+    else this.complete(saved.endsAt);
+  }
+
   /** Cancela (ou dispensa o "concluído") e volta ao repouso, sem disparar `onFinished`. */
   cancel(): FocusResult<FocusState> {
     this.cancelTimer();
@@ -186,6 +223,11 @@ export class FocusTimer {
       this.schedule(left);
       return;
     }
+    this.complete(this.now());
+  }
+
+  /** Conclui a sessão em andamento; `at` é o instante em que ela realmente terminou. */
+  private complete(at: number): void {
     const { kind, task, durationMs } = this.state;
     let cycleCount = this.state.cycleCount;
     if (this.config.cycle) {
@@ -209,7 +251,7 @@ export class FocusTimer {
       kind,
       minutes: Math.round(durationMs / 60_000),
       task,
-      at: this.now(),
+      at,
     });
   }
 }

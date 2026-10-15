@@ -769,3 +769,102 @@ button:disabled {
     animation: none;
   }
 }
+
+/* ---- Foco ---- */
+.focus-ring {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  margin: 4px auto 0;
+}
+
+.ring-track {
+  fill: none;
+  stroke: var(--panel);
+  stroke-width: 14;
+}
+
+.ring-prog {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 14;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear;
+}
+
+.ring-prog[data-kind='break'] {
+  stroke: var(--warn);
+}
+
+.focus-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.focus-center strong {
+  font-size: 48px;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-center span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.cycle-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cycle-dots i {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+}
+
+.cycle-dots i[data-on='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.focus-task {
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.focus-actions {
+  justify-content: center;
+}
+
+.focus-actions button {
+  flex: 1;
+}
+
+.chip-btn[data-active='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stepper span {
+  font-size: 20px;
+  font-weight: 700;
+}

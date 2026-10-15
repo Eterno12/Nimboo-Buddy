@@ -6,6 +6,7 @@ import { parseProfile, serializeProfile, type Profile } from './profile';
 import { useTasks } from './useTasks';
 import { Icon } from './ui/Icon';
 import { AddTaskSheet, EditTaskSheet } from './ui/TaskSheets';
+import { FocusScreen } from './screens/FocusScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SoonScreen } from './screens/SoonScreen';
 import { TasksScreen } from './screens/TasksScreen';
@@ -95,7 +96,7 @@ export function App({ core }: { core: Core }) {
         {tab === 'tasks' && (
           <TasksScreen active={tasks.active} completed={tasks.completed} onToggle={toggle} onOpen={openEdit} onAdd={() => setAdding(true)} />
         )}
-        {tab === 'focus' && <SoonScreen title="Foco" icon="focus" text="Temporizador de foco com pausas." />}
+        {tab === 'focus' && <FocusScreen core={core} tasks={tasks.active} onCompleteTask={toggle} />}
         {tab === 'notes' && <SoonScreen title="Notas" icon="notes" text="Notas com formatação." />}
         {tab === 'profile' && <ProfileScreen core={core} profile={profile} onChange={changeProfile} />}
       </main>
