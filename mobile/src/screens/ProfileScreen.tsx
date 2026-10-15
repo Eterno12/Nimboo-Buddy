@@ -11,10 +11,12 @@ interface Props {
   core: Core;
   profile: Profile;
   onChange(next: Profile): void;
+  onOpenAchievements(): void;
 }
 
 /** Perfil: personagem, cor, nome e conta. */
-export function ProfileScreen({ core, profile, onChange }: Props) {
+export function ProfileScreen({ core, profile, onChange, onOpenAchievements }: Props) {
+  const snap = core.bond.snapshot();
   return (
     <div className="screen" data-testid="screen-profile">
       <header className="screen-head">
@@ -35,7 +37,7 @@ export function ProfileScreen({ core, profile, onChange }: Props) {
               onClick={() => onChange({ ...profile, character: id })}
             >
               <span className="char-art">
-                <Mascot state="idle" replay={0} hop={false} blinking={false} mood="mid" character={id} palette={profile.color} uid={`pf-${id}`} />
+                <Mascot state="idle" replay={0} hop={false} blinking={false} mood="mid" character={id} palette={profile.color} skin={profile.skin} uid={`pf-${id}`} />
               </span>
               <span>{CHARACTER_LABELS[id]}</span>
             </button>
@@ -63,6 +65,15 @@ export function ProfileScreen({ core, profile, onChange }: Props) {
           </div>
         )}
       </section>
+
+      <button type="button" className="card link-card" data-testid="open-achievements" onClick={onOpenAchievements}>
+        <span>
+          <strong>Conquistas e acessórios</strong>
+          <small className="muted">
+            {snap.unlockedCount}/{snap.total} conquistas · {snap.points} pts (saldo {snap.balance})
+          </small>
+        </span>
+      </button>
 
       <AccountPanel core={core} />
 

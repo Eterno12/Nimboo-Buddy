@@ -992,3 +992,193 @@ button:disabled {
   flex: 1;
   overflow-y: auto;
 }
+
+/* ---- Conquistas e acessórios ---- */
+.link-card {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link-card small {
+  display: block;
+  margin-top: 2px;
+}
+
+.full-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: env(safe-area-inset-top) 16px 0;
+  background: var(--bg);
+}
+
+.full-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.full-bar h1 {
+  flex: 1;
+  font-size: 22px;
+}
+
+.full-bar .icon-btn svg {
+  transform: rotate(180deg);
+}
+
+.points {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.full-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+}
+
+.ach-list,
+.shop-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.ach-row {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.ach-row[data-tier='bronze'] { border-left-color: #b8743a; }
+.ach-row[data-tier='silver'] { border-left-color: #8e97a3; }
+.ach-row[data-tier='gold'] { border-left-color: #d3a81c; }
+.ach-row[data-tier='platinum'] { border-left-color: #5b8fc7; }
+.ach-row[data-unlocked='false'] { opacity: 0.72; }
+
+.ach-medal {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.ach-row[data-unlocked='true'] .ach-medal {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.ach-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.ach-text em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ach-text small {
+  color: var(--muted);
+}
+
+.ach-progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ach-progress i {
+  display: block;
+  height: 6px;
+  min-width: 4px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.shop-group {
+  margin: 16px 0 8px;
+  font-size: 15px;
+}
+
+.shop-card {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.shop-card[data-using='true'] {
+  border-color: var(--accent);
+}
+
+.shop-preview {
+  flex: none;
+  width: 72px;
+  height: 72px;
+}
+
+.shop-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  align-items: flex-start;
+}
+
+.shop-info small {
+  color: var(--muted);
+}
+
+.shop-info button {
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+/* Barra do editor em uma linha rolável; os seletores de cor flutuam fora dela (não são cortados). */
+.note-screen .note-toolbar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.note-screen .note-tool-group {
+  flex: none;
+}
+
+.note-screen .note-popover {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 112px);
+  left: 12px;
+  right: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}

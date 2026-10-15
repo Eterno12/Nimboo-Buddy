@@ -6,6 +6,7 @@ import { parseProfile, serializeProfile, type Profile } from './profile';
 import { useTasks } from './useTasks';
 import { Icon } from './ui/Icon';
 import { AddTaskSheet, EditTaskSheet } from './ui/TaskSheets';
+import { AchievementsScreen } from './screens/AchievementsScreen';
 import { FocusScreen } from './screens/FocusScreen';
 import { NotesScreen } from './screens/NotesScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
@@ -27,6 +28,7 @@ export function App({ core }: { core: Core }) {
   const [tab, setTab] = useState<Tab>('today');
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [showAchievements, setShowAchievements] = useState(false);
   const [version, bump] = useState(0);
   const tasks = useTasks(core);
   const mascot = useMascot();
@@ -47,7 +49,12 @@ export function App({ core }: { core: Core }) {
     [core, mascot],
   );
 
-  const changeProfile = (next: Profile) => core.setPref('profile', serializeProfile(next));
+  const changeProfile = (next: Profile) => {
+    if (next.character !== profile.character) core.bond.record({ type: 'character', id: next.character });
+    // Trocar de personagem tira o acessório do anterior (cada um tem os seus).
+    const skin = next.skin && next.skin.startsWith(`${next.character}.`) ? next.skin : null;
+    core.setPref('profile', serializeProfile({ ...next, skin }));
+  };
   const state = core.syncState();
   const account = core.auth.account();
   const syncLabel = !account
@@ -86,7 +93,7 @@ export function App({ core }: { core: Core }) {
         {tab === 'today' && (
           <TodayScreen
             profile={profile}
-            mascot={mascot}
+            mascot={{ ...mascot, pet: () => { mascot.pet(); core.bond.record({ type: 'pet' }); } }}
             tasks={tasks.active}
             onAdd={() => setAdding(true)}
             onOpenTasks={() => setTab('tasks')}
@@ -98,7 +105,9 @@ export function App({ core }: { core: Core }) {
         )}
         {tab === 'focus' && <FocusScreen core={core} tasks={tasks.active} onCompleteTask={toggle} />}
         {tab === 'notes' && <NotesScreen core={core} />}
-        {tab === 'profile' && <ProfileScreen core={core} profile={profile} onChange={changeProfile} />}
+        {tab === 'profile' && (
+          <ProfileScreen core={core} profile={profile} onChange={changeProfile} onOpenAchievements={() => setShowAchievements(true)} />
+        )}
       </main>
 
       {tasks.pending && (
@@ -120,6 +129,10 @@ export function App({ core }: { core: Core }) {
           </button>
         ))}
       </nav>
+
+      {showAchievements && (
+        <AchievementsScreen core={core} profile={profile} onProfile={changeProfile} onClose={() => setShowAchievements(false)} />
+      )}
 
       {adding && <AddTaskSheet core={core} onClose={() => setAdding(false)} />}
       {editing && (

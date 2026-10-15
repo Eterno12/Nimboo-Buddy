@@ -34,6 +34,7 @@ export function TodayScreen({ profile, mascot, tasks, onAdd, onOpenTasks, onTogg
             mood={mascot.mood}
             character={profile.character}
             palette={profile.color}
+            skin={profile.skin}
             uid="today"
             onHopEnd={mascot.endHop}
           />

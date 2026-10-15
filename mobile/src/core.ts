@@ -8,6 +8,9 @@ import { openPersistedDb, type BlobStore, type PersistedDb } from '../db/persist
 import type { SqlJsModule } from '../db/sqlJsDatabase.ts';
 import { SYNC_IDLE_INTERVAL_MS, SYNC_TICK_MS } from '../../shared/sync/config.ts';
 import { SqliteNotesRepository } from '../../electron/notes/sqliteNotesRepository.ts';
+import { BondEngine } from '../../electron/bond/bondEngine.ts';
+import { SqliteBondStore } from '../../electron/bond/bondStore.ts';
+import type { BondEvent, BondSnapshot } from '../../shared/achievements.ts';
 import { FocusTimer } from '../../electron/focus/focusTimer.ts';
 import { FocusLog } from '../../electron/focus/focusLog.ts';
 import { DEFAULT_FOCUS_CONFIG, type FocusConfig, type FocusState, type FocusStats } from '../../shared/focus.ts';
@@ -31,6 +34,8 @@ export interface CoreOptions {
 export interface Core {
   tasks: SqliteTaskRepository;
   notes: SqliteNotesRepository;
+  /** Vínculo: conquistas, pontos e acessórios (deste aparelho; a sincronização disso vem depois). */
+  bond: { snapshot(): BondSnapshot; record(event: BondEvent): void; buySkin(id: string): BondSnapshot | null };
   store: SyncStore;
   auth: SupabaseAuth;
   recovered: boolean;
@@ -63,8 +68,24 @@ export async function createCore(o: CoreOptions): Promise<Core> {
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach((l) => l());
 
-  const tasks = new SqliteTaskRepository(asNode, { onChange: emit });
-  const notes = new SqliteNotesRepository(asNode, { onChange: emit });
+  const bondEngine = new BondEngine({
+    store: new SqliteBondStore(asNode),
+    now: () => new Date((o.now ?? (() => Date.now()))()),
+    onChanged: () => emit(),
+  });
+  const tasks = new SqliteTaskRepository(asNode, {
+    onChange: (change) => {
+      if (change.type === 'created') bondEngine.handle({ type: 'task_created' });
+      else if (change.type === 'completed') bondEngine.handle({ type: 'task_completed' });
+      emit();
+    },
+  });
+  const notes = new SqliteNotesRepository(asNode, {
+    onChange: (change) => {
+      if (change.type === 'created') bondEngine.handle({ type: 'note_created' });
+      emit();
+    },
+  });
   const store = new SyncStore(asNode);
   const auth = new SupabaseAuth({ url: o.url, anonKey: o.anonKey, fetch: o.fetch, storage: o.session });
   const transport = new SupabaseTransport({ url: o.url, anonKey: o.anonKey, fetch: o.fetch, token: () => auth.accessToken() });
@@ -123,6 +144,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     },
     onFinished: (kind, session) => {
       focusLog.record({ kind, minutes: session.minutes, taskId: session.task?.id ?? null, at: new Date(session.at) });
+      if (kind === 'focus') bondEngine.handle({ type: 'focus_finished', minutes: session.minutes });
       try {
         navigator.vibrate?.(kind === 'focus' ? [200, 100, 200] : [120]);
       } catch {
@@ -157,9 +179,16 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     }
   };
 
+  bondEngine.handle({ type: 'open' });
+
   return {
     tasks,
     notes,
+    bond: {
+      snapshot: () => bondEngine.snapshot(),
+      record: (event) => void bondEngine.handle(event),
+      buySkin: (id) => bondEngine.buySkin(id),
+    },
     store,
     auth,
     recovered: persisted.recovered,

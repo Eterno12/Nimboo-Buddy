@@ -219,6 +219,30 @@ try {
     await page.waitFor(`!!document.querySelector('[data-testid="fab-note"]') && document.querySelectorAll('[data-testid="note-item"]').length === 0`, 'lista vazia');
   });
 
+  await step('Conquistas e acessórios: pontos pelo uso, lista de troféus e loja com saldo', async () => {
+    await click(page, 'tab-profile');
+    await click(page, 'open-achievements');
+    await page.waitFor(`!!document.querySelector('[data-testid="achievements-screen"]')`, 'tela de conquistas');
+    const points = await page.ev(`document.querySelector('[data-testid="ach-points"]').textContent`);
+    assert.match(points, /^\d+\/\d+ pts · saldo \d+$/);
+    const unlocked = await page.ev(`document.querySelectorAll('.ach-row[data-unlocked="true"]').length`);
+    assert.ok(unlocked >= 1, 'a primeira nota já liberou uma conquista');
+    assert.ok((await page.ev(`document.querySelectorAll('.ach-row').length`)) >= 20);
+
+    await click(page, 'ach-tab-skins');
+    await page.waitFor(`document.querySelectorAll('[data-testid="skin"]').length === 16`, '16 acessórios');
+    // Pontos de sobra para o laço (20)? Compra e usa; senão o botão mostra o que falta.
+    const state = await page.ev(`document.querySelector('[data-testid="buy-mochi.laco"]').textContent`);
+    if (/Comprar/.test(state)) {
+      await click(page, 'buy-mochi.laco');
+      await page.waitFor(`/Em uso/.test(document.querySelector('[data-using="true"]')?.textContent ?? '')`, 'acessório em uso');
+    } else {
+      assert.match(state, /faltam \d+/);
+    }
+    await click(page, 'ach-back');
+    await page.waitFor(`!document.querySelector('[data-testid="achievements-screen"]')`, 'voltou ao perfil');
+  });
+
   await step('Hoje reflete as tarefas e recarregar a página não perde nada (banco persistido)', async () => {
     await sleep(600);
     await page.call('Page.reload');
