@@ -87,5 +87,8 @@
       "shortcutName": "Nimboo",
       "deleteAppDataOnUninstall": false
     }
+  },
+  "dependencies": {
+    "sql.js": "1.15.0"
   }
 }
