@@ -28,6 +28,15 @@ cd android && ./gradlew assembleDebug    # gera android/app/build/outputs/apk/de
 adb install -r app/build/outputs/apk/debug/app-debug.apk   # celular com depuração USB
 ```
 
+Compilar no PowerShell (o `local.properties` usa barras normais: `sdk.dir=G:/Android/sdk`):
+
+```powershell
+cd G:Mochi-Desktopandroid
+$env:JAVA_HOME='G:Androidjdkjdk-21.0.12.1+1'; $env:ANDROID_HOME='G:Androidsdk'; $env:GRADLE_USER_HOME='G:Androidgradle-home'
+.gradlew.bat assembleDebug
+& 'G:Androidsdkplatform-toolsadb.exe' install -r appuildoutputsapkdebugapp-debug.apk
+```
+
 ## Arquitetura resumida
 - `mobile/src/` — casca do app (React). `mobile/db/` — banco sql.js + persistência.
 - No Android o banco é um arquivo no armazenamento privado do app (`@capacitor/filesystem`);
