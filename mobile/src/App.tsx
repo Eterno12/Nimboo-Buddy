@@ -1,200 +1,135 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Task } from '../../shared/tasks';
+import { useMascot } from '../../src/features/mascot/useMascot';
 import type { Core } from './core';
+import { parseProfile, serializeProfile, type Profile } from './profile';
+import { useTasks } from './useTasks';
+import { Icon } from './ui/Icon';
+import { AddTaskSheet, EditTaskSheet } from './ui/TaskSheets';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { SoonScreen } from './screens/SoonScreen';
+import { TasksScreen } from './screens/TasksScreen';
+import { TodayScreen } from './screens/TodayScreen';
 
-/** Casca funcional (F3): entrar, tarefas e estado da sincronização. A interface final é a F4. */
+type Tab = 'today' | 'tasks' | 'focus' | 'notes' | 'profile';
+
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'today', label: 'Hoje', icon: 'today' },
+  { id: 'tasks', label: 'Tarefas', icon: 'tasks' },
+  { id: 'focus', label: 'Foco', icon: 'focus' },
+  { id: 'notes', label: 'Notas', icon: 'notes' },
+  { id: 'profile', label: 'Perfil', icon: 'profile' },
+];
+
+/** Casca do app: navegação inferior, estado das tarefas e o mascote. */
 export function App({ core }: { core: Core }) {
-  const [, force] = useState(0);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [title, setTitle] = useState('');
-  const [tab, setTab] = useState<'tasks' | 'account'>('tasks');
+  const [tab, setTab] = useState<Tab>('today');
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Task | null>(null);
+  const [version, bump] = useState(0);
+  const tasks = useTasks(core);
+  const mascot = useMascot();
+  // `version` muda quando o núcleo avisa (preferência alterada): recalcula o perfil.
+  const profile = useMemo(() => parseProfile(core.getPref('profile')), [core, version]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const load = useCallback(async () => {
-    setTasks((await core.tasks.list()).active);
-  }, [core]);
+  useEffect(() => core.subscribe(() => bump((n) => n + 1)), [core]);
+  useEffect(() => mascot.greet(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    void load();
-    return core.subscribe(() => {
-      force((n) => n + 1);
-      void load();
-    });
-  }, [core, load]);
+  const toggle = useCallback(
+    (task: Task) => {
+      if (task.completed) void core.tasks.reopen(task.id);
+      else {
+        void core.tasks.complete(task.id);
+        mascot.celebrate();
+      }
+    },
+    [core, mascot],
+  );
 
-  const add = async () => {
-    const t = title.trim();
-    if (!t) return;
-    const r = await core.tasks.create(t);
-    if (r.ok) setTitle('');
-  };
-
+  const changeProfile = (next: Profile) => core.setPref('profile', serializeProfile(next));
   const state = core.syncState();
   const account = core.auth.account();
-  const status = !account
-    ? 'Offline (sem conta)'
+  const syncLabel = !account
+    ? 'Sem conta'
     : !core.syncEnabled()
-      ? 'Sincronização desligada'
+      ? 'Pausado'
       : state.status === 'syncing'
         ? 'Sincronizando…'
         : state.status === 'login'
           ? 'Entre de novo'
           : state.status === 'error'
-            ? (state.error ?? 'Erro ao sincronizar')
+            ? 'Erro'
             : state.lastSync
               ? 'Sincronizado'
               : 'Pronto';
 
+  const openEdit = useCallback((task: Task) => setEditing(task), []);
+  const subtasks = editing ? [...tasks.active, ...tasks.completed].filter((t) => t.parentId === editing.id) : [];
+
   return (
     <div className="app">
-      <header className="top">
-        <h1>Nimboo</h1>
+      <header className="appbar">
+        <span className="brand">{profile.name}</span>
         <span className="chip" data-testid="status" data-status={state.status}>
-          {status}
+          {syncLabel}
         </span>
       </header>
 
       {core.recovered && (
-        <p className="notice" role="status">
-          Os dados deste aparelho estavam danificados; vamos baixá-los da nuvem.
+        <p className="banner" role="status">
+          Os dados deste aparelho estavam danificados; estamos baixando tudo da nuvem.
         </p>
       )}
 
-      {tab === 'tasks' ? (
-        <main>
-          <form
-            className="add"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void add();
-            }}
-          >
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nova tarefa" aria-label="Nova tarefa" data-testid="new-task" />
-            <button type="submit" data-testid="add-task">
-              Adicionar
-            </button>
-          </form>
-          <ul className="tasks" data-testid="tasks">
-            {tasks.map((t) => (
-              <li key={t.id} data-testid="task">
-                <button className="check" aria-label={`Concluir ${t.title}`} onClick={() => void core.tasks.complete(t.id)} />
-                <span className="title">{t.title}</span>
-                <button className="del" aria-label={`Excluir ${t.title}`} onClick={() => void core.tasks.remove(t.id)}>
-                  ×
-                </button>
-              </li>
-            ))}
-            {tasks.length === 0 && <li className="empty">Nenhuma tarefa por aqui.</li>}
-          </ul>
-        </main>
-      ) : (
-        <Account core={core} />
-      )}
-
-      <nav className="tabs">
-        <button aria-pressed={tab === 'tasks'} onClick={() => setTab('tasks')} data-testid="tab-tasks">
-          Tarefas
-        </button>
-        <button aria-pressed={tab === 'account'} onClick={() => setTab('account')} data-testid="tab-account">
-          Conta
-        </button>
-      </nav>
-    </div>
-  );
-}
-
-function Account({ core }: { core: Core }) {
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [sent, setSent] = useState(false);
-  const [consent, setConsent] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [, force] = useState(0);
-  const account = core.auth.account();
-  const refresh = () => force((n) => n + 1);
-
-  const act = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    try {
-      await fn();
-    } finally {
-      setBusy(false);
-      refresh();
-    }
-  };
-
-  if (!account) {
-    return (
-      <main className="account">
-        <p>Entre para sincronizar com o Nimboo do computador. Nada sai do aparelho sem isso.</p>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@exemplo.com" aria-label="E-mail" data-testid="email" />
-        {sent && <input inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Código" aria-label="Código" data-testid="code" />}
-        {!sent ? (
-          <button
-            disabled={busy || !email}
-            data-testid="send-code"
-            onClick={() =>
-              void act(async () => {
-                const r = await core.auth.requestCode(email);
-                setMsg(r.ok ? 'Enviamos um código para o seu e-mail.' : r.message);
-                if (r.ok) setSent(true);
-              })
-            }
-          >
-            Enviar código
-          </button>
-        ) : (
-          <button
-            disabled={busy || !code}
-            data-testid="enter"
-            onClick={() =>
-              void act(async () => {
-                const r = await core.auth.verifyCode(email, code);
-                setMsg(r.ok ? null : r.message);
-                if (r.ok) setSent(false);
-              })
-            }
-          >
-            Entrar
-          </button>
+      <main className="content">
+        {tab === 'today' && (
+          <TodayScreen
+            profile={profile}
+            mascot={mascot}
+            tasks={tasks.active}
+            onAdd={() => setAdding(true)}
+            onOpenTasks={() => setTab('tasks')}
+            onToggle={toggle}
+          />
         )}
-        {msg && (
-          <p className="msg" role="status" data-testid="msg">
-            {msg}
-          </p>
+        {tab === 'tasks' && (
+          <TasksScreen active={tasks.active} completed={tasks.completed} onToggle={toggle} onOpen={openEdit} onAdd={() => setAdding(true)} />
         )}
+        {tab === 'focus' && <SoonScreen title="Foco" icon="focus" text="Temporizador de foco com pausas." />}
+        {tab === 'notes' && <SoonScreen title="Notas" icon="notes" text="Notas com formatação." />}
+        {tab === 'profile' && <ProfileScreen core={core} profile={profile} onChange={changeProfile} />}
       </main>
-    );
-  }
 
-  return (
-    <main className="account">
-      <p data-testid="account">
-        Conta: <strong>{account.email}</strong>
-      </p>
-      {!core.syncEnabled() ? (
-        <>
-          <label className="check-row">
-            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} data-testid="consent" />
-            <span>Entendo que minhas tarefas serão guardadas na nuvem (Supabase), protegidas pela minha conta.</span>
-          </label>
-          <button disabled={!consent} data-testid="enable" onClick={() => core.setSyncEnabled(true)}>
-            Ligar sincronização
+      {tasks.pending && (
+        <div className="snackbar" role="status" data-testid="snackbar">
+          <span>
+            Tarefa excluída{tasks.pending.count > 0 ? ` (com ${tasks.pending.count} subtarefa${tasks.pending.count > 1 ? 's' : ''})` : ''}.
+          </span>
+          <button type="button" onClick={tasks.undo} data-testid="undo">
+            <Icon name="undo" size={16} /> Desfazer
           </button>
-        </>
-      ) : (
-        <>
-          <button disabled={busy} data-testid="sync-now" onClick={() => void act(() => core.syncNow())}>
-            Sincronizar agora
-          </button>
-          <button disabled={busy} onClick={() => core.setSyncEnabled(false)}>
-            Pausar
-          </button>
-        </>
+        </div>
       )}
-      <button disabled={busy} data-testid="sign-out" onClick={() => void act(() => core.auth.signOut())}>
-        Sair da conta
-      </button>
-    </main>
+
+      <nav className="tabbar" aria-label="Principal">
+        {TABS.map((t) => (
+          <button key={t.id} type="button" aria-current={tab === t.id ? 'page' : undefined} data-testid={`tab-${t.id}`} onClick={() => setTab(t.id)}>
+            <Icon name={t.icon} />
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {adding && <AddTaskSheet core={core} onClose={() => setAdding(false)} />}
+      {editing && (
+        <EditTaskSheet
+          core={core}
+          task={editing}
+          subtasks={subtasks}
+          onDelete={(t) => tasks.remove(t)}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
   );
 }

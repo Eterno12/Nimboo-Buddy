@@ -26,6 +26,9 @@ export interface Core {
   recovered: boolean;
   syncEnabled(): boolean;
   setSyncEnabled(value: boolean): void;
+  /** Preferências locais do aparelho (personagem, cor...), guardadas no mesmo banco. */
+  getPref(key: string): string | null;
+  setPref(key: string, value: string): void;
   syncState(): RunnerState;
   /** Sincroniza agora (nada acontece sem conta e sem consentimento). */
   syncNow(): Promise<void>;
@@ -79,6 +82,11 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     auth,
     recovered: persisted.recovered,
     syncEnabled: enabled,
+    getPref: (key) => metaGet(`pref_${key}`),
+    setPref(key, value) {
+      metaSet(`pref_${key}`, value);
+      emit();
+    },
     setSyncEnabled(value) {
       metaSet('enabled', value ? '1' : '0');
       lastRun = 0;

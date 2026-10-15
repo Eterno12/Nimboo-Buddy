@@ -96,35 +96,81 @@ async function connect() {
 const setValue = (p, testid, value) =>
   p.ev(`(() => { const i = document.querySelector('[data-testid="${testid}"]'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, ${JSON.stringify(value)}); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
 const click = (p, testid) => p.ev(`document.querySelector('[data-testid="${testid}"]').click()`);
-const taskTitles = (p) => p.ev(`[...document.querySelectorAll('[data-testid="task"] .title')].map((e) => e.textContent).sort()`);
+const taskTitles = (p) => p.ev(`[...document.querySelectorAll('[data-testid="task"] .task-title')].map((e) => e.textContent).sort()`);
 
 let page;
 try {
-  console.log('App móvel (web) — banco sql.js persistido, login e sincronização (Chromium real, servidor falso)');
+  console.log('App móvel (web) — telas, banco persistido, login e sincronização (Chromium real, servidor falso)');
   page = await connect();
-  await page.waitFor(`!!document.querySelector('[data-testid="new-task"]')`, 'app carregado');
+  await page.waitFor(`!!document.querySelector('[data-testid="screen-today"]')`, 'tela Hoje');
 
-  await step('criar tarefas funciona e a lista aparece', async () => {
-    for (const t of ['Comprar pão', 'Estudar']) {
-      await setValue(page, 'new-task', t);
-      await click(page, 'add-task');
-      await page.waitFor(`[...document.querySelectorAll('[data-testid="task"] .title')].some((e) => e.textContent === ${JSON.stringify(t)})`, `tarefa ${t}`);
-    }
+  const addTask = async (title, extra = '') => {
+    await click(page, 'tab-tasks');
+    await page.waitFor(`!!document.querySelector('[data-testid="fab-add"]')`, 'botão de nova tarefa');
+    await click(page, 'fab-add');
+    await page.waitFor(`!!document.querySelector('[data-testid="field-title"]')`, 'folha de nova tarefa');
+    await setValue(page, 'field-title', title);
+    if (extra) await page.ev(extra);
+    await click(page, 'save-task');
+    await page.waitFor(`!document.querySelector('[data-testid="field-title"]')`, 'folha fechou');
+    await page.waitFor(`[...document.querySelectorAll('[data-testid="task"] .task-title')].some((e) => e.textContent === ${JSON.stringify(title)})`, `tarefa ${title}`);
+  };
+
+  await step('Hoje: sem tarefas mostra "Tudo em dia!" e o mascote', async () => {
+    assert.equal(await page.ev(`document.querySelector('[data-testid="today-line"]').textContent`), 'Tudo em dia!');
+    assert.equal(await page.ev(`!!document.querySelector('[data-testid="screen-today"] svg.mascot')`), true);
+  });
+
+  await step('criar tarefas (com prazo e prioridade) e vê-las na lista', async () => {
+    await addTask('Comprar pão');
+    await addTask('Estudar');
     assert.deepEqual(await taskTitles(page), ['Comprar pão', 'Estudar']);
   });
 
-  await step('recarregar a página não perde nada (banco persistido)', async () => {
-    await sleep(600); // passa o atraso de gravação
+  await step('editar: título, subtarefa e prioridade pela folha', async () => {
+    await page.ev(`[...document.querySelectorAll('[data-testid="task"] .task-main')].find((b) => b.textContent.includes('Estudar')).click()`);
+    await page.waitFor(`!!document.querySelector('[data-testid="field-title"]')`, 'folha de edição');
+    await setValue(page, 'field-title', 'Estudar capítulo 4');
+    await page.ev(`document.querySelector('.segmented [data-priority="3"]').click()`);
+    await setValue(page, 'field-sub', 'Resumo');
+    await page.ev(`document.querySelector('.inline-add .btn-soft').click()`);
+    await page.waitFor(`document.querySelectorAll('.subtasks li').length === 1`, 'subtarefa criada');
+    await click(page, 'save-edit');
+    await page.waitFor(`!document.querySelector('[data-testid="field-title"]')`, 'folha fechou');
+    await page.waitFor(`[...document.querySelectorAll('[data-testid="task"] .task-title')].some((e) => e.textContent === 'Estudar capítulo 4')`, 'título novo');
+    const meta = await page.ev(`[...document.querySelectorAll('[data-testid="task"]')].find((r) => r.textContent.includes('Estudar capítulo 4')).textContent`);
+    assert.match(meta, /Alta/, 'prioridade alta aparece');
+    assert.match(meta, /0\/1/, 'contador de subtarefas');
+  });
+
+  await step('excluir mostra "Desfazer"; desfazer devolve a tarefa; sem desfazer ela some de verdade', async () => {
+    await page.ev(`[...document.querySelectorAll('[data-testid="task"] .task-main')].find((b) => b.textContent.includes('Comprar pão')).click()`);
+    await click(page, 'delete-task');
+    await page.waitFor(`!!document.querySelector('[data-testid="snackbar"]')`, 'aviso de exclusão');
+    assert.deepEqual(await taskTitles(page), ['Estudar capítulo 4']);
+    await click(page, 'undo');
+    await page.waitFor(`document.querySelectorAll('[data-testid="task"]').length === 2`, 'tarefa voltou');
+
+    await page.ev(`[...document.querySelectorAll('[data-testid="task"] .task-main')].find((b) => b.textContent.includes('Comprar pão')).click()`);
+    await click(page, 'delete-task');
+    await page.waitFor(`!document.querySelector('[data-testid="snackbar"]')`, 'prazo do desfazer acabou', 9000);
+    const rows = await page.ev(`window.__nimboo.tasks.list().then((l) => l.active.map((t) => t.title).sort())`);
+    assert.deepEqual(rows, ['Estudar capítulo 4', 'Resumo']);
+  });
+
+  await step('Hoje reflete as tarefas e recarregar a página não perde nada (banco persistido)', async () => {
+    await sleep(600);
     await page.call('Page.reload');
-    await sleep(300);
-    await page.waitFor(`document.querySelectorAll('[data-testid="task"]').length === 2`, 'tarefas depois de recarregar', 15000);
-    assert.deepEqual(await taskTitles(page), ['Comprar pão', 'Estudar']);
+    await page.waitFor(`!!document.querySelector('[data-testid="screen-today"]')`, 'recarregou', 15000);
+    await click(page, 'tab-tasks');
+    await page.waitFor(`document.querySelectorAll('[data-testid="task"]').length === 1`, 'tarefa principal depois de recarregar', 15000);
+    assert.deepEqual(await taskTitles(page), ['Estudar capítulo 4']);
   });
 
   await step('sem conta nada é enviado; entrar com código e ligar sincroniza nos dois sentidos', async () => {
     assert.equal(fake.state.pushes, 0);
     fake.seedTask('44444444-4444-4444-8444-444444444444', 'Veio do PC');
-    await click(page, 'tab-account');
+    await click(page, 'tab-profile');
     await setValue(page, 'email', 'ana@exemplo.com');
     await click(page, 'send-code');
     await page.waitFor(`!!document.querySelector('[data-testid="code"]')`, 'campo de código');
@@ -140,40 +186,42 @@ try {
     await click(page, 'enable');
     await page.waitFor(`!!document.querySelector('[data-testid="sync-now"]')`, 'ligada');
     await click(page, 'sync-now');
-
-    await sleep(800);
+    await sleep(900);
     const sent = [...fake.state.rows.values()].filter((r) => r.tbl === 'tasks' && !r.deleted).map((r) => r.payload.title).sort();
-    assert.deepEqual(sent, ['Comprar pão', 'Estudar', 'Veio do PC']);
+    assert.deepEqual(sent, ['Estudar capítulo 4', 'Resumo', 'Veio do PC']);
     await click(page, 'tab-tasks');
-    await page.waitFor(`document.querySelectorAll('[data-testid="task"]').length === 3`, 'tarefa do PC apareceu');
-    assert.deepEqual(await taskTitles(page), ['Comprar pão', 'Estudar', 'Veio do PC']);
+    await page.waitFor(`document.querySelectorAll('[data-testid="task"]').length === 2`, 'tarefa do PC apareceu');
+    assert.deepEqual(await taskTitles(page), ['Estudar capítulo 4', 'Veio do PC']);
   });
 
-  await step('concluir no celular chega ao servidor; a sessão e o cursor sobrevivem a recarregar', async () => {
-    await page.ev(`document.querySelector('[data-testid="task"] .check').click()`);
-    await page.waitFor(`document.querySelectorAll('[data-testid="task"]').length === 2`, 'saiu da lista');
-    await click(page, 'tab-account');
+  await step('concluir no celular chega ao servidor; sessão e cursor sobrevivem a recarregar', async () => {
+    await page.ev(`[...document.querySelectorAll('[data-testid="task"]')].find((r) => r.textContent.includes('Veio do PC')).querySelector('.task-check').click()`);
+    await page.waitFor(`document.querySelectorAll('[data-testid="task"]').length === 1`, 'saiu da lista de ativas');
+    await click(page, 'tab-profile');
     await click(page, 'sync-now');
-    await sleep(800);
-    const completed = [...fake.state.rows.values()].filter((r) => r.tbl === 'tasks' && !r.deleted && r.payload.completed === 1);
-    assert.equal(completed.length, 1);
+    await sleep(900);
+    const done = [...fake.state.rows.values()].filter((r) => r.tbl === 'tasks' && !r.deleted && r.payload.completed === 1);
+    assert.equal(done.length, 1);
 
     const pushesBefore = fake.state.pushes;
     await page.call('Page.reload');
-    await page.waitFor(`!!document.querySelector('[data-testid="new-task"]')`, 'recarregou', 15000);
-    await page.waitFor(`document.querySelectorAll('[data-testid="task"]').length === 2`, 'lista depois de recarregar', 15000);
-    await click(page, 'tab-account');
+    await page.waitFor(`!!document.querySelector('[data-testid="screen-today"]')`, 'recarregou', 15000);
+    await click(page, 'tab-profile');
     await page.waitFor(`!!document.querySelector('[data-testid="account"]')`, 'sessão restaurada');
     await click(page, 'sync-now');
-    await sleep(800);
+    await sleep(900);
     assert.equal(fake.state.pushes, pushesBefore, 'nada novo para enviar depois de recarregar');
   });
 
-  await step('sair da conta mantém as tarefas no aparelho', async () => {
+  await step('trocar o personagem no Perfil muda o mascote e fica salvo; sair mantém as tarefas', async () => {
+    await click(page, 'char-cactus');
+    await click(page, 'tab-today');
+    await page.waitFor(`document.querySelector('[data-testid="screen-today"] svg.mascot')?.dataset.character === 'cactus'`, 'cacto na tela Hoje');
+    await click(page, 'tab-profile');
     await click(page, 'sign-out');
     await page.waitFor(`!!document.querySelector('[data-testid="email"]')`, 'voltou ao login');
     await click(page, 'tab-tasks');
-    assert.equal((await taskTitles(page)).length, 2);
+    assert.equal((await taskTitles(page)).length, 1);
   });
 } catch (error) {
   console.log(`  FAIL (infra) ${error.message}`);
