@@ -81,6 +81,17 @@ Cada personagem tem dois acessórios exclusivos. Eles são comprados com os pont
 
 <div align="center"><img src="docs/media/skins.png" alt="Os 16 acessórios, dois por personagem" width="100%"></div>
 
+## Nimboo no Android
+
+O app do celular tem tarefas, foco, notas, conquistas, sons, lembretes, um **widget** com o mascote e a
+**sincronização** com o PC (opcional, por conta). Baixe o APK na página de
+[Releases](https://github.com/Eterno12/Nimboo-Buddy/releases) (repositório privado: entre com a conta do GitHub).
+
+**Instalar:** abra o APK no celular e permita "instalar de fontes desconhecidas" quando o Android pedir.
+
+**Conectar ao PC sem e-mail:** no PC, Configurações → Conta e sincronização → *Conectar o celular com QR code*; no
+celular, Perfil → *Escanear QR do PC*. Detalhes e comandos de build em [docs/MOBILE.md](docs/MOBILE.md).
+
 ## Primeira execução e configurações
 
 <table>
