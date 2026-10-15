@@ -1,13 +1,30 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { isNewer, type Stamp } from '../../shared/sync/merge.ts';
 import { isTaskId, validateTitle } from '../../shared/tasks.ts';
+import { parseProfileData, profileEquals, serializeProfileData, type ProfileData } from '../../shared/sync/profile.ts';
 
 /** Tabelas que sincronizam e as colunas que viajam (nada além disso é aceito do outro lado). */
 const TABLES = {
   tasks: ['id', 'title', 'completed', 'created_at', 'completed_at', 'updated_at', 'due_at', 'source_ref', 'priority', 'recurrence', 'parent_id', 'position', 'origin'],
   notes: ['id', 'title', 'preview', 'plain', 'doc', 'color', 'pinned', 'win_x', 'win_y', 'win_w', 'win_h', 'created_at', 'updated_at', 'task_id', 'event_ref', 'origin'],
   focus_sessions: ['id', 'kind', 'minutes', 'completed_at', 'task_id', 'origin'],
+  achievements: ['id', 'unlocked_at', 'origin'],
+  skins_owned: ['id', 'owned_at', 'origin'],
+  profile: ['id', 'data', 'updated_at', 'origin'],
 } as const;
+
+/** Coluna que carrega o instante da última edição de cada tabela. */
+const STAMP_COLUMN: Record<SyncTable, string | null> = {
+  tasks: 'updated_at',
+  notes: 'updated_at',
+  focus_sessions: null,
+  achievements: 'unlocked_at',
+  skins_owned: 'owned_at',
+  profile: 'updated_at',
+};
+
+/** Tabelas de "só entra": se o registro já existe aqui, o que vem de fora é ignorado (conquista e compra não se desfazem). */
+const INSERT_ONLY: ReadonlySet<string> = new Set(['focus_sessions', 'achievements', 'skins_owned']);
 
 export type SyncTable = keyof typeof TABLES;
 export const SYNC_TABLES = Object.keys(TABLES) as SyncTable[];
@@ -23,6 +40,14 @@ export type ApplyResult = 'applied' | 'ignored';
 type Row = Record<string, string | number | null>;
 
 const isTable = (t: string): t is SyncTable => Object.hasOwn(TABLES, t);
+
+/** Formato do id aceito de cada tabela (tarefas/notas/sessões: UUID; conquistas e acessórios: slug; perfil: `main`). */
+function validId(tbl: SyncTable, id: unknown): id is string {
+  if (typeof id !== 'string') return false;
+  if (tbl === 'achievements' || tbl === 'skins_owned') return /^[a-z0-9_.-]{1,64}$/.test(id);
+  if (tbl === 'profile') return id === 'main';
+  return isTaskId(id);
+}
 
 /**
  * Lado local da sincronização: fila de saída, marcas de exclusão e aplicação do que vem da nuvem.
@@ -113,6 +138,23 @@ export class SyncStore {
     return { ...row, origin: row.origin ?? this.deviceId() };
   }
 
+  /** Perfil guardado (ou `null`); linha única `main`. */
+  getProfile(): { profile: ProfileData; updatedAt: string } | null {
+    const row = this.db.prepare("SELECT data, updated_at FROM profile WHERE id = 'main'").get() as { data: string; updated_at: string } | undefined;
+    const profile = parseProfileData(row?.data);
+    return row && profile ? { profile, updatedAt: row.updated_at } : null;
+  }
+
+  /** Grava o perfil só se mudou (devolve se gravou): o valor igual nunca gera envio nem eco. */
+  putProfile(profile: ProfileData, at: string): boolean {
+    const current = this.getProfile();
+    if (current && profileEquals(current.profile, profile)) return false;
+    this.db
+      .prepare("INSERT INTO profile (id, data, updated_at) VALUES ('main', ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at")
+      .run(serializeProfileData(profile), at);
+    return true;
+  }
+
   /** Primeira sincronização: tudo que já existe localmente entra na fila de envio. */
   enqueueAll(): number {
     let total = 0;
@@ -140,20 +182,23 @@ export class SyncStore {
   }
 
   private stampOf(tbl: SyncTable, id: string): Stamp | null {
-    if (tbl === 'focus_sessions') {
-      const exists = this.db.prepare('SELECT 1 AS x FROM focus_sessions WHERE id = ?').get(id);
-      return exists ? { updatedAt: '9999', origin: '' } : null; // sessões são imutáveis: a local sempre vence
+    const column = STAMP_COLUMN[tbl];
+    if (INSERT_ONLY.has(tbl) || column === null) {
+      // Sessões, conquistas e compras não mudam depois de criadas: o que já existe aqui sempre vence.
+      const exists = this.db.prepare(`SELECT 1 AS x FROM ${tbl} WHERE id = ?`).get(id);
+      return exists ? { updatedAt: '9999', origin: '' } : null;
     }
-    const row = this.db.prepare(`SELECT updated_at, origin FROM ${tbl} WHERE id = ?`).get(id) as { updated_at: string; origin: string | null } | undefined;
-    return row ? { updatedAt: row.updated_at, origin: row.origin ?? '' } : null;
+    const row = this.db.prepare(`SELECT ${column} AS at, origin FROM ${tbl} WHERE id = ?`).get(id) as { at: string; origin: string | null } | undefined;
+    return row ? { updatedAt: row.at, origin: row.origin ?? '' } : null;
   }
 
   /** Aplica um registro vindo da nuvem. Valida o formato e respeita a regra de conflito e as marcas de exclusão. */
   applyUpsert(tbl: string, incoming: Row): ApplyResult {
-    if (!isTable(tbl) || typeof incoming.id !== 'string' || !isTaskId(incoming.id)) return 'ignored';
+    if (!isTable(tbl) || !validId(tbl, incoming.id)) return 'ignored';
     if (tbl === 'tasks' && !validateTitle(incoming.title).ok) return 'ignored';
     const cols = TABLES[tbl];
-    const incomingAt = String(incoming.updated_at ?? incoming.completed_at ?? '');
+    const column = STAMP_COLUMN[tbl] ?? 'completed_at';
+    const incomingAt = String(incoming[column] ?? '');
     const stamp: Stamp = { updatedAt: incomingAt, origin: String(incoming.origin ?? '') };
     const tomb = this.db.prepare('SELECT deleted_at FROM tombstones WHERE tbl = ? AND id = ?').get(tbl, incoming.id) as { deleted_at: string } | undefined;
     // Exclusão vale sobre cópias mais antigas (ou do mesmo instante): só uma edição POSTERIOR ressuscita.
@@ -177,7 +222,7 @@ export class SyncStore {
 
   /** Aplica uma exclusão vinda da nuvem (uma edição local posterior à exclusão a anula). */
   applyDelete(tbl: string, id: string, deletedAt: string, origin: string): ApplyResult {
-    if (!isTable(tbl) || !isTaskId(id)) return 'ignored';
+    if (!isTable(tbl) || !validId(tbl, id)) return 'ignored';
     const local = this.stampOf(tbl, id);
     if (local && isNewer(local, { updatedAt: deletedAt, origin })) return 'ignored';
     this.quiet(() => {

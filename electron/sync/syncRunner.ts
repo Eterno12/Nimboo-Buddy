@@ -17,7 +17,7 @@ export interface SyncRunnerOptions {
   /** Sincronização ligada e com conta? (falso: não chama o servidor). */
   canRun(): boolean;
   /** Quantos registros vindos da nuvem mudaram o banco local (a interface precisa recarregar). */
-  onApplied?(count: number): void;
+  onApplied?(count: number, tables: string[]): void;
   /** O estado mudou (para avisar as janelas). */
   onState?(state: RunnerState): void;
   now?: () => Date;
@@ -59,7 +59,7 @@ export class SyncRunner {
       try {
         const result = await syncOnce(this.o.store, this.o.transport);
         this.set({ status: 'idle', lastSync: (this.o.now?.() ?? new Date()).toISOString(), error: null });
-        if (result.applied > 0) this.o.onApplied?.(result.applied);
+        if (result.applied > 0) this.o.onApplied?.(result.applied, result.appliedTables);
       } catch (error) {
         if (error instanceof SyncAuthError) {
           this.set({ status: 'login', error: error.message });

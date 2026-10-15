@@ -33,6 +33,8 @@ import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
 import { createLogFile, describe } from './logFile';
 import { startSyncService, type SyncService } from './syncService';
+import { profileEquals, type ProfileData } from '../shared/sync/profile';
+import { skinById } from '../shared/skins';
 import { ReminderScheduler, type Reminder } from './reminders';
 import { startReminderToasts, type ReminderSource, type ReminderToasts } from './reminderToast';
 import { FocusLog } from './focus/focusLog';
@@ -233,6 +235,30 @@ function deliverReminder(reminder: Reminder, source: ReminderSource): void {
   reminderToasts?.show(reminder, source);
 }
 
+/** O que "o Nimboo parece" nas preferências (vai para a nuvem e para o celular). */
+function profileOf(s: Settings): ProfileData {
+  const wanted = skinById(s.skin);
+  return {
+    character: s.character,
+    color: s.color,
+    name: s.mascotName,
+    skin: wanted && wanted.character === s.character ? wanted.id : null,
+  };
+}
+
+/** Chegou um perfil de outro aparelho: aplica nas preferências (sem devolvê-lo à nuvem). */
+function applyRemoteProfile(): void {
+  const remote = sync?.profile();
+  if (!remote || !settingsStore) return;
+  const current = settingsStore.get();
+  if (profileEquals(profileOf(current), remote)) return;
+  const previous = current;
+  settingsStore.update({ character: remote.character, color: remote.color, mascotName: remote.name, skin: remote.skin });
+  // O perfil acabou de vir da nuvem: não regrava (o valor já é igual ao da nuvem).
+  applySettingsChange(previous, settingsStore.get());
+  settingsService?.broadcast();
+}
+
 /** Efeitos de uma mudança de preferências que vão além de redesenhar as janelas. */
 function applySettingsChange(previous: Settings, next: Settings): void {
   if (previous.islandScale !== next.islandScale || previous.mochiScale !== next.mochiScale) {
@@ -246,6 +272,14 @@ function applySettingsChange(previous: Settings, next: Settings): void {
   if (previous.character !== next.character) bond?.record({ type: 'character', id: next.character });
   if (previous.mediaPlayer !== next.mediaPlayer) media?.setEnabled(next.mediaPlayer);
   if (previous.syncEnabled !== next.syncEnabled) sync?.kick();
+  if (
+    previous.character !== next.character ||
+    previous.color !== next.color ||
+    previous.mascotName !== next.mascotName ||
+    previous.skin !== next.skin
+  ) {
+    sync?.setProfile(profileOf(next));
+  }
   focus?.configure(focusConfigOf(next));
   const reminderConfig = { enabled: next.remindersEnabled, leadMinutes: next.reminderLeadMin };
   reminders?.setConfig(reminderConfig);
@@ -525,12 +559,16 @@ if (!app.requestSingleInstanceLock()) {
         userDataDir: app.getPath('userData'),
         isAppUrl,
         enabled: () => settingsStore?.get().syncEnabled === true,
-        onApplied: () => {
+        onApplied: (tables) => {
           tasks?.notifyExternalChange();
           notes?.notifyExternalChange();
+          if (tables.includes('achievements') || tables.includes('skins_owned')) bond?.reload();
+          if (tables.includes('profile')) applyRemoteProfile();
         },
       });
     }
+
+    if (settingsStore) sync?.ensureProfile(profileOf(settingsStore.get()));
 
     dataService = startDataService({ database: () => tasks?.database() ?? null, isAppUrl });
 

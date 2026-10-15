@@ -172,6 +172,11 @@ async function openSyncPanel(d) {
 const setValue = (c, testid, value) =>
   c.ev(`(() => { const i = document.querySelector('[data-testid="${testid}"]'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, ${JSON.stringify(value)}); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
 const click = (c, testid) => c.ev(`document.querySelector('[data-testid="${testid}"]').click()`);
+/** Sincroniza agora, duas vezes: uma rodada já em andamento pode ter começado antes da última mudança. */
+const syncTwice = async (d) => {
+  await d.main.ev(`window.mochi.sync.now()`);
+  await d.main.ev(`window.mochi.sync.now()`);
+};
 const titles = async (d) => (await d.main.ev(`window.mochi.tasks.list()`)).value.active.map((t) => t.title).sort();
 
 try {
@@ -255,10 +260,31 @@ try {
     // A exclusão é finalizada depois do prazo do "Desfazer".
     await A.main.waitFor(`window.mochi.tasks.notice().then(() => true)`, 'ok');
     await sleep(5600);
-    await click(A.panel, 'sync-now');
-    await click(B.panel, 'sync-now');
+    await syncTwice(A);
+    await syncTwice(B);
     await B.main.waitFor(`window.mochi.tasks.list().then((r) => r.value.active.every((t) => t.title !== 'Outra do A'))`, 'exclusão chegou em B', 15000);
     assert.deepEqual(await titles(B), ['Editada no B']);
+  });
+
+  await step('personagem, acessório e conquistas seguem de um aparelho para o outro', async () => {
+    // A troca o personagem; B recebe sozinho (sem devolver à nuvem).
+    await A.main.ev(`window.mochi.settings.update({ character: 'cactus', mascotName: 'Espinho' })`);
+    await sleep(400);
+    await syncTwice(A);
+    await syncTwice(B);
+    await B.main.waitFor(`window.mochi.settings.get().then((r) => r.settings.character === 'cactus' && r.settings.mascotName === 'Espinho')`, 'B recebeu o personagem', 15000);
+
+    // Concluir uma tarefa em A libera a conquista; B passa a ter a mesma conquista e os mesmos pontos.
+    const t = await A.main.ev(`window.mochi.tasks.create('Para a conquista')`);
+    await A.main.ev(`window.mochi.tasks.complete(${JSON.stringify(t.value.id)})`);
+    await sleep(500);
+    await syncTwice(A);
+    await syncTwice(B);
+    await B.main.waitFor(`window.mochi.bond.get().then((b) => b.achievements.find((a) => a.id === 'first_task')?.unlocked === true)`, 'conquista chegou em B', 15000);
+    const pa = (await A.main.ev(`window.mochi.bond.get()`)).points;
+    const pb = (await B.main.ev(`window.mochi.bond.get()`)).points;
+    assert.ok(pa >= 10, `pontos em A: ${pa}`);
+    assert.equal(pb >= 10, true, `pontos em B: ${pb}`);
   });
 
   await step('apagar da nuvem remove só a nuvem, desliga a sincronização e mantém os dados locais', async () => {

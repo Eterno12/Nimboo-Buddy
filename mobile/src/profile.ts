@@ -1,14 +1,9 @@
 import { CHARACTERS, MOCHI_COLORS, type CharacterId, type MochiColor } from '../../shared/settings.ts';
 import { skinById } from '../../shared/skins.ts';
+import type { ProfileData } from '../../shared/sync/profile.ts';
 
 /** Como o Nimboo aparece neste aparelho. Guardado nas preferências locais (sincroniza na F5). */
-export interface Profile {
-  character: CharacterId;
-  color: MochiColor;
-  name: string;
-  /** Acessório em uso (`<personagem>.<nome>`) ou `null`. */
-  skin: string | null;
-}
+export type Profile = ProfileData;
 
 export const DEFAULT_PROFILE: Profile = { character: 'mochi', color: 'mint', name: 'Nimboo', skin: null };
 

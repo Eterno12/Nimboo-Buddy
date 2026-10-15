@@ -212,6 +212,57 @@ export const MIGRATIONS: readonly Migration[] = [
       }
     },
   },
+  {
+    // Vínculo sincronizável (D57): acessórios comprados viram linhas (antes: JSON em bond_kv), conquistas e acessórios
+    // ganham o aparelho de origem e a fila de envio, e o perfil (personagem, cor, nome, acessório em uso) vira uma linha.
+    // Contadores (bond_kv.stats/days/affection) continuam em cada aparelho.
+    version: 10,
+    name: 'sync_bond_profile',
+    up(db) {
+      db.exec(`
+        ALTER TABLE achievements ADD COLUMN origin TEXT;
+        CREATE TABLE skins_owned (
+          id       TEXT NOT NULL PRIMARY KEY,
+          owned_at TEXT NOT NULL,
+          origin   TEXT
+        ) STRICT;
+        INSERT OR IGNORE INTO skins_owned (id, owned_at)
+          SELECT value, strftime('%Y-%m-%dT%H:%M:%fZ', 'now') FROM json_each((SELECT value FROM bond_kv WHERE key = 'skins' AND json_valid(value)));
+        DELETE FROM bond_kv WHERE key = 'skins';
+        CREATE TABLE profile (
+          id         TEXT NOT NULL PRIMARY KEY,
+          data       TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          origin     TEXT
+        ) STRICT;
+      `);
+      const tables: [string, string][] = [
+        ['achievements', 'OLD.unlocked_at'],
+        ['skins_owned', 'OLD.owned_at'],
+        ['profile', 'OLD.updated_at'],
+      ];
+      for (const [table, last] of tables) {
+        const now = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
+        const device = "(SELECT value FROM sync_meta WHERE key = 'device_id')";
+        const quiet = '(SELECT suppress FROM sync_ctx) = 0';
+        db.exec(`
+          CREATE TRIGGER trg_${table}_sync_ins AFTER INSERT ON ${table} WHEN ${quiet} BEGIN
+            UPDATE ${table} SET origin = ${device} WHERE id = NEW.id;
+            DELETE FROM tombstones WHERE tbl = '${table}' AND id = NEW.id;
+            INSERT INTO outbox (tbl, id, op, at) VALUES ('${table}', NEW.id, 'upsert', ${now});
+          END;
+          CREATE TRIGGER trg_${table}_sync_upd AFTER UPDATE ON ${table} WHEN ${quiet} AND NEW.origin IS OLD.origin BEGIN
+            UPDATE ${table} SET origin = ${device} WHERE id = NEW.id;
+            INSERT INTO outbox (tbl, id, op, at) VALUES ('${table}', NEW.id, 'upsert', ${now});
+          END;
+          CREATE TRIGGER trg_${table}_sync_del AFTER DELETE ON ${table} WHEN ${quiet} BEGIN
+            INSERT OR REPLACE INTO tombstones (tbl, id, deleted_at, origin) VALUES ('${table}', OLD.id, max(${now}, ${last}), ${device});
+            INSERT INTO outbox (tbl, id, op, at) VALUES ('${table}', OLD.id, 'delete', ${now});
+          END;
+        `);
+      }
+    },
+  },
 ];
 
 /** O banco foi criado por uma versão mais nova do app; não é seguro abri-lo. */

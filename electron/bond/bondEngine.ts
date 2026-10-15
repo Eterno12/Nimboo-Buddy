@@ -46,6 +46,14 @@ export class BondEngine {
     this.skins = loaded.skins ?? [];
   }
 
+  /** Relê o armazenamento (a sincronização trouxe conquistas/acessórios de outro aparelho). */
+  reload(): void {
+    const loaded = this.store.load();
+    this.unlocked = { ...loaded.unlocked, ...this.unlocked, ...loaded.unlocked };
+    this.skins = [...new Set([...(loaded.skins ?? []), ...this.skins])];
+    this.onChanged(this.snapshot());
+  }
+
   snapshot(): BondSnapshot {
     return buildSnapshot(this.state, this.unlocked, this.affection, this.skins);
   }

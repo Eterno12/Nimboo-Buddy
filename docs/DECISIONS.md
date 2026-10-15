@@ -623,3 +623,16 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   gatilhos, duplicando regras.
 - **Limites:** o banco inteiro cabe na memória (uso pessoal: poucos MB) e uma morte súbita do app pode perder
   até ~300 ms de escrita (a fila de envio é regravada junto, então nada fica inconsistente).
+
+## D57 — Vínculo e perfil sincronizados (conquistas, acessórios, personagem)
+- **O que sincroniza:** conquistas desbloqueadas (união entre aparelhos), acessórios comprados (união) e o **perfil**
+  (personagem, cor, nome, acessório em uso; a edição mais nova vence). Os pontos e o saldo são derivados, então
+  batem nos dois aparelhos.
+- **O que NÃO sincroniza:** contadores (tarefas concluídas, dias juntos, sequência, afeto) ficam por aparelho; o
+  progresso das barras pode diferir entre PC e celular. Somar contadores de vários aparelhos exigiria contadores por
+  aparelho (CRDT) e foi adiado.
+- **Regras:** conquistas e compras são "só entram" (o que já existe aqui nunca é trocado por cópia de fora); o perfil
+  segue `shared/sync/merge.ts`. Migração v10: `skins_owned` (antes JSON em `bond_kv`), `achievements.origin`, `profile`.
+- **PC:** o perfil vive nas preferências (settings.json); uma ponte (`main.ts`) grava na linha `profile` quando
+  personagem/cor/nome/acessório mudam e aplica o que chega da nuvem, sem eco. `ensureProfile` nunca sobrescreve o de
+  outro aparelho.

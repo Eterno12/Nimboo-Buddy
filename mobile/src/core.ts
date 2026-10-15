@@ -11,6 +11,8 @@ import { SqliteNotesRepository } from '../../electron/notes/sqliteNotesRepositor
 import { BondEngine } from '../../electron/bond/bondEngine.ts';
 import { SqliteBondStore } from '../../electron/bond/bondStore.ts';
 import type { BondEvent, BondSnapshot } from '../../shared/achievements.ts';
+import type { ProfileData } from '../../shared/sync/profile.ts';
+import { DEFAULT_PROFILE, parseProfile } from './profile.ts';
 import { FocusTimer } from '../../electron/focus/focusTimer.ts';
 import { FocusLog } from '../../electron/focus/focusLog.ts';
 import { DEFAULT_FOCUS_CONFIG, type FocusConfig, type FocusState, type FocusStats } from '../../shared/focus.ts';
@@ -41,7 +43,10 @@ export interface Core {
   recovered: boolean;
   syncEnabled(): boolean;
   setSyncEnabled(value: boolean): void;
-  /** Preferências locais do aparelho (personagem, cor...), guardadas no mesmo banco. */
+  /** Como o Nimboo aparece (sincroniza com o PC). */
+  getProfile(): ProfileData;
+  setProfile(profile: ProfileData): void;
+  /** Preferências locais do aparelho, guardadas no mesmo banco. */
   getPref(key: string): string | null;
   setPref(key: string, value: string): void;
   /** Temporizador de foco (o mesmo do PC); a sessão sobrevive ao fechar o app. */
@@ -166,7 +171,11 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     store,
     transport,
     canRun: () => enabled() && auth.account() !== null,
-    onApplied: emit,
+    onApplied: (_count, tables) => {
+      // Conquistas/acessórios vindos do PC: o motor do vínculo relê o banco antes de redesenhar.
+      if (tables.includes('achievements') || tables.includes('skins_owned')) bondEngine.reload();
+      emit();
+    },
     onState: emit,
   });
 
@@ -202,6 +211,17 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     },
     focusToday: () => focusLog.today(new Date(now())),
     notifier,
+    getProfile() {
+      const stored = store.getProfile();
+      if (stored) return stored.profile;
+      // Primeira vez com sincronização de perfil: aproveita a escolha antiga (preferência local), se houver.
+      const legacy = parseProfile(metaGet('pref_profile'));
+      return legacy ?? { ...DEFAULT_PROFILE };
+    },
+    setProfile(profile) {
+      store.putProfile(profile, new Date(now()).toISOString());
+      emit();
+    },
     getPref: (key) => metaGet(`pref_${key}`),
     setPref(key, value) {
       metaSet(`pref_${key}`, value);

@@ -59,13 +59,8 @@ export class SqliteBondStore {
     const unlocked: Record<string, string> = {};
     for (const r of unlockedRows) unlocked[r.id] = r.unlocked_at;
     const aff = Number(kv.get('affection'));
-    let skins: string[] = [];
-    try {
-      const raw = JSON.parse(kv.get('skins') ?? '[]') as unknown;
-      if (Array.isArray(raw)) skins = raw.filter((v): v is string => typeof v === 'string' && SKIN_ID_RE.test(v)).slice(0, 64);
-    } catch {
-      /* dado corrompido: começa sem acessórios */
-    }
+    const skinRows = this.db.prepare('SELECT id FROM skins_owned ORDER BY owned_at, id').all() as unknown as { id: string }[];
+    const skins = skinRows.map((r) => r.id).filter((id) => SKIN_ID_RE.test(id)).slice(0, 64);
     return {
       state: kv.size === 0 ? EMPTY_BOND : { stats: parseStats(kv.get('stats')), days: parseDays(kv.get('days')) },
       unlocked,
@@ -90,10 +85,10 @@ export class SqliteBondStore {
     }
   }
 
+  /** Garante uma linha por acessório comprado (compras nunca são desfeitas). */
   saveSkins(skins: readonly string[]): void {
-    this.db
-      .prepare('INSERT INTO bond_kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
-      .run('skins', JSON.stringify(skins));
+    const insert = this.db.prepare("INSERT OR IGNORE INTO skins_owned (id, owned_at) VALUES (?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))");
+    for (const id of skins) insert.run(id);
   }
 
   unlock(id: string, at: string): void {

@@ -5,6 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { IPC } from '../shared/ipc';
 import { SUPABASE_ANON_KEY, SUPABASE_URL, SYNC_IDLE_INTERVAL_MS, SYNC_TICK_MS } from '../shared/sync/config';
 import type { SyncResultMessage, SyncState } from '../shared/sync/state';
+import type { ProfileData } from '../shared/sync/profile';
 import { SyncStore } from './sync/syncStore';
 import { SyncRunner } from './sync/syncRunner';
 import { SupabaseAuth, type SessionStorage } from './sync/supabaseAuth';
@@ -13,6 +14,12 @@ import { SupabaseTransport, type FetchLike } from './sync/supabaseTransport';
 export interface SyncService {
   /** Preferências mudaram (ligar/desligar): reavalia na hora. */
   kick(): void;
+  /** Perfil guardado para sincronizar (ou `null`). */
+  profile(): ProfileData | null;
+  /** O personagem/cor/nome/acessório mudou aqui: grava (só se mudou) para ir à nuvem. */
+  setProfile(profile: ProfileData): void;
+  /** Cria o perfil a partir deste aparelho se ainda não existe nenhum (nunca sobrescreve o de outro). */
+  ensureProfile(profile: ProfileData): void;
   close(): void;
 }
 
@@ -22,8 +29,8 @@ interface Options {
   isAppUrl(url: string): boolean;
   /** Sincronização ligada nas preferências? */
   enabled(): boolean;
-  /** Registros vindos da nuvem mudaram o banco: as janelas precisam recarregar. */
-  onApplied(): void;
+  /** Registros vindos da nuvem mudaram o banco (e em quais tabelas): as janelas precisam recarregar. */
+  onApplied(tables: string[]): void;
 }
 
 /** Sessão guardada cifrada pelo cofre do Windows (DPAPI); sem o cofre, não guarda nada. */
@@ -111,7 +118,7 @@ export function startSyncService({ db, userDataDir, isAppUrl, enabled, onApplied
     store,
     transport,
     canRun: () => enabled() && auth.account() !== null,
-    onApplied: () => onApplied(),
+    onApplied: (_count, tables) => onApplied(tables),
     onState: broadcast,
   });
 
@@ -177,6 +184,13 @@ export function startSyncService({ db, userDataDir, isAppUrl, enabled, onApplied
   });
 
   return {
+    profile: () => store.getProfile()?.profile ?? null,
+    setProfile(profile) {
+      if (store.putProfile(profile, new Date().toISOString())) lastRun = 0;
+    },
+    ensureProfile(profile) {
+      if (store.getProfile() === null) store.putProfile(profile, new Date().toISOString());
+    },
     kick() {
       lastRun = 0;
       broadcast();

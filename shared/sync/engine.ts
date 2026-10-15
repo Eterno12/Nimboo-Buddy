@@ -57,12 +57,14 @@ export interface SyncResult {
   applied: number;
   ignored: number;
   pushed: number;
+  /** Tabelas em que pelo menos um registro vindo da nuvem mudou o banco local. */
+  appliedTables: string[];
 }
 
 export const SYNC_PAGE = 500;
 
 export async function syncOnce(store: LocalStore, transport: Transport): Promise<SyncResult> {
-  const result: SyncResult = { pulled: 0, applied: 0, ignored: 0, pushed: 0 };
+  const result: SyncResult = { pulled: 0, applied: 0, ignored: 0, pushed: 0, appliedTables: [] };
   const device = store.deviceId();
 
   // Primeira vez: tudo que já existe localmente entra na fila (a regra de conflito resolve o resto).
@@ -82,7 +84,10 @@ export async function syncOnce(store: LocalStore, transport: Transport): Promise
         : r.payload
           ? store.applyUpsert(r.tbl, { ...(r.payload as Record<string, string | number | null>), id: r.id, origin: r.origin })
           : 'ignored';
-      if (outcome === 'applied') result.applied++;
+      if (outcome === 'applied') {
+        result.applied++;
+        if (!result.appliedTables.includes(r.tbl)) result.appliedTables.push(r.tbl);
+      }
       else result.ignored++;
       if (typeof r.server_seq === 'number' && r.server_seq > max) max = r.server_seq;
     }
@@ -104,7 +109,7 @@ export async function syncOnce(store: LocalStore, transport: Transport): Promise
       }
       const row = store.readRow(p.tbl, p.id);
       if (!row) continue; // apagado depois de entrar na fila: a exclusão vem em outro item
-      const stamp = String(row.updated_at ?? row.completed_at ?? '');
+      const stamp = String(row.updated_at ?? row.unlocked_at ?? row.owned_at ?? row.completed_at ?? '');
       batch.push({ tbl: p.tbl, id: p.id, deleted: false, stamp, origin: String(row.origin || device), payload: row });
     }
     if (batch.length > 0) await transport.push(batch);

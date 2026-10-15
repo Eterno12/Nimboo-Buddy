@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Task } from '../../shared/tasks';
 import { useMascot } from '../../src/features/mascot/useMascot';
 import type { Core } from './core';
-import { parseProfile, serializeProfile, type Profile } from './profile';
+import type { Profile } from './profile';
 import { useTasks } from './useTasks';
 import { Icon } from './ui/Icon';
 import { AddTaskSheet, EditTaskSheet } from './ui/TaskSheets';
@@ -33,7 +33,7 @@ export function App({ core }: { core: Core }) {
   const tasks = useTasks(core);
   const mascot = useMascot();
   // `version` muda quando o núcleo avisa (preferência alterada): recalcula o perfil.
-  const profile = useMemo(() => parseProfile(core.getPref('profile')), [core, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  const profile = useMemo(() => core.getProfile(), [core, version]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => core.subscribe(() => bump((n) => n + 1)), [core]);
   useEffect(() => mascot.greet(), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -53,7 +53,7 @@ export function App({ core }: { core: Core }) {
     if (next.character !== profile.character) core.bond.record({ type: 'character', id: next.character });
     // Trocar de personagem tira o acessório do anterior (cada um tem os seus).
     const skin = next.skin && next.skin.startsWith(`${next.character}.`) ? next.skin : null;
-    core.setPref('profile', serializeProfile({ ...next, skin }));
+    core.setProfile({ ...next, skin });
   };
   const state = core.syncState();
   const account = core.auth.account();

@@ -11,6 +11,8 @@ export interface BondService {
   /** Evento nascido no processo principal (tarefa concluída, nota criada, foco, personagem...). */
   record(event: BondEvent): void;
   snapshot(): BondSnapshot;
+  /** A sincronização trouxe conquistas/acessórios de outro aparelho: relê e avisa as janelas. */
+  reload(): void;
   openWindow(): void;
   close(): void;
 }
@@ -125,6 +127,7 @@ export function startBondService({ db, isAppUrl, isDark, canToast }: BondService
       engine.handle(event);
     },
     snapshot: () => engine.snapshot(),
+    reload: () => engine.reload(),
     openWindow,
     close() {
       disposed = true;
