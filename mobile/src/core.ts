@@ -39,6 +39,10 @@ export interface CoreOptions {
   widget?: WidgetBridge;
   /** Espera antes de reescrever o resumo do widget depois de mudanças. */
   widgetDelayMs?: number;
+  /** Conquistas recém-desbloqueadas (a interface toca o som). */
+  onUnlocked?: (ids: string[]) => void;
+  /** Uma sessão de foco/pausa terminou (a interface toca o som). */
+  onFocusFinished?: (kind: 'focus' | 'break') => void;
 }
 
 /** Tudo que o app do celular precisa, sem depender de React: banco, tarefas, conta e sincronização. */
@@ -110,6 +114,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     store: new SqliteBondStore(asNode),
     now: () => new Date((o.now ?? (() => Date.now()))()),
     onChanged: () => emit(),
+    onUnlocked: (ids) => o.onUnlocked?.(ids),
   });
   const tasks = new SqliteTaskRepository(asNode, {
     onChange: (change) => {
@@ -234,6 +239,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     onFinished: (kind, session) => {
       focusLog.record({ kind, minutes: session.minutes, taskId: session.task?.id ?? null, at: new Date(session.at) });
       if (kind === 'focus') bondEngine.handle({ type: 'focus_finished', minutes: session.minutes });
+      o.onFocusFinished?.(kind);
       try {
         navigator.vibrate?.(kind === 'focus' ? [200, 100, 200] : [120]);
       } catch {

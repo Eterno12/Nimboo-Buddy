@@ -10,6 +10,7 @@ import {
 } from '../../../shared/focus';
 import type { Task } from '../../../shared/tasks';
 import type { Core } from '../core';
+import { playSound } from '../sound';
 import { Icon } from '../ui/Icon';
 
 const R = 108;
@@ -54,6 +55,7 @@ export function FocusScreen({ core, tasks, onCompleteTask }: Props) {
     const t = kind === 'focus' ? mains.find((x) => x.id === taskId) : undefined;
     const r = core.focus.start(kind, minutes, t ? { id: t.id, title: t.title } : null);
     if (!r.ok) setError(r.error.message);
+    else playSound(kind === 'focus' ? 'focusStart' : 'tick');
   };
 
   const setMinutes = (m: number) => {
@@ -147,11 +149,11 @@ export function FocusScreen({ core, tasks, onCompleteTask }: Props) {
       {(state.status === 'running' || state.status === 'paused') && (
         <div className="row focus-actions">
           {running ? (
-            <button type="button" className="btn-primary" data-testid="focus-pause" onClick={() => core.focus.pause()}>
+            <button type="button" className="btn-primary" data-testid="focus-pause" onClick={() => (playSound('pause'), core.focus.pause())}>
               Pausar
             </button>
           ) : (
-            <button type="button" className="btn-primary" data-testid="focus-resume" onClick={() => core.focus.resume()}>
+            <button type="button" className="btn-primary" data-testid="focus-resume" onClick={() => (playSound('resume'), core.focus.resume())}>
               Retomar
             </button>
           )}

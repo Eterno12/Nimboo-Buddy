@@ -72,6 +72,7 @@ export function createPanelWindow(dark = false): BrowserWindow {
     minHeight: 440,
     title: 'Nimboo',
     autoHideMenuBar: true,
+    skipTaskbar: true, // o Nimboo nunca aparece na barra de tarefas
     show: false,
     backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),
@@ -90,6 +91,7 @@ export function createAssistantWindow(dark: boolean): BrowserWindow {
     minHeight: 420,
     title: 'Assistente — Nimboo',
     autoHideMenuBar: true,
+    skipTaskbar: true, // o Nimboo nunca aparece na barra de tarefas
     show: false,
     backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),
@@ -109,6 +111,7 @@ export function createWelcomeWindow(dark: boolean): BrowserWindow {
     minHeight: 520,
     title: 'Bem-vindo — Nimboo',
     autoHideMenuBar: true,
+    skipTaskbar: true, // o Nimboo nunca aparece na barra de tarefas
     show: false,
     center: true,
     backgroundColor: dark ? '#342b3f' : '#fdf8f3',
@@ -129,6 +132,7 @@ export function createAchievementsWindow(dark: boolean): BrowserWindow {
     minHeight: 460,
     title: 'Conquistas — Nimboo',
     autoHideMenuBar: true,
+    skipTaskbar: true, // o Nimboo nunca aparece na barra de tarefas
     show: false,
     backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),
@@ -227,6 +231,7 @@ export function createNotesWindow(openId: string | null, dark: boolean): Browser
     minHeight: 380,
     title: 'Notas — Nimboo',
     autoHideMenuBar: true,
+    skipTaskbar: true, // o Nimboo nunca aparece na barra de tarefas
     show: false,
     backgroundColor: dark ? '#342b3f' : '#fdf8f3',
     webPreferences: secureWebPreferences(),

@@ -11,6 +11,7 @@ import { nativeWidget } from './platform/nativeWidget';
 import { silentNotifier } from './platform/notifier';
 import { encryptedSession, indexedDbKeyVault, syncSessionStorage } from './platform/secureSession';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../shared/sync/config';
+import { applySound, playSound } from './sound';
 import './style.css';
 
 declare global {
@@ -40,7 +41,10 @@ async function boot() {
       anonKey: SUPABASE_ANON_KEY,
       notifier: native ? nativeNotifier() : silentNotifier,
       widget: native ? nativeWidget() : undefined,
+      onUnlocked: () => playSound('achievement'),
+      onFocusFinished: (kind) => playSound(kind === 'focus' ? 'focusDone' : 'breakDone'),
     });
+    applySound(core);
     window.__nimboo = core;
     core.startTimers();
     root.render(<App core={core} />);

@@ -261,7 +261,11 @@ function applyRemoteProfile(): void {
 
 /** Efeitos de uma mudança de preferências que vão além de redesenhar as janelas. */
 function applySettingsChange(previous: Settings, next: Settings): void {
-  if (previous.islandScale !== next.islandScale || previous.mochiScale !== next.mochiScale) {
+  if (
+    previous.islandScale !== next.islandScale ||
+    previous.mochiScale !== next.mochiScale ||
+    previous.hideWhenAway !== next.hideWhenAway
+  ) {
     windowMode?.refreshLayout();
   }
   if (previous.shortcut !== next.shortcut || previous.assistantShortcut !== next.assistantShortcut) {
@@ -603,7 +607,8 @@ if (!app.requestSingleInstanceLock()) {
       getLog: () => focusLog,
       onFinished: (kind, minutes) => {
         if (kind === 'focus') bond?.record({ type: 'focus_finished', minutes });
-        const visible = !!mascot && !mascot.isDestroyed() && mascot.isVisible();
+        // Sem o Nimboo no canto (hideWhenAway), a ilha é quem avisa: não vale notificação do sistema.
+        const visible = (!!mascot && !mascot.isDestroyed() && mascot.isVisible()) || !!windowMode?.isStealth();
         if (!visible && Notification.isSupported()) {
           new Notification({
             title: 'Nimboo',

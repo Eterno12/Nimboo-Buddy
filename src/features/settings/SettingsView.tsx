@@ -285,6 +285,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       soundVolume: DEFAULT_SETTINGS.soundVolume,
       bubbles: DEFAULT_SETTINGS.bubbles,
       doNotDisturb: DEFAULT_SETTINGS.doNotDisturb,
+      hideWhenAway: DEFAULT_SETTINGS.hideWhenAway,
       character: DEFAULT_SETTINGS.character,
       color: DEFAULT_SETTINGS.color,
       theme: DEFAULT_SETTINGS.theme,
@@ -493,6 +494,17 @@ export function SettingsView({ onBack }: SettingsViewProps) {
               </option>
             ))}
           </select>
+        </label>
+        <label className="settings-row settings-check">
+          <input
+            type="checkbox"
+            checked={settings.hideWhenAway}
+            onChange={(e) => set({ hideWhenAway: e.target.checked })}
+          />
+          <span>
+            Só a ilha: o Nimboo não aparece no canto quando ela se esconde
+            <small>Para trazer a ilha de volta, encoste o cursor no topo da tela ou use o atalho.</small>
+          </span>
         </label>
         <label className="settings-row settings-check">
           <input

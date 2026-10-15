@@ -58,6 +58,8 @@ export interface WindowModeManager {
   /** O modo preferido é a ilha, mas ela está escondida e o Nimboo está no canto. */
   isAway(): boolean;
   isIslandOpen(): boolean;
+  /** A ilha está escondida e o Nimboo do canto também (opção `hideWhenAway`). */
+  isStealth(): boolean;
   /** Reaplica tamanhos (e posição) depois de uma mudança de configuração. */
   refreshLayout(): void;
   /** Fatores efetivos (o pedido, limitado ao monitor). */
@@ -90,6 +92,8 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   let mode: PresentationMode = STARTUP_MODE;
   if (settings.get().mode !== STARTUP_MODE) settings.update({ mode: STARTUP_MODE });
   let away = false;
+  /** `away` sem o Nimboo no canto: a janela fica oculta até a ilha voltar. */
+  let stealth = false;
   let islandOpen = false;
   let islandExtent: IslandExtent = 'home';
   let busy = false; // troca ou volta à ilha em andamento
@@ -160,7 +164,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   const showEdgeHint = (delay = 0) => {
     clearTimeout(edgeHintTimer);
     edgeHintTimer = setTimeout(() => {
-      if (!(away || hiding) || window.isDestroyed() || !window.isVisible()) return;
+      if (!(away || hiding) || window.isDestroyed() || (!window.isVisible() && !stealth)) return;
       const bounds = edgeHintBounds(islandDisplay(), EDGE_HINT_SIZE);
       if (edgeHint && !edgeHint.isDestroyed()) {
         if (edgeHint.isVisible()) return; // já está à vista (ex.: seguiu da saída da ilha para o canto)
@@ -177,8 +181,11 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     }, delay);
   };
   // Mascote ocultado pelo usuário → sem linha; reexibido no canto → linha de volta.
-  window.on('hide', hideEdgeHint);
+  window.on('hide', () => {
+    if (!stealth) hideEdgeHint();
+  });
   window.on('show', () => {
+    stealth = false;
     if (away) showEdgeHint(0);
   });
   window.on('closed', () => {
@@ -297,7 +304,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   ipcMain.on(IPC.leaveDone, onLeaveDone);
 
   /** Troca de layout com a janela invisível, para não haver quadro desencontrado. */
-  async function transition(apply: () => void, state: PresentationState): Promise<void> {
+  async function transition(apply: () => void, state: PresentationState, keepHidden = false): Promise<void> {
     busy = true;
     try {
       window.setOpacity(0);
@@ -312,7 +319,10 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
       });
     } finally {
       applyAck = null;
-      if (!window.isDestroyed()) window.setOpacity(1);
+      if (!window.isDestroyed()) {
+        if (keepHidden) window.hide(); // antes de voltar a opacidade: nenhum quadro do Nimboo no canto
+        window.setOpacity(1);
+      }
       busy = false;
     }
   }
@@ -327,10 +337,12 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     islandOpen = false;
     awayAt = Date.now();
     edgeSince = null;
-    await transition(() => layoutFloating(bounds), {
-      mode: 'floating',
-      entrance: { kind: 'slide', from: corner },
-    });
+    stealth = settings.get().hideWhenAway;
+    await transition(
+      () => layoutFloating(bounds),
+      { mode: 'floating', entrance: { kind: 'slide', from: corner } },
+      stealth,
+    );
     hiding = false;
     showEdgeHint(0); // com o Nimboo no canto, a linha mostra por onde a ilha volta (já está à vista)
   }
@@ -338,6 +350,19 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   /** Traz a ilha de volta: o Nimboo sai de cena e a ilha desce do topo. */
   async function showIsland(): Promise<void> {
     if (!away || busy || window.isDestroyed()) return;
+    if (stealth) {
+      // Nimboo oculto: sem animação de saída; a ilha desce direto do topo.
+      away = false;
+      await transition(
+        () => {
+          layoutIsland();
+          window.showInactive();
+        },
+        { mode: 'island', entrance: { kind: 'drop' } },
+      );
+      fadeOutEdgeHint();
+      return;
+    }
     busy = true; // a linha segue à vista: a ilha vai surgir dela (esmaece ao começar a entrada)
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, LEAVE_TIMEOUT_MS);
@@ -369,6 +394,13 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   /** Reaplica tamanhos e posição (depois de mudar o tamanho da ilha ou do Nimboo nas preferências). */
   function refreshLayout(): void {
     if (window.isDestroyed() || busy) return;
+    // A opção foi ligada/desligada com o Nimboo do canto já decidido: acompanha na hora.
+    if (away && !stealth && settings.get().hideWhenAway && window.isVisible()) {
+      stealth = true;
+      window.hide();
+    } else if (stealth && !settings.get().hideWhenAway) {
+      window.showInactive(); // o evento 'show' zera `stealth`
+    }
     if (presentationMode() === 'island') {
       window.setBounds(islandRect());
       window.setShape(shapesNow());
@@ -391,7 +423,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   /** Atalho global: traz o mascote e pede à ilha para abrir direto nas tarefas. */
   async function summon(): Promise<void> {
     if (window.isDestroyed() || mode !== 'island') return;
-    if (!window.isVisible()) window.show();
+    if (!window.isVisible() && !stealth) window.show();
     if (away) await showIsland();
     if (!window.isDestroyed()) window.webContents.send(IPC.islandSummon);
   }
@@ -399,13 +431,20 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
   async function setMode(next: PresentationMode): Promise<void> {
     if (busy || window.isDestroyed() || next === mode) return;
     hideEdgeHint();
+    const wasStealth = stealth;
     if (next === 'island') {
       persistPosition(); // lembra onde o mascote estava para voltar depois
       const display = pickDisplayForRect(window.getBounds(), allDisplays(), primaryId());
       settings.update({ mode: 'island', displayId: display.id });
       mode = 'island';
       away = false;
-      await transition(layoutIsland, { mode: 'island', entrance: { kind: 'drop' } });
+      await transition(
+        () => {
+          layoutIsland();
+          if (wasStealth) window.showInactive(); // estava oculto (hideWhenAway)
+        },
+        { mode: 'island', entrance: { kind: 'drop' } },
+      );
       return;
     }
     // Fixar o mascote solto.
@@ -418,6 +457,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
       const [x, y] = window.getPosition();
       baseline = window.getBounds();
       settings.update({ floating: { x, y } });
+      if (wasStealth) window.showInactive(); // estava oculto (hideWhenAway): agora o Nimboo fica fixo
       return;
     }
     const target = floatingTarget();
@@ -431,6 +471,7 @@ export function createWindowModeManager(settings: SettingsStore): WindowModeMana
     getPresentation: presentationMode,
     isAway: () => away,
     isIslandOpen: () => islandOpen,
+    isStealth: () => stealth,
     refreshLayout,
     getScales: () => {
       const s = sizes();

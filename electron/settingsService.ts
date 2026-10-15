@@ -8,6 +8,7 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'islandScale',
   'mochiScale',
   'hideDelaySec',
+  'hideWhenAway',
   'launchAtLogin',
   'shortcut',
   'soundEnabled',

@@ -12,6 +12,7 @@ import { NotesScreen } from './screens/NotesScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { TasksScreen } from './screens/TasksScreen';
 import { TodayScreen } from './screens/TodayScreen';
+import { applySound, playSound } from './sound';
 
 type Tab = 'today' | 'tasks' | 'focus' | 'notes' | 'profile';
 
@@ -36,13 +37,17 @@ export function App({ core }: { core: Core }) {
   const profile = useMemo(() => core.getProfile(), [core, version]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => core.subscribe(() => bump((n) => n + 1)), [core]);
+  useEffect(() => applySound(core), [core, profile.character]); // personagem pode vir da nuvem
   useEffect(() => mascot.greet(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = useCallback(
     (task: Task) => {
-      if (task.completed) void core.tasks.reopen(task.id);
-      else {
+      if (task.completed) {
+        void core.tasks.reopen(task.id);
+        playSound('tick');
+      } else {
         void core.tasks.complete(task.id);
+        playSound('taskDone');
         mascot.celebrate();
       }
     },
@@ -54,6 +59,7 @@ export function App({ core }: { core: Core }) {
     // Trocar de personagem tira o acessório do anterior (cada um tem os seus).
     const skin = next.skin && next.skin.startsWith(`${next.character}.`) ? next.skin : null;
     core.setProfile({ ...next, skin });
+    applySound(core); // a identidade sonora acompanha o personagem
   };
   const state = core.syncState();
   const account = core.auth.account();
@@ -93,7 +99,7 @@ export function App({ core }: { core: Core }) {
         {tab === 'today' && (
           <TodayScreen
             profile={profile}
-            mascot={{ ...mascot, pet: () => { mascot.pet(); core.bond.record({ type: 'pet' }); } }}
+            mascot={{ ...mascot, pet: () => { mascot.pet(); playSound('happy'); core.bond.record({ type: 'pet' }); } }}
             tasks={tasks.active}
             onAdd={() => setAdding(true)}
             onOpenTasks={() => setTab('tasks')}

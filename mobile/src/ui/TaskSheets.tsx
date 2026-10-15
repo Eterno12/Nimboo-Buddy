@@ -11,6 +11,7 @@ import {
 } from '../../../shared/tasks';
 import { fromLocalInputValue, presetDue, toLocalInputValue } from '../../../src/features/tasks/dueFormat';
 import type { Core } from '../core';
+import { playSound } from '../sound';
 import { Icon } from './Icon';
 import { Sheet } from './Sheet';
 
@@ -106,8 +107,10 @@ export function AddTaskSheet({ core, onClose }: { core: Core; onClose(): void })
       priority: form.priority,
       recurrence: form.recurrence || null,
     });
-    if (r.ok) onClose();
-    else setError(r.error.message);
+    if (r.ok) {
+      playSound('tick');
+      onClose();
+    } else setError(r.error.message);
   };
 
   return (
@@ -186,7 +189,7 @@ export function EditTaskSheet({ core, task, subtasks, onDelete, onClose }: EditP
                   className="task-check small"
                   data-done={s.completed}
                   aria-label={s.completed ? `Reabrir ${s.title}` : `Concluir ${s.title}`}
-                  onClick={() => void (s.completed ? core.tasks.reopen(s.id) : core.tasks.complete(s.id))}
+                  onClick={() => void (s.completed ? core.tasks.reopen(s.id) : (playSound('taskDone'), core.tasks.complete(s.id)))}
                 >
                   <Icon name="check" size={14} />
                 </button>

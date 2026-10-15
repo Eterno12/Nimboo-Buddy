@@ -207,3 +207,9 @@ test('introdução guiada: arquivo antigo (sem o campo) conta como vista; instal
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('parseSettings: hideWhenAway é booleano e desligado por padrão', () => {
+  assert.equal(DEFAULT_SETTINGS.hideWhenAway, false);
+  assert.equal(parseSettings({ version: 3, hideWhenAway: true }).hideWhenAway, true);
+  for (const bad of ['sim', 1, null]) assert.equal(parseSettings({ version: 3, hideWhenAway: bad }).hideWhenAway, false);
+});

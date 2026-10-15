@@ -67,6 +67,8 @@ export interface Settings {
   mochiScale: number;
   /** Segundos até a ilha recolhida se esconder (`0` = nunca). */
   hideDelaySec: number;
+  /** Com a ilha escondida, o Nimboo não aparece no canto: some junto com ela. */
+  hideWhenAway: boolean;
   /** Iniciar com o Windows (só vale no app instalado). */
   launchAtLogin: boolean;
   /** Atalho global para chamar a ilha (`null` = desligado). */
@@ -165,6 +167,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   islandScale: 1,
   mochiScale: 1,
   hideDelaySec: 3,
+  hideWhenAway: false,
   launchAtLogin: false,
   // Ctrl+Alt+M (de "Nimboo"): Ctrl+Alt+Espaço costuma estar em uso por outros apps (ex.: Claude).
   shortcut: 'Control+Alt+M',
@@ -256,6 +259,7 @@ export function parseSettings(raw: unknown): Settings {
     if (isFiniteNumber(r.islandScale)) out.islandScale = nearestOf(ISLAND_SCALES, r.islandScale);
     if (isFiniteNumber(r.mochiScale)) out.mochiScale = nearestOf(MOCHI_SCALES, r.mochiScale);
     if (isFiniteNumber(r.hideDelaySec)) out.hideDelaySec = nearestOf(HIDE_DELAYS_SEC, r.hideDelaySec);
+    if (typeof r.hideWhenAway === 'boolean') out.hideWhenAway = r.hideWhenAway;
     if (typeof r.launchAtLogin === 'boolean') out.launchAtLogin = r.launchAtLogin;
     if (r.shortcut === null) out.shortcut = null;
     else if (typeof r.shortcut === 'string' && (SHORTCUT_PRESETS as readonly string[]).includes(r.shortcut)) {

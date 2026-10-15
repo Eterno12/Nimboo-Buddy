@@ -648,3 +648,14 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   tarefa do resumo local e o app aplica a conclusão ao abrir/voltar ao primeiro plano (ids validados, sem repetição).
 - **Limites:** a tarefa só conclui no banco quando o app abre; o resumo atualiza a cada mudança, a cada 15 min com o app
   vivo e pelo `updatePeriodMillis` do Android (mín. 30 min).
+
+## D59 — "Só a ilha", fora da barra de tarefas e sons no celular
+- **hideWhenAway (PC):** opção em Configurações → Comportamento. Com ela ligada, quando a ilha se esconde o Nimboo não
+  surge no canto: a janela fica oculta (`stealth` em `windowMode.ts`). A linha-dica do topo e o atalho continuam
+  trazendo a ilha de volta. Desligar a opção com o Nimboo oculto o traz ao canto; ligar com ele no canto o esconde.
+  Fim de foco com o Nimboo oculto abre a ilha em vez de usar notificação do sistema. Padrão: desligada.
+- **Barra de tarefas:** todas as janelas (painel, configurações, notas, conquistas, assistente, boas-vindas) usam
+  `skipTaskbar`. O app só aparece na bandeja.
+- **Sons no celular:** o mesmo motor WebAudio do PC (`src/features/audio`), com a identidade sonora de cada
+  personagem. Tocam ao concluir/criar tarefa, no foco (iniciar, pausar, retomar, fim), em conquistas e ao tocar no
+  mascote. Preferência (ligado/volume) só deste aparelho, em Perfil → Sons.
