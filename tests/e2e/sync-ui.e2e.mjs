@@ -55,6 +55,11 @@ const httpServer = http.createServer(async (req, res) => {
     if (!authed()) return send(401, { message: 'JWT expired' });
     const fn = url.split('/').pop();
     if (fn === 'sync_push') {
+      for (const r of body.batch ?? []) {
+        if (!['tasks', 'notes', 'focus_sessions', 'achievements', 'skins_owned', 'profile', 'bond_kv', 'skins'].includes(r.tbl)) {
+          return send(400, { code: '23514', message: 'violates check constraint sync_records_tbl_check' });
+        }
+      }
       server.pushes++;
       for (const r of body.batch) {
         const key = `${r.tbl}:${r.id}`;
