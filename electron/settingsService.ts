@@ -47,6 +47,7 @@ const EDITABLE: readonly (keyof Settings)[] = [
   'assistantPersona',
   'assistantContext',
   'skin',
+  'syncEnabled',
   'mediaPlayer',
   'mediaReact',
   'onboardingDone',

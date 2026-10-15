@@ -26,6 +26,7 @@ import type { GeminiStatus } from '../../../shared/assistantApi';
 import { configureSound, playSound } from '../audio/soundEngine';
 import { CALENDAR_MAX_SOURCES } from '../../../shared/calendar';
 import { useCalendar } from '../calendar/useCalendar';
+import { SyncSettings } from '../sync/SyncSettings';
 import { useSettings } from './useSettings';
 import './settings.css';
 
@@ -1009,6 +1010,8 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           </span>
         </label>
       </fieldset>
+
+      <SyncSettings hidden={tab !== 'general'} enabled={settings.syncEnabled} onEnabledChange={(v) => update({ syncEnabled: v })} />
 
       <fieldset className="settings-group" hidden={tab !== 'general'}>
         <legend>Seus dados</legend>

@@ -9,6 +9,7 @@ import type { FocusApi } from './focus';
 import type { Settings } from './settings';
 import type { CalendarResult, CalendarState } from './calendar';
 import type { ReminderToastAction, ReminderToastInfo } from './reminderToast';
+import type { SyncResultMessage, SyncState } from './sync/state';
 
 /** Preferências + o que só o processo principal sabe (para a tela de configurações). */
 export interface SettingsSnapshot {
@@ -118,6 +119,13 @@ export const IPC = {
   islandToggle: 'island:toggle',
   /** Agenda (iCal): estado, endereço (só entra, nunca sai), remoção e atualização. */
   logOpenFolder: 'log:open-folder',
+  syncGet: 'sync:get',
+  syncRequestCode: 'sync:request-code',
+  syncVerify: 'sync:verify',
+  syncNow: 'sync:now',
+  syncSignOut: 'sync:sign-out',
+  syncWipe: 'sync:wipe',
+  syncChanged: 'sync:changed',
   reminderGet: 'reminder:get',
   reminderAct: 'reminder:act',
   calendarGet: 'calendar:get',
@@ -223,6 +231,16 @@ export interface MochiApi {
     get(): Promise<SettingsSnapshot>;
     update(patch: Partial<Omit<Settings, 'version'>>): Promise<SettingsSnapshot>;
     onChange(listener: (snapshot: SettingsSnapshot) => void): () => void;
+  };
+  /** Conta e sincronização na nuvem (opt-in, D55). Nunca expõe tokens. */
+  sync: {
+    get(): Promise<SyncState>;
+    requestCode(email: string): Promise<SyncResultMessage>;
+    verify(email: string, code: string): Promise<SyncResultMessage>;
+    now(): Promise<SyncState | null>;
+    signOut(): Promise<SyncState | null>;
+    wipeCloud(): Promise<SyncResultMessage>;
+    onChange(listener: (state: SyncState) => void): () => void;
   };
   /** Suporte: abre a pasta do registro local de erros. */
   support: {

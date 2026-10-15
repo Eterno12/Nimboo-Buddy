@@ -23,6 +23,8 @@ const PURGE_INTERVAL_MS = 60 * 60 * 1000;
 export interface TasksService {
   /** Conexão aberta (para outros registros no mesmo arquivo, como as sessões de foco) ou null. */
   database(): DatabaseSync | null;
+  /** Algo mudou fora das operações normais (sincronização): avisa janelas e lembretes. */
+  notifyExternalChange(): void;
   /** Conclui uma tarefa pelo processo principal (botão do aviso de lembrete). `false` = não existe ou falhou. */
   complete(id: string): Promise<boolean>;
   close(): void;
@@ -239,6 +241,7 @@ export function startTasksService({ dbPath, isAppUrl, onTasksChanged, onChange }
 
   return {
     database: () => db,
+    notifyExternalChange: () => broadcast(),
     async complete(id) {
       if (!repo || !isTaskId(id)) return false;
       try {

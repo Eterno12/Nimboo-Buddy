@@ -76,6 +76,11 @@ export class SyncStore {
     this.setMeta('first_sync', '1');
   }
 
+  /** Depois de apagar a nuvem: a próxima sincronização envia tudo de novo. */
+  resetFirstSync(): void {
+    this.setMeta('first_sync', '0');
+  }
+
   /** Marca de exclusão de um registro (para enviar a exclusão com o horário certo). */
   tombstone(tbl: string, id: string): { deletedAt: string; origin: string } | null {
     const row = this.db.prepare('SELECT deleted_at, origin FROM tombstones WHERE tbl = ? AND id = ?').get(tbl, id) as

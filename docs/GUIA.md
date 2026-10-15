@@ -149,6 +149,10 @@ minutos antes (configurável) com balão e som, e um aviso no canto da tela traz
 
 Em Configurações → **Google Agenda**, cole o "endereço secreto no formato iCal" da sua agenda (o app explica onde achar). Dá para conectar **até 5 agendas**; eventos repetidos aparecem uma vez e cada agenda pode ser removida sozinha. O Nimboo mostra a **Agenda de hoje** no topo das tarefas e avisa dos eventos na hora e antes. É somente leitura, o endereço fica criptografado neste computador e nunca é exibido de volta.
 
+### Conta e sincronização (opcional)
+
+Em *Configurações > Geral > Conta e sincronização*: entre com seu e-mail (você recebe um código, sem senha), marque que entende que tarefas, notas e sessões de foco serão guardadas na nuvem e ligue. O Nimboo envia e recebe sozinho (a cada minuto ou quando você muda algo); **Sincronizar agora** força. Dá para **Pausar**, **Sair da conta** (os dados deste computador ficam) e **Apagar meus dados da nuvem**. A chave do Gemini, os endereços de agenda e o histórico do assistente nunca são enviados. Sem entrar numa conta, nada sai do computador.
+
 ### Acessórios
 
 Na janela de conquistas, a aba **Acessórios** é uma loja: cada personagem tem 2 acessórios exclusivos (laço, óculos, cartola, óculos escuros do cacto, capacete espacial…), comprados com os **pontos das conquistas**. Comprar gasta o saldo, mas não diminui o total de pontos nem a amizade. Um acessório por vez; ele aparece no mascote, no assistente e nas conquistas.

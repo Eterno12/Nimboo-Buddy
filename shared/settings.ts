@@ -137,6 +137,8 @@ export interface Settings {
   assistantContext: boolean;
   /** Acessório em uso (`<personagem>.<nome>`); só aparece se for do personagem atual. */
   skin: string | null;
+  /** Sincronizar com a conta na nuvem (opt-in; só vale com a conta conectada). */
+  syncEnabled: boolean;
   /** Player de música na ilha (lê o que toca no Windows; tudo local). */
   mediaPlayer: boolean;
   /** O personagem reage à música (balança) enquanto algo toca. */
@@ -203,6 +205,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   assistantPersona: '',
   assistantContext: false,
   skin: null,
+  syncEnabled: false,
   mediaPlayer: true,
   mediaReact: true,
   onboardingDone: false,
@@ -291,6 +294,7 @@ export function parseSettings(raw: unknown): Settings {
     if (typeof r.onboardingDone === 'boolean') out.onboardingDone = r.onboardingDone;
     if (typeof r.assistantGemini === 'boolean') out.assistantGemini = r.assistantGemini;
     if (typeof r.assistantContext === 'boolean') out.assistantContext = r.assistantContext;
+    if (typeof r.syncEnabled === 'boolean') out.syncEnabled = r.syncEnabled;
     if (r.skin === null) out.skin = null;
     else if (typeof r.skin === 'string' && SKIN_ID_RE.test(r.skin)) out.skin = r.skin;
     if (typeof r.geminiModel === 'string' && GEMINI_MODEL_RE.test(r.geminiModel.trim())) out.geminiModel = r.geminiModel.trim();

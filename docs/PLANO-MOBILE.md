@@ -70,9 +70,10 @@ F0 Decisões e backend ─▶ F1 PC pronto p/ sync ─▶ F2 Motor de sync + con
 
 | Fase | Estado |
 |---|---|
-| F0 | **Escrita, falta aplicar.** `supabase/migrations/0001_sync.sql` (tabela, RLS, `sync_push`/`sync_pull`/`sync_wipe`) e `supabase/tests/rls_check.sql` prontos; D55 e regra do `CLAUDE.md` registradas. **Pendente:** D1/D2 (projeto Supabase) para aplicar e rodar o teste de RLS. |
+| F0 | **Feita e verificada.** SQL aplicado no projeto `dgzzzztyfzuggxcnutfl` e teste de RLS ok (`rls_check: ok`); anon sem acesso às funções (42501). *(histórico:* **Escrita, falta aplicar.** `supabase/migrations/0001_sync.sql` (tabela, RLS, `sync_push`/`sync_pull`/`sync_wipe`) e `supabase/tests/rls_check.sql` prontos; D55 e regra do `CLAUDE.md` registradas. **Pendente:** D1/D2 (projeto Supabase) para aplicar e rodar o teste de RLS. |
 | F1 | **Feita e testada** (commit `d67470f`). Migração v9 por gatilhos (fila, marcas de exclusão, identidade do aparelho), `SyncStore` e regra de merge pura. Cobre S1, S2, S3, S4 (parcial), S5, S6, S7, S8, S9, S10. **Fica para a F2:** S11 (salto de relógio), S12 (campos de versões novas), S13 (token/CSP). |
-| F2–F8 | Não iniciadas. |
+| F2 | **Feita no PC** (testes unitários e e2e com servidor falso). Motor, login por código, transporte, serviço e a tela "Conta e sincronização". **Falta:** testar com o Supabase real (e-mail com código exige o modelo de e-mail com `{{ .Token }}`), S11/S12. |
+| F3–F8 | Não iniciadas. |
 
 ---
 

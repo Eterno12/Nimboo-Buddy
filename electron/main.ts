@@ -32,6 +32,7 @@ import { startFocusService, type FocusService } from './focusService';
 import { startSettingsService, type SettingsService } from './settingsService';
 import { startFullscreenWatcher, type FullscreenWatcher } from './dnd';
 import { createLogFile, describe } from './logFile';
+import { startSyncService, type SyncService } from './syncService';
 import { ReminderScheduler, type Reminder } from './reminders';
 import { startReminderToasts, type ReminderSource, type ReminderToasts } from './reminderToast';
 import { FocusLog } from './focus/focusLog';
@@ -50,6 +51,7 @@ let reminderToasts: ReminderToasts | null = null;
 let eventReminders: ReminderScheduler | null = null;
 let calendar: CalendarService | null = null;
 let notes: NotesService | null = null;
+let sync: SyncService | null = null;
 let assistant: AssistantService | null = null;
 let dataService: DataService | null = null;
 let bond: BondService | null = null;
@@ -243,6 +245,7 @@ function applySettingsChange(previous: Settings, next: Settings): void {
   if (previous.doNotDisturb !== next.doNotDisturb) applyDoNotDisturb(next.doNotDisturb);
   if (previous.character !== next.character) bond?.record({ type: 'character', id: next.character });
   if (previous.mediaPlayer !== next.mediaPlayer) media?.setEnabled(next.mediaPlayer);
+  if (previous.syncEnabled !== next.syncEnabled) sync?.kick();
   focus?.configure(focusConfigOf(next));
   const reminderConfig = { enabled: next.remindersEnabled, leadMinutes: next.reminderLeadMin };
   reminders?.setConfig(reminderConfig);
@@ -515,6 +518,20 @@ if (!app.requestSingleInstanceLock()) {
       },
     });
 
+    // Sincronização na nuvem (D55): só age depois de a pessoa entrar numa conta e ligar a opção.
+    if (database) {
+      sync = startSyncService({
+        db: database,
+        userDataDir: app.getPath('userData'),
+        isAppUrl,
+        enabled: () => settingsStore?.get().syncEnabled === true,
+        onApplied: () => {
+          tasks?.notifyExternalChange();
+          notes?.notifyExternalChange();
+        },
+      });
+    }
+
     dataService = startDataService({ database: () => tasks?.database() ?? null, isAppUrl });
 
     // Player de música: lê o que toca no Windows (só enquanto a preferência estiver ligada).
@@ -576,6 +593,7 @@ if (!app.requestSingleInstanceLock()) {
     eventReminders?.dispose();
     reminderToasts?.close();
     calendar?.close();
+    sync?.close();
     notes?.close();
     assistant?.close();
     dataService?.close();

@@ -606,5 +606,9 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Limites:** relógios muito diferentes entre aparelhos podem favorecer uma edição mais antiga (S4);
   edições simultâneas na mesma nota ficam com a mais recente (sem mesclagem de texto).
 - **Segurança:** RLS por `auth.uid()`, token no cofre do aparelho, chamadas só do processo principal.
-- **Estado (F0/F1):** esquema SQL e teste de RLS escritos em `supabase/`; ainda NÃO aplicados a um projeto
-  Supabase real (depende da conta da pessoa). Camada local pronta e testada (`electron/sync/syncStore.ts`).
+- **Estado (F0–F2):** projeto Supabase criado e esquema aplicado (RLS verificada). PC: motor puro
+  (`shared/sync/engine.ts`), login por código (`electron/sync/supabaseAuth.ts`), transporte RPC, serviço e tela
+  em Configurações > Geral. Sessão cifrada em `sync-session.bin` (safeStorage). A chave `anon` fica em
+  `shared/sync/config.ts` (pública por desenho). O e-mail do login precisa do modelo com o código (`{{ .Token }}`).
+- **Limite do teste:** os testes usam um servidor falso com a mesma regra do SQL; a conversa real com o Supabase
+  (e-mail, renovação do token) só é exercitada manualmente.

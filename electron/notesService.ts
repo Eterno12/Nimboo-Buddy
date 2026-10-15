@@ -13,6 +13,8 @@ import { createNotesWindow, createNoteWindow } from './windows';
 import { SqliteNotesRepository } from './notes/sqliteNotesRepository';
 
 export interface NotesService {
+  /** Algo mudou fora das operações normais (sincronização): as janelas recarregam. */
+  notifyExternalChange(): void;
   /** Abre (ou traz à frente) a janela de notas, opcionalmente numa nota. */
   openManager(id?: string | null): void;
   close(): void;
@@ -187,6 +189,7 @@ export function startNotesService({ db, isAppUrl, isDark, onCreated }: NotesServ
 
   return {
     openManager,
+    notifyExternalChange: () => broadcast({ type: 'updated', id: '', fields: [] }),
     close() {
       disposed = true;
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);

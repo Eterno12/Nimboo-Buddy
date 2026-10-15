@@ -5,6 +5,7 @@ import type { FocusKind, FocusState } from '../shared/focus';
 import { EMPTY_CALENDAR, type CalendarState } from '../shared/calendar';
 import type { BondSnapshot } from '../shared/achievements';
 import type { MediaState } from '../shared/media';
+import { EMPTY_SYNC, type SyncState } from '../shared/sync/state';
 
 /** Sanitiza o que vem do main antes de entregar à página. */
 function asPresentation(value: unknown): PresentationState {
@@ -162,6 +163,15 @@ const api: MochiApi = {
         listener(type === 'updated' ? { type, id, fields } : { type, id });
       }),
     onOpen: (listener) => listen<[unknown]>(IPC.notesOpen, (id) => listener(typeof id === 'string' ? id : null)),
+  },
+  sync: {
+    get: async () => (await ipcRenderer.invoke(IPC.syncGet)) ?? EMPTY_SYNC,
+    requestCode: (email) => ipcRenderer.invoke(IPC.syncRequestCode, email),
+    verify: (email, code) => ipcRenderer.invoke(IPC.syncVerify, email, code),
+    now: () => ipcRenderer.invoke(IPC.syncNow),
+    signOut: () => ipcRenderer.invoke(IPC.syncSignOut),
+    wipeCloud: () => ipcRenderer.invoke(IPC.syncWipe),
+    onChange: (listener) => listen<[SyncState]>(IPC.syncChanged, (s) => listener(s)),
   },
   support: {
     openLogs: () => ipcRenderer.send(IPC.logOpenFolder),
