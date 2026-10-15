@@ -58,13 +58,30 @@ export class SyncStore {
     this.setMeta('needs_full_pull', '0');
   }
 
-  /** Cursor de leitura por tabela (o servidor define o que significa). */
-  cursor(tbl: SyncTable): number {
-    return Number(this.meta(`cursor_${tbl}`) ?? 0);
+  /** Cursor de leitura (o `server_seq` do último registro baixado). */
+  cursor(): number {
+    return Number(this.meta('cursor') ?? 0);
   }
 
-  setCursor(tbl: SyncTable, value: number): void {
-    this.setMeta(`cursor_${tbl}`, String(value));
+  setCursor(value: number): void {
+    this.setMeta('cursor', String(value));
+  }
+
+  /** A primeira sincronização já enfileirou tudo que existia antes? */
+  firstSyncDone(): boolean {
+    return this.meta('first_sync') === '1';
+  }
+
+  markFirstSyncDone(): void {
+    this.setMeta('first_sync', '1');
+  }
+
+  /** Marca de exclusão de um registro (para enviar a exclusão com o horário certo). */
+  tombstone(tbl: string, id: string): { deletedAt: string; origin: string } | null {
+    const row = this.db.prepare('SELECT deleted_at, origin FROM tombstones WHERE tbl = ? AND id = ?').get(tbl, id) as
+      | { deleted_at: string; origin: string | null }
+      | undefined;
+    return row ? { deletedAt: row.deleted_at, origin: row.origin ?? '' } : null;
   }
 
   /** Mudanças ainda não enviadas, compactadas: um item por registro (o mais recente). */
