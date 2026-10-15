@@ -17,6 +17,8 @@ import { FocusTimer } from '../../electron/focus/focusTimer.ts';
 import { FocusLog } from '../../electron/focus/focusLog.ts';
 import { DEFAULT_FOCUS_CONFIG, type FocusConfig, type FocusState, type FocusStats } from '../../shared/focus.ts';
 import { silentNotifier, type Notifier } from './platform/notifier.ts';
+import { noWidget, type WidgetBridge } from './platform/widgetBridge.ts';
+import { buildWidgetSnapshot, parseInbox } from './widget.ts';
 import { DEFAULT_REMINDER_CONFIG, REMINDER_LEADS, planReminders, type ReminderConfig } from './reminders.ts';
 
 export interface CoreOptions {
@@ -33,6 +35,10 @@ export interface CoreOptions {
   now?: () => number;
   /** Espera antes de reagendar os lembretes depois de mudanças (agrupa várias). */
   reminderDelayMs?: number;
+  /** Widget da tela inicial (Android). Padrão: nenhum. */
+  widget?: WidgetBridge;
+  /** Espera antes de reescrever o resumo do widget depois de mudanças. */
+  widgetDelayMs?: number;
 }
 
 /** Tudo que o app do celular precisa, sem depender de React: banco, tarefas, conta e sincronização. */
@@ -59,6 +65,8 @@ export interface Core {
   /** Focos concluídos hoje. */
   focusToday(): FocusStats;
   notifier: Notifier;
+  /** Aplica o que o widget deixou (ex.: Concluir) e reescreve o resumo dele. */
+  processWidgetInbox(): Promise<void>;
   reminderConfig(): ReminderConfig;
   setReminderConfig(config: ReminderConfig): void;
   syncState(): RunnerState;
@@ -80,7 +88,17 @@ export async function createCore(o: CoreOptions): Promise<Core> {
 
   let reminderTimer: ReturnType<typeof setTimeout> | undefined;
   let reminderRun: (() => void) | null = null;
+  let widgetTimer: ReturnType<typeof setTimeout> | undefined;
+  let widgetRun: (() => void) | null = null;
+  const scheduleWidgetUpdate = () => {
+    if (widgetTimer !== undefined) clearTimeout(widgetTimer);
+    widgetTimer = setTimeout(() => {
+      widgetTimer = undefined;
+      widgetRun?.();
+    }, o.widgetDelayMs ?? 500);
+  };
   const scheduleReminderPlan = () => {
+    scheduleWidgetUpdate();
     if (reminderTimer !== undefined) clearTimeout(reminderTimer);
     reminderTimer = setTimeout(() => {
       reminderTimer = undefined;
@@ -142,6 +160,11 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     }
   };
 
+  const readProfile = () => {
+    const stored = store.getProfile();
+    return stored ? stored.profile : (parseProfile(metaGet('pref_profile')) ?? { ...DEFAULT_PROFILE });
+  };
+
   const readReminderConfig = (): ReminderConfig => {
     try {
       const raw = JSON.parse(prefGet('reminder_config') ?? '{}') as Partial<ReminderConfig>;
@@ -162,6 +185,30 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     if (a.action === 'complete') void tasks.complete(a.taskId);
     else void notifier.scheduleSnooze(a.taskId, a.title, now() + 10 * 60_000);
   });
+
+  const widget = o.widget ?? noWidget;
+  const writeWidget = async () => {
+    const lists = await tasks.list();
+    const snapshot = buildWidgetSnapshot([...lists.active, ...lists.completed], now(), readProfile());
+    await widget.write(snapshot);
+    await widget.refresh();
+  };
+  /** Concluir/abrir deixados pelo widget: aplica ANTES de reescrever o resumo (ele reflete o banco). */
+  const processWidgetInbox = async () => {
+    try {
+      const actions = parseInbox(await widget.readInbox());
+      if (actions.length > 0) {
+        for (const a of actions) await tasks.complete(a.taskId);
+        await widget.clearInbox();
+      } else if ((await widget.readInbox()) !== null) {
+        await widget.clearInbox(); // lixo ou já aplicado
+      }
+      await writeWidget();
+    } catch (error) {
+      console.error('Falha ao atualizar o widget:', error);
+    }
+  };
+  widgetRun = () => void processWidgetInbox();
 
   let focusEndScheduled = false;
   const syncFocusNotice = (state: FocusState) => {
@@ -250,6 +297,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     },
     focusToday: () => focusLog.today(new Date(now())),
     notifier,
+    processWidgetInbox,
     reminderConfig: readReminderConfig,
     setReminderConfig(config) {
       prefSet('reminder_config', JSON.stringify(config));
@@ -265,6 +313,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     },
     setProfile(profile) {
       store.putProfile(profile, new Date(now()).toISOString());
+      scheduleWidgetUpdate();
       emit();
     },
     getPref: (key) => metaGet(`pref_${key}`),
@@ -290,9 +339,13 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     flush: () => persisted.flush(),
     startTimers() {
       const t = setInterval(tick, SYNC_TICK_MS);
+      const widgetTick = setInterval(() => scheduleWidgetUpdate(), 15 * 60_000);
       const onVisibility = () => {
         if (document.visibilityState === 'hidden') void persisted.flush();
-        else tick();
+        else {
+          tick();
+          scheduleWidgetUpdate();
+        }
       };
       const onHide = () => void persisted.flush();
       document.addEventListener('visibilitychange', onVisibility);
@@ -300,6 +353,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
       setTimeout(tick, 1500);
       return () => {
         clearInterval(t);
+        clearInterval(widgetTick);
         document.removeEventListener('visibilitychange', onVisibility);
         window.removeEventListener('pagehide', onHide);
       };
@@ -308,6 +362,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
       focus.dispose();
       stopReminderActions();
       if (reminderTimer !== undefined) clearTimeout(reminderTimer);
+      if (widgetTimer !== undefined) clearTimeout(widgetTimer);
       await persisted.close();
     },
   };

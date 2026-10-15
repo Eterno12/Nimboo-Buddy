@@ -77,7 +77,8 @@ F0 Decisões e backend ─▶ F1 PC pronto p/ sync ─▶ F2 Motor de sync + con
 | F4 | **Feita.** Navegação (Hoje · Tarefas · Foco · Notas · Perfil), tela Hoje com mascote, tarefas completas, **Foco** (mesmo temporizador do PC, sessão restaurável ao fechar o app, aviso do fim agendado no sistema, Pomodoro, tarefa vinculada), **Notas** (editor do PC com formatação, busca, cores, exclusão), **Conquistas e Acessórios** (troféus, pontos, saldo, loja de 16 acessórios), perfil com personagem/cor/acessório e conta. Testado em 11 passos e2e no Chromium e instalado no Motorola Edge 50 Pro. **Limites:** conquistas, pontos e acessórios ainda ficam só neste aparelho (a sincronização disso entra na F5); o Superdesign não foi usado (exige seu login). |
 | F5 | **Feita:** conquistas, acessórios e perfil (personagem, cor, nome, acessório em uso) sincronizam entre PC e celular (D57); contadores ficam por aparelho. Verificado por testes unitários (convergência PC×celular) e e2e com dois PCs. |
 | F6 | **Feita:** lembretes de prazo no celular (antes e na hora, ligáveis, com botões Concluir e Adiar 10 min) agendados no sistema, reagendados a cada mudança ou sincronização. Testado por unidade e e2e web; **a entrega real da notificação no aparelho depende da permissão do Android e do modo economia de bateria.** |
-| F7–F8 | Não iniciadas. |
+| F7 | **Feita e instalada:** widget "Hoje" (4×2) com o mascote na pose do momento (celebrate, surprised, curious, sleepy, idle) e até 3 tarefas com botão ✓ Concluir. 234 poses PNG pré-renderizadas (todas as cores/acessórios). Resumo escrito pelo app (`widget.json`); "Concluir" vai para `widget_inbox.json` e o app aplica ao abrir (D58). **Falta:** você adicionar o widget na tela inicial e conferir. |
+| F8 | Não iniciada. |
 
 ---
 

@@ -636,3 +636,15 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **PC:** o perfil vive nas preferências (settings.json); uma ponte (`main.ts`) grava na linha `profile` quando
   personagem/cor/nome/acessório mudam e aplica o que chega da nuvem, sem eco. `ensureProfile` nunca sobrescreve o de
   outro aparelho.
+
+## D58 — Widget Android: poses pré-renderizadas e arquivos como ponte
+- **Por quê PNG por pose:** widget não anima. Cada pose do mascote (`idle, happy, curious, sleepy, celebrate, surprised`)
+  é renderizada no build (`scripts/render-poses.cjs`, Electron offscreen a partir do mesmo componente Mascot) e
+  empacotada em `android/app/src/main/assets/poses` (234 imagens, ~7 MB).
+- **Pose:** `shared/mascotPose.ts` decide (comemorar até 10 min após concluir > atrasada > prazo em 30 min > sono à noite > normal).
+- **Ponte JS↔nativo:** o app grava `widget.json` (Directory.Data = `getFilesDir()`); o provider Java só lê. O plugin
+  `NimbooWidget.refresh()` pede o redesenho. Sem Kotlin/Glance: RemoteViews com 3 linhas fixas bastam e evitam dependências.
+- **Concluir:** não fala com a nuvem (o token fica cifrado no WebView). O widget anota em `widget_inbox.json`, tira a
+  tarefa do resumo local e o app aplica a conclusão ao abrir/voltar ao primeiro plano (ids validados, sem repetição).
+- **Limites:** a tarefa só conclui no banco quando o app abre; o resumo atualiza a cada mudança, a cada 15 min com o app
+  vivo e pelo `updatePeriodMillis` do Android (mín. 30 min).

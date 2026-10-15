@@ -4,4 +4,9 @@
     <string name="title_activity_main">Nimboo</string>
     <string name="package_name">app.nimboo.mobile</string>
     <string name="custom_url_scheme">app.nimboo.mobile</string>
+    <string name="widget_label">Nimboo — Hoje</string>
+    <string name="widget_description">O mascote e as próximas tarefas na tela inicial.</string>
+    <string name="widget_empty">Abra o Nimboo para começar</string>
+    <string name="widget_mascot">Mascote</string>
+    <string name="widget_done">Concluir tarefa</string>
 </resources>

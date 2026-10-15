@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { indexedDbBlobStore, localSessionStorage } from './platform/web';
 import { filesystemBlobStore } from './platform/native';
 import { nativeNotifier } from './platform/nativeNotifier';
+import { nativeWidget } from './platform/nativeWidget';
 import { silentNotifier } from './platform/notifier';
 import { encryptedSession, indexedDbKeyVault, syncSessionStorage } from './platform/secureSession';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../shared/sync/config';
@@ -38,6 +39,7 @@ async function boot() {
       url,
       anonKey: SUPABASE_ANON_KEY,
       notifier: native ? nativeNotifier() : silentNotifier,
+      widget: native ? nativeWidget() : undefined,
     });
     window.__nimboo = core;
     core.startTimers();
