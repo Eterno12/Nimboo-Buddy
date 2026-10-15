@@ -37,6 +37,11 @@ const httpServer = http.createServer(async (req, res) => {
     server.codesSent.push(body.email);
     return send(200, {});
   }
+  if (url === '/functions/v1/pair') {
+    if (!authed()) return send(401, { error: 'unauthorized' });
+    server.pairs = (server.pairs ?? 0) + 1;
+    return send(200, { token_hash: 'ab'.repeat(32) });
+  }
   if (url === '/auth/v1/verify') {
     if (body.token !== '123456') return send(403, { msg: 'Token has expired or is invalid' });
     return send(200, sessionFor(body.email));
@@ -227,6 +232,15 @@ try {
   });
 
   const B = await launchDevice('b', 9150);
+
+  await step('conectar celular: mostra um QR de uso único com a contagem regressiva (sem expor tokens)', async () => {
+    await click(A.panel, 'pair-generate');
+    await A.panel.waitFor(`!!document.querySelector('[data-testid="pair-qr"]')`, 'QR na tela');
+    assert.equal(server.pairs, 1, 'a função "pair" foi chamada uma vez');
+    assert.match(await A.panel.ev(`document.querySelector('[data-testid="pair-left"]').textContent`), /Expira em [12]:[0-9][0-9]/);
+    const html = await A.panel.ev(`document.querySelector('[data-testid="pair-qr"]').outerHTML`);
+    assert.ok(!html.includes('abab'), 'o texto do token não aparece no HTML (só o desenho)');
+  });
 
   await step('segundo aparelho: entra com o mesmo e-mail e recebe as tarefas do primeiro', async () => {
     await openSyncPanel(B);

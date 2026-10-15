@@ -324,6 +324,30 @@ try {
     await click(page, 'tab-tasks');
     assert.equal((await taskTitles(page)).length, 1);
   });
+
+  await step('QR do PC: entra na mesma conta sem e-mail; o mesmo QR não vale duas vezes', async () => {
+    const hash = 'c'.repeat(64);
+    fake.state.pairTokens.add(hash);
+    const host = new URL(fake.url).host;
+    const qr = `nimboo://pair?v=1&h=${hash}&x=${Math.floor(Date.now() / 1000) + 120}&p=${host}`;
+    await click(page, 'tab-profile');
+    await click(page, 'scan-qr');
+    await page.waitFor(`!!document.querySelector('[data-testid="qr-paste"]')`, 'leitor aberto');
+    await setValue(page, 'qr-paste', 'texto qualquer');
+    await click(page, 'qr-use-paste');
+    await page.waitFor(`/não é do Nimboo/.test(document.querySelector('[data-testid="msg"]')?.textContent ?? '')`, 'QR inválido recusado');
+    await setValue(page, 'qr-paste', qr);
+    await click(page, 'qr-use-paste');
+    await page.waitFor(`document.querySelector('[data-testid="account"]')?.textContent.includes('ana@exemplo.com')`, 'conta aberta pelo QR');
+
+    // Sai e tenta o mesmo QR de novo: o token já foi usado.
+    await click(page, 'sign-out');
+    await page.waitFor(`!!document.querySelector('[data-testid="scan-qr"]')`, 'voltou ao login');
+    await click(page, 'scan-qr');
+    await setValue(page, 'qr-paste', qr);
+    await click(page, 'qr-use-paste');
+    await page.waitFor(`/já usado ou vencido/.test(document.querySelector('[data-testid="msg"]')?.textContent ?? '')`, 'QR usado recusado');
+  });
 } catch (error) {
   console.log(`  FAIL (infra) ${error.message}`);
   results.push({ name: 'infraestrutura', ok: false, error });

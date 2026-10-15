@@ -170,6 +170,7 @@ const api: MochiApi = {
     verify: (email, code) => ipcRenderer.invoke(IPC.syncVerify, email, code),
     now: () => ipcRenderer.invoke(IPC.syncNow),
     signOut: () => ipcRenderer.invoke(IPC.syncSignOut),
+    pairing: () => ipcRenderer.invoke(IPC.syncPairing),
     wipeCloud: () => ipcRenderer.invoke(IPC.syncWipe),
     onChange: (listener) => listen<[SyncState]>(IPC.syncChanged, (s) => listener(s)),
   },

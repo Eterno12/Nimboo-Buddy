@@ -4,7 +4,7 @@ import { app, BrowserWindow, ipcMain, net, safeStorage, type IpcMainInvokeEvent 
 import type { DatabaseSync } from 'node:sqlite';
 import { IPC } from '../shared/ipc';
 import { SUPABASE_ANON_KEY, SUPABASE_URL, SYNC_IDLE_INTERVAL_MS, SYNC_TICK_MS } from '../shared/sync/config';
-import type { SyncResultMessage, SyncState } from '../shared/sync/state';
+import type { PairingMessage, SyncResultMessage, SyncState } from '../shared/sync/state';
 import type { ProfileData } from '../shared/sync/profile';
 import { SyncStore } from './sync/syncStore';
 import { SyncRunner } from './sync/syncRunner';
@@ -161,6 +161,10 @@ export function startSyncService({ db, userDataDir, isAppUrl, enabled, onApplied
     await runner.run();
     return snapshot();
   });
+  ipcMain.handle(IPC.syncPairing, async (event): Promise<PairingMessage> => {
+    if (!trusted(event)) return denied;
+    return auth.createPairing();
+  });
   ipcMain.handle(IPC.syncSignOut, async (event): Promise<SyncState | null> => {
     if (!trusted(event)) return null;
     await auth.signOut();
@@ -198,7 +202,7 @@ export function startSyncService({ db, userDataDir, isAppUrl, enabled, onApplied
     },
     close() {
       clearInterval(timer);
-      for (const c of [IPC.syncGet, IPC.syncRequestCode, IPC.syncVerify, IPC.syncNow, IPC.syncSignOut, IPC.syncWipe]) {
+      for (const c of [IPC.syncGet, IPC.syncRequestCode, IPC.syncVerify, IPC.syncNow, IPC.syncSignOut, IPC.syncPairing, IPC.syncWipe]) {
         ipcMain.removeHandler(c);
       }
     },

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PairingPanel } from './PairingPanel';
 import { useSync } from './useSync';
 
 const time = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -162,6 +163,7 @@ export function SyncSettings({ hidden, enabled, onEnabledChange }: Props) {
               {status}
             </p>
           )}
+          <PairingPanel />
           <details className="settings-help">
             <summary>Apagar meus dados da nuvem</summary>
             <p>

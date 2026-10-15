@@ -6,7 +6,7 @@
 import http from 'node:http';
 
 export async function startFakeSupabase() {
-  const state = { rows: new Map(), seq: 0, codesSent: [], refreshes: 0, pushes: 0, validToken: new Set() };
+  const state = { rows: new Map(), seq: 0, codesSent: [], refreshes: 0, pushes: 0, validToken: new Set(), pairTokens: new Set(), pairsMade: 0 };
 
   const sessionFor = (email) => {
     const token = `tok-${Math.random().toString(36).slice(2)}`;
@@ -48,6 +48,18 @@ export async function startFakeSupabase() {
     if (url === '/auth/v1/otp') {
       state.codesSent.push(body.email);
       return send(200, {});
+    }
+    if (url === '/functions/v1/pair') {
+      if (!authed()) return send(401, { error: 'unauthorized' });
+      const hash = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      state.pairTokens.add(hash);
+      state.pairsMade++;
+      return send(200, { token_hash: hash });
+    }
+    if (url === '/auth/v1/verify' && body.type === 'magiclink') {
+      // Uso único, como no Supabase: depois de trocado, o token deixa de valer.
+      if (!state.pairTokens.delete(body.token_hash)) return send(403, { msg: 'Email link is invalid or has expired' });
+      return send(200, sessionFor('ana@exemplo.com'));
     }
     if (url === '/auth/v1/verify') {
       if (body.token !== '123456') return send(403, { msg: 'Token has expired or is invalid' });

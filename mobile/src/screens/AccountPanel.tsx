@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Core } from '../core';
+import { QrScanner } from '../ui/QrScanner';
 
 /** Conta e sincronização (entrar por código, consentir, sincronizar, sair). */
 export function AccountPanel({ core }: { core: Core }) {
@@ -9,6 +10,7 @@ export function AccountPanel({ core }: { core: Core }) {
   const [consent, setConsent] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [, force] = useState(0);
   const account = core.auth.account();
   const state = core.syncState();
@@ -71,10 +73,25 @@ export function AccountPanel({ core }: { core: Core }) {
             Entrar
           </button>
         )}
+        <button type="button" className="btn-soft" disabled={busy} data-testid="scan-qr" onClick={() => setScanning(true)}>
+          Escanear QR do PC (sem e-mail)
+        </button>
         {msg && (
           <p className="muted" role="status" data-testid="msg">
             {msg}
           </p>
+        )}
+        {scanning && (
+          <QrScanner
+            onClose={() => setScanning(false)}
+            onResult={(text) =>
+              void act(async () => {
+                const r = await core.auth.signInWithPairing(text);
+                setMsg(r.ok ? null : r.message);
+                if (r.ok) setScanning(false);
+              })
+            }
+          />
         )}
       </section>
     );

@@ -659,3 +659,17 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Sons no celular:** o mesmo motor WebAudio do PC (`src/features/audio`), com a identidade sonora de cada
   personagem. Tocam ao concluir/criar tarefa, no foco (iniciar, pausar, retomar, fim), em conquistas e ao tocar no
   mascote. Preferência (ligado/volume) só deste aparelho, em Perfil → Sons.
+
+## D60 — Conectar o celular por QR (sem e-mail)
+- **Fluxo:** PC logado → Configurações → Conta e sincronização → "Conectar o celular com QR code" → QR. No celular:
+  Perfil → Conta → "Escanear QR do PC". O celular entra na MESMA conta e sincroniza.
+- **Segurança:** o QR leva só um `token_hash` de uso único (gerado por `generateLink` do Supabase Auth, sem enviar
+  e-mail), preso ao projeto (host) e com validade de 2 min conferida pelo app (±30 s de relógio). Nunca leva a sessão
+  do PC: duas máquinas renovando o mesmo refresh token derrubariam o login de uma delas.
+- **Servidor:** Edge Function `supabase/functions/pair/index.ts` (Verify JWT ligado; o e-mail vem do token validado,
+  não do corpo). Publicada à mão no painel (Edge Functions → Deploy a new function → `pair`). Sem ela o PC mostra
+  "Não foi possível gerar o QR" e o login por código continua funcionando.
+- **Bibliotecas:** `qrcode-generator` (desenho, PC) e `jsqr` (leitura, celular), ambas sem dependências.
+- **Câmera:** permissão `CAMERA` no Android; se negada, dá para colar o texto do QR.
+- **Limite:** o token de e-mail do Supabase vale até o tempo de OTP do projeto (padrão 1 h) mesmo que o QR do app
+  expire em 2 min; a recusa dos 2 min é do app, a de "uso único" é do servidor.

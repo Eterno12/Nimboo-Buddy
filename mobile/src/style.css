@@ -1182,3 +1182,6 @@ button:disabled {
   flex-wrap: wrap;
   justify-content: center;
 }
+
+/* Leitor de QR */
+.qr-video { width: 100%; max-height: 46vh; border-radius: 14px; background: #000; object-fit: cover; }

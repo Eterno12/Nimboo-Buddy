@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SupabaseAuth, type SessionStorage } from '../electron/sync/supabaseAuth.ts';
 import { SupabaseTransport, SyncAuthError } from '../electron/sync/supabaseTransport.ts';
+import { encodePairing } from '../shared/sync/pairing.ts';
 
 const URL_BASE = 'https://projeto.supabase.co';
 const KEY = 'anon-key-publica';
@@ -170,4 +171,56 @@ test('transporte: 401 vira erro de login; outros erros viram mensagem sem vazar 
     () => transport.pull(0, 10),
     (e: unknown) => e instanceof Error && !(e instanceof SyncAuthError) && !e.message.includes('segredo-tok'),
   );
+});
+
+const HASH64 = 'f'.repeat(64);
+
+test('QR: o PC pede o token de uso único à função "pair" com o token da sessão e monta o QR', async () => {
+  const f = fakeFetch([{ status: 200, body: session(3600) }, { status: 200, body: { token_hash: HASH64 } }]);
+  const auth = new SupabaseAuth({ url: URL_BASE, anonKey: KEY, fetch: f.fn, storage: memoryStorage(), now: () => 5_000_000 });
+  await auth.verifyCode('ana@exemplo.com', '123456');
+
+  const r = await auth.createPairing();
+  assert.ok(r.ok);
+  assert.equal(f.calls[1].url, `${URL_BASE}/functions/v1/pair`);
+  assert.equal(f.calls[1].headers.Authorization, 'Bearer acc-1');
+  assert.ok(r.ok && r.qr.startsWith('nimboo://pair?') && r.qr.includes(HASH64));
+});
+
+test('QR: sem login não há o que parear; erro do servidor vira mensagem', async () => {
+  const none = new SupabaseAuth({ url: URL_BASE, anonKey: KEY, fetch: fakeFetch([]).fn, storage: memoryStorage() });
+  assert.equal((await none.createPairing()).ok, false);
+
+  const f = fakeFetch([{ status: 200, body: session(3600) }, { status: 500, body: { error: 'x' } }]);
+  const auth = new SupabaseAuth({ url: URL_BASE, anonKey: KEY, fetch: f.fn, storage: memoryStorage() });
+  await auth.verifyCode('ana@exemplo.com', '123456');
+  const r = await auth.createPairing();
+  assert.ok(!r.ok && /QR/.test(r.message));
+});
+
+test('QR: o celular troca o token do QR por uma sessão da mesma conta', async () => {
+  const f = fakeFetch([{ status: 200, body: session(3600) }]);
+  const storage = memoryStorage();
+  const auth = new SupabaseAuth({ url: URL_BASE, anonKey: KEY, fetch: f.fn, storage, now: () => 1_000_000 });
+  const qr = encodePairing({ url: URL_BASE, tokenHash: HASH64, now: 1_000_000 });
+
+  assert.deepEqual(await auth.signInWithPairing(qr), { ok: true });
+  assert.equal(f.calls[0].url, `${URL_BASE}/auth/v1/verify`);
+  assert.deepEqual(f.calls[0].body, { type: 'magiclink', token_hash: HASH64 });
+  assert.deepEqual(auth.account(), { email: 'ana@exemplo.com', userId: 'user-1' });
+});
+
+test('QR: QR vencido, de outro projeto ou recusado pelo servidor não abre sessão', async () => {
+  const f = fakeFetch([{ status: 403, body: { msg: 'invalid' } }]);
+  const auth = new SupabaseAuth({ url: URL_BASE, anonKey: KEY, fetch: f.fn, storage: memoryStorage(), now: () => 9_000_000 });
+  const old = encodePairing({ url: URL_BASE, tokenHash: HASH64, now: 1_000_000 });
+  assert.equal((await auth.signInWithPairing(old)).ok, false);
+  const other = encodePairing({ url: 'https://outro.supabase.co', tokenHash: HASH64, now: 9_000_000 });
+  assert.equal((await auth.signInWithPairing(other)).ok, false);
+  assert.equal(f.calls.length, 0, 'QR inválido nem chega à rede');
+
+  const fresh = encodePairing({ url: URL_BASE, tokenHash: HASH64, now: 9_000_000 });
+  const denied = await auth.signInWithPairing(fresh);
+  assert.ok(!denied.ok && /QR/.test(denied.message));
+  assert.equal(auth.account(), null);
 });

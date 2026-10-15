@@ -405,3 +405,14 @@ textarea.settings-text {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Conectar celular: QR sobre fundo branco (precisa de contraste para a câmera) */
+.settings-pair {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+.settings-pair svg {
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}

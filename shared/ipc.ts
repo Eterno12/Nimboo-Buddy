@@ -9,7 +9,7 @@ import type { FocusApi } from './focus';
 import type { Settings } from './settings';
 import type { CalendarResult, CalendarState } from './calendar';
 import type { ReminderToastAction, ReminderToastInfo } from './reminderToast';
-import type { SyncResultMessage, SyncState } from './sync/state';
+import type { PairingMessage, SyncResultMessage, SyncState } from './sync/state';
 
 /** Preferências + o que só o processo principal sabe (para a tela de configurações). */
 export interface SettingsSnapshot {
@@ -124,6 +124,7 @@ export const IPC = {
   syncVerify: 'sync:verify',
   syncNow: 'sync:now',
   syncSignOut: 'sync:sign-out',
+  syncPairing: 'sync:pairing',
   syncWipe: 'sync:wipe',
   syncChanged: 'sync:changed',
   reminderGet: 'reminder:get',
@@ -239,6 +240,8 @@ export interface MochiApi {
     verify(email: string, code: string): Promise<SyncResultMessage>;
     now(): Promise<SyncState | null>;
     signOut(): Promise<SyncState | null>;
+    /** Gera o texto do QR que conecta o celular à mesma conta (vale poucos minutos, uma vez). */
+    pairing(): Promise<PairingMessage>;
     wipeCloud(): Promise<SyncResultMessage>;
     onChange(listener: (state: SyncState) => void): () => void;
   };

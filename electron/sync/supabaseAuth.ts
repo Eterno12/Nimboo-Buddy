@@ -1,4 +1,5 @@
 import { SyncAuthError, type FetchLike } from './supabaseTransport.ts';
+import { encodePairing, parsePairing } from '../../shared/sync/pairing.ts';
 
 export interface SessionStorage {
   read(): string | null;
@@ -124,6 +125,42 @@ export class SupabaseAuth {
       const session = this.parse(r.data, email);
       if (r.status < 200 || r.status >= 300 || !session) {
         return { ok: false, message: 'Código incorreto ou expirado. Peça um novo código.' };
+      }
+      this.save(session);
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Sem conexão com a internet.' };
+    }
+  }
+
+  /**
+   * PC logado: pede à função "pair" um token de uso único (o servidor gera sem enviar e-mail) e devolve
+   * o texto do QR. Só o token vai no QR, nunca a sessão deste aparelho.
+   */
+  async createPairing(): Promise<{ ok: true; qr: string } | { ok: false; message: string }> {
+    const failure = { ok: false as const, message: 'Não foi possível gerar o QR agora. Tente de novo.' };
+    if (!this.current) return { ok: false, message: 'Entre na conta antes de conectar o celular.' };
+    try {
+      const bearer = await this.accessToken();
+      const r = await this.post('/functions/v1/pair', {}, bearer);
+      const hash = r.data.token_hash;
+      if (r.status < 200 || r.status >= 300 || typeof hash !== 'string') return failure;
+      return { ok: true, qr: encodePairing({ url: this.o.url, tokenHash: hash, now: this.now() }) };
+    } catch {
+      return failure;
+    }
+  }
+
+  /** Celular: troca o token lido do QR por uma sessão da mesma conta do PC. */
+  async signInWithPairing(qr: string): Promise<AuthResult> {
+    const parsed = parsePairing(qr, { url: this.o.url, now: this.now() });
+    if (!parsed.ok) return parsed;
+    try {
+      const r = await this.post('/auth/v1/verify', { type: 'magiclink', token_hash: parsed.tokenHash });
+      if (r.status === 429) return { ok: false, message: 'Muitas tentativas. Espere um minuto e tente de novo.' };
+      const session = this.parse(r.data, '');
+      if (r.status < 200 || r.status >= 300 || !session) {
+        return { ok: false, message: 'O QR não vale mais (já usado ou vencido). Gere um novo no PC.' };
       }
       this.save(session);
       return { ok: true };

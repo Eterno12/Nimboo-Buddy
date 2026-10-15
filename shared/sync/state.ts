@@ -14,6 +14,8 @@ export interface SyncState {
 }
 
 export type SyncResultMessage = { ok: true } | { ok: false; message: string };
+/** Texto do QR para conectar o celular (ou o motivo de não ter gerado). */
+export type PairingMessage = { ok: true; qr: string } | { ok: false; message: string };
 
 export const EMPTY_SYNC: SyncState = {
   canStore: true,
