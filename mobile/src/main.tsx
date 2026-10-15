@@ -3,7 +3,10 @@ import initSqlJs from 'sql.js/dist/sql-wasm-browser.js';
 import wasmUrl from 'sql.js/dist/sql-wasm-browser.wasm?url';
 import { App } from './App';
 import { createCore, type Core } from './core';
+import { Capacitor } from '@capacitor/core';
 import { indexedDbBlobStore, localSessionStorage } from './platform/web';
+import { filesystemBlobStore } from './platform/native';
+import { encryptedSession, indexedDbKeyVault, syncSessionStorage } from './platform/secureSession';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../shared/sync/config';
 import './style.css';
 
@@ -21,10 +24,14 @@ async function boot() {
     // `?sync=http://127.0.0.1:porta` aponta para um servidor falso (testes); sem isso, o projeto real.
     const override = new URLSearchParams(location.search).get('sync');
     const url = override && /^http:\/\/127\.0\.0\.1:\d+$/.test(override) ? override : SUPABASE_URL;
+    // No Android: arquivo no armazenamento privado do app. No navegador (desenvolvimento): IndexedDB.
+    const native = Capacitor.isNativePlatform();
+    // A sessão (tokens) é sempre cifrada com uma chave não extraível guardada à parte.
+    const session = await syncSessionStorage(await encryptedSession(localSessionStorage(), indexedDbKeyVault()));
     const core = await createCore({
       SQL,
-      blob: indexedDbBlobStore(),
-      session: localSessionStorage(),
+      blob: native ? filesystemBlobStore() : indexedDbBlobStore(),
+      session,
       fetch: (u, init) => fetch(u, init),
       url,
       anonKey: SUPABASE_ANON_KEY,

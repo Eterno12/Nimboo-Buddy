@@ -1,0 +1,7 @@
+{
+  "appId": "app.nimboo.mobile",
+  "appName": "Nimboo",
+  "webDir": "dist-mobile",
+  "android": { "allowMixedContent": false },
+  "server": { "androidScheme": "https" }
+}
