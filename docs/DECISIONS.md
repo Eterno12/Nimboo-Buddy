@@ -592,3 +592,19 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   `CSC_LINK`/`CSC_KEY_PASSWORD` automaticamente se existirem.
 - **Atualização automática: adiada.** Exigiria um servidor/Releases e uma verificação de rede periódica; só com
   decisão explícita (fonte da atualização) e opt-in.
+
+## D55 — Sincronização na nuvem (Supabase), opt-in
+- **Decisão:** a pessoa pode entrar numa conta (e-mail + código) e sincronizar PC e Android pelo Supabase.
+  Desligada por padrão; sem conta, nada muda e nada sai do computador.
+- **O que vai:** tarefas, notas, sessões de foco, conquistas, vínculo e acessórios. **Nunca:** chave do Gemini,
+  endereços de agenda, histórico do assistente.
+- **Modelo:** *local-first* (cada aparelho tem o SQLite e funciona offline). Fila de saída (`outbox`) e marcas
+  de exclusão (`tombstones`) mantidas por gatilhos do banco (migração v9), na mesma transação da mudança.
+  Conflito: a edição mais recente vence; empate decide pela exclusão e depois pelo aparelho
+  (`shared/sync/merge.ts`, igual a `supabase/migrations/0001_sync.sql`). A limpeza dos 30 dias é local e não
+  vira exclusão sincronizada (S2). Banco recuperado de corrupção baixa tudo antes de enviar (S3).
+- **Limites:** relógios muito diferentes entre aparelhos podem favorecer uma edição mais antiga (S4);
+  edições simultâneas na mesma nota ficam com a mais recente (sem mesclagem de texto).
+- **Segurança:** RLS por `auth.uid()`, token no cofre do aparelho, chamadas só do processo principal.
+- **Estado (F0/F1):** esquema SQL e teste de RLS escritos em `supabase/`; ainda NÃO aplicados a um projeto
+  Supabase real (depende da conta da pessoa). Camada local pronta e testada (`electron/sync/syncStore.ts`).

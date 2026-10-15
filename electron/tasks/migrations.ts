@@ -156,6 +156,62 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Preparação para sincronizar (D55): identidade do aparelho, fila de saída durável e marcas de exclusão.
+    // Tudo é mantido por gatilhos, na MESMA transação de cada mudança, para nenhuma escrita escapar da fila.
+    // Exclusões feitas pela limpeza de 30 dias ligam `sync_ctx.suppress` e não viram exclusão sincronizada.
+    version: 9,
+    name: 'sync_foundations',
+    up(db) {
+      db.exec(`
+        ALTER TABLE tasks ADD COLUMN origin TEXT;
+        ALTER TABLE notes ADD COLUMN origin TEXT;
+        ALTER TABLE focus_sessions ADD COLUMN origin TEXT;
+        CREATE TABLE sync_meta (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL) STRICT;
+        INSERT INTO sync_meta (key, value) VALUES ('device_id', lower(hex(randomblob(16))));
+        INSERT INTO sync_meta (key, value) VALUES ('protocol', '1');
+        CREATE TABLE sync_ctx (id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1), suppress INTEGER NOT NULL DEFAULT 0) STRICT;
+        INSERT INTO sync_ctx (id, suppress) VALUES (1, 0);
+        CREATE TABLE outbox (
+          seq INTEGER PRIMARY KEY AUTOINCREMENT,
+          tbl TEXT NOT NULL,
+          id  TEXT NOT NULL,
+          op  TEXT NOT NULL CHECK (op IN ('upsert', 'delete')),
+          at  TEXT NOT NULL
+        );
+        CREATE INDEX idx_outbox_row ON outbox (tbl, id);
+        CREATE TABLE tombstones (
+          tbl        TEXT NOT NULL,
+          id         TEXT NOT NULL,
+          deleted_at TEXT NOT NULL,
+          origin     TEXT,
+          PRIMARY KEY (tbl, id)
+        ) STRICT;
+      `);
+      for (const table of ['tasks', 'notes', 'focus_sessions']) {
+        const now = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
+        const device = "(SELECT value FROM sync_meta WHERE key = 'device_id')";
+        const quiet = '(SELECT suppress FROM sync_ctx) = 0';
+        // A exclusão vale como "depois da última edição" mesmo com o relógio local atrasado.
+        const last = table === 'focus_sessions' ? 'OLD.completed_at' : 'OLD.updated_at';
+        db.exec(`
+          CREATE TRIGGER trg_${table}_sync_ins AFTER INSERT ON ${table} WHEN ${quiet} BEGIN
+            UPDATE ${table} SET origin = ${device} WHERE id = NEW.id;
+            DELETE FROM tombstones WHERE tbl = '${table}' AND id = NEW.id;
+            INSERT INTO outbox (tbl, id, op, at) VALUES ('${table}', NEW.id, 'upsert', ${now});
+          END;
+          CREATE TRIGGER trg_${table}_sync_upd AFTER UPDATE ON ${table} WHEN ${quiet} AND NEW.origin IS OLD.origin BEGIN
+            UPDATE ${table} SET origin = ${device} WHERE id = NEW.id;
+            INSERT INTO outbox (tbl, id, op, at) VALUES ('${table}', NEW.id, 'upsert', ${now});
+          END;
+          CREATE TRIGGER trg_${table}_sync_del AFTER DELETE ON ${table} WHEN ${quiet} BEGIN
+            INSERT OR REPLACE INTO tombstones (tbl, id, deleted_at, origin) VALUES ('${table}', OLD.id, max(${now}, ${last}), ${device});
+            INSERT INTO outbox (tbl, id, op, at) VALUES ('${table}', OLD.id, 'delete', ${now});
+          END;
+        `);
+      }
+    },
+  },
 ];
 
 /** O banco foi criado por uma versão mais nova do app; não é seguro abri-lo. */

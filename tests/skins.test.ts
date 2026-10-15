@@ -33,12 +33,14 @@ test('acessórios: comprar gasta o saldo mas não o total de pontos; persiste', 
     assert.equal(engine.buySkin('cactus.bandana'), null, 'sem pontos');
     for (let i = 0; i < 10; i++) engine.handle({ type: 'task_completed' });
     const before = engine.snapshot();
-    assert.equal(before.points, 35);
-    assert.equal(before.balance, 35);
+    // Conquistas por horário/dia podem somar pontos extras: o teste usa o total real.
+    const total = before.points;
+    assert.ok(total >= 35 && total < 70, `pontos ${total}`);
+    assert.equal(before.balance, total);
 
     const bought = engine.buySkin('cactus.bandana');
-    assert.equal(bought?.points, 35);
-    assert.equal(bought?.balance, 15);
+    assert.equal(bought?.points, total);
+    assert.equal(bought?.balance, total - 20);
     assert.deepEqual(bought?.ownedSkins, ['cactus.bandana']);
 
     assert.equal(engine.buySkin('cactus.bandana'), null, 'não compra duas vezes');
@@ -47,7 +49,7 @@ test('acessórios: comprar gasta o saldo mas não o total de pontos; persiste', 
     assert.equal(engine.buySkin(42), null);
 
     const again = t.make().snapshot();
-    assert.equal(again.balance, 15);
+    assert.equal(again.balance, total - 20);
     assert.deepEqual(again.ownedSkins, ['cactus.bandana']);
   } finally {
     t.done();

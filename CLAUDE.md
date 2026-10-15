@@ -60,7 +60,7 @@ interface de tarefas ou na ilha, também `npm run test:e2e`; se mexeu no modo fo
 - O banco só é aberto no processo principal. O renderer nunca recebe SQL, caminho de arquivo nem conexão.
 - Handlers `ipcMain` validam o remetente (janela do app, quadro principal, URL do app) e validam os argumentos.
 - Manter a CSP de `index.html`, navegação/`window.open` bloqueados e permissões negadas.
-- **Rede:** só o processo principal fala com a internet, e só em 3 casos opt-in: a agenda (iCal) quando a pessoa cola o endereço (D31: https, sem IP/localhost, endereço criptografado com `safeStorage`, nunca devolvido ao renderer); a Wikipédia (`pt.wikipedia.org`) e a IA local do Ollama (`127.0.0.1:11434`) quando ligadas em Configurações > Assistente (D37). O renderer continua sem rede (CSP). Qualquer chamada externa nova (IA em nuvem, sync) exige decisão explícita registrada em `docs/DECISIONS.md`.
+- **Rede:** só o processo principal fala com a internet, e só em 3 casos opt-in: a agenda (iCal) quando a pessoa cola o endereço (D31: https, sem IP/localhost, endereço criptografado com `safeStorage`, nunca devolvido ao renderer); a Wikipédia (`pt.wikipedia.org`) e a IA local do Ollama (`127.0.0.1:11434`) quando ligadas em Configurações > Assistente (D37). O renderer continua sem rede (CSP). A **sincronização com o Supabase** (D55) é o 4º caso e só existe depois que a pessoa entra numa conta; o token fica no `safeStorage` e só o processo principal fala com o servidor. Qualquer chamada externa nova (IA em nuvem etc.) exige decisão explícita registrada em `docs/DECISIONS.md`.
 
 ## Convenções e armadilhas
 

@@ -79,6 +79,8 @@ export class SqliteTaskRepository implements TaskRepository {
   private readonly newId: () => string;
   private readonly retentionMs: number;
   private readonly onChange: (change: TaskChange) => void;
+  /** O banco tem a camada de sincronização (migração v9)? Bancos de testes antigos podem não ter. */
+  private readonly hasSync: boolean;
 
   constructor(db: DatabaseSync, options: SqliteTaskRepositoryOptions = {}) {
     this.db = db;
@@ -86,6 +88,7 @@ export class SqliteTaskRepository implements TaskRepository {
     this.newId = options.newId ?? randomUUID;
     this.retentionMs = (options.retentionDays ?? COMPLETED_RETENTION_DAYS) * DAY_MS;
     this.onChange = options.onChange ?? (() => {});
+    this.hasSync = db.prepare("SELECT 1 AS x FROM sqlite_master WHERE name = 'sync_ctx'").get() !== undefined;
   }
 
   /**
@@ -125,7 +128,10 @@ export class SqliteTaskRepository implements TaskRepository {
    * depois de um `hasExpired` nunca é apagada por engano.
    */
   private purgeInside(cutoff: string = this.cutoff()): number {
+    // Limpeza local não é exclusão do usuário: não deixa marca nem entra na fila de sincronização.
+    if (this.hasSync) this.db.exec('UPDATE sync_ctx SET suppress = 1');
     const result = this.db.prepare('DELETE FROM tasks WHERE completed = 1 AND completed_at < ?').run(cutoff);
+    if (this.hasSync) this.db.exec('UPDATE sync_ctx SET suppress = 0');
     return Number(result.changes);
   }
 

@@ -122,7 +122,14 @@ export function openDatabaseDetailed(filePath: string, options: OpenDatabaseOpti
       }
     }
     info.backupPath = null;
-    return { db: openAndPrepare(filePath, options, info), recoveredFrom: preserved, backupPath: null };
+    const db = openAndPrepare(filePath, options, info);
+    // Começou vazio por causa da corrupção: ausência não pode ser lida como "o usuário apagou tudo".
+    try {
+      db.prepare("INSERT OR REPLACE INTO sync_meta (key, value) VALUES ('needs_full_pull', '1')").run();
+    } catch {
+      /* esquema sem a camada de sincronização */
+    }
+    return { db, recoveredFrom: preserved, backupPath: null };
   }
 }
 
