@@ -1,0 +1,174 @@
+:root {
+  color-scheme: light dark;
+  --bg: #fdf8f3;
+  --panel: #f6efe8;
+  --text: #3b3040;
+  --muted: #6f6478;
+  --border: #cfc5d6;
+  --accent: #25754a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #2b2335;
+    --panel: #342b3f;
+    --text: #f1ecf6;
+    --muted: #b7aec2;
+    --border: #5d5169;
+    --accent: #8fd9a8;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 8px);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.top h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+main {
+  flex: 1;
+}
+
+.add {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+input[type='text'],
+input[type='email'],
+input:not([type]),
+input[inputmode] {
+  flex: 1;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+
+button {
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+.tasks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tasks li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tasks .title {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.tasks .empty {
+  color: var(--muted);
+  justify-content: center;
+}
+
+.check {
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 2px solid var(--muted);
+  border-radius: 8px;
+  background: transparent;
+}
+
+.del {
+  min-height: 40px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.tabs button {
+  flex: 1;
+  background: transparent;
+  color: var(--text);
+}
+
+.tabs button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.check-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.msg,
+.notice {
+  color: var(--muted);
+}
+
+.boot-error {
+  padding: 24px;
+}

@@ -612,3 +612,14 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
   `shared/sync/config.ts` (pública por desenho). O e-mail do login precisa do modelo com o código (`{{ .Token }}`).
 - **Limite do teste:** os testes usam um servidor falso com a mesma regra do SQL; a conversa real com o Supabase
   (e-mail, renovação do token) só é exercitada manualmente.
+
+## D56 — Banco do app Android: SQLite WASM (sql.js) com o mesmo código do PC
+- **Decisão:** o app móvel usa o sql.js (SQLite em WASM) atrás de um adaptador com a API do `node:sqlite`
+  (`mobile/db/sqlJsDatabase.ts`). Assim as migrações, os repositórios, os gatilhos da fila e o `SyncStore` do PC
+  rodam **sem alteração** (testado em `tests/mobileDb.test.ts` e `tests/mobileSync.test.ts`).
+- **Persistência:** banco em memória, regravado (arquivo inteiro) depois de cada transação com atraso de 300 ms e
+  ao pausar o app; arquivo corrompido vira cópia + banco novo com `needs_full_pull`; versão mais nova é recusada.
+- **Alternativa descartada:** plugin SQLite nativo do Capacitor (assíncrono): exigiria reescrever repositórios e
+  gatilhos, duplicando regras.
+- **Limites:** o banco inteiro cabe na memória (uso pessoal: poucos MB) e uma morte súbita do app pode perder
+  até ~300 ms de escrita (a fila de envio é regravada junto, então nada fica inconsistente).

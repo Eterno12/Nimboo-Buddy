@@ -83,3 +83,4 @@ release/
 
 # Trilha exportada do filme de lançamento (gerada; não versionar)
 launch/*.wav
+dist-mobile/
