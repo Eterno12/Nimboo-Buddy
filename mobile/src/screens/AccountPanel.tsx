@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Core } from '../core';
+import { hasNativeScanner, scanQrNative } from '../platform/nativeScan';
 import { QrScanner } from '../ui/QrScanner';
 
 /** Conta e sincronização (entrar por código, consentir, sincronizar, sair). */
@@ -73,7 +74,15 @@ export function AccountPanel({ core }: { core: Core }) {
             Entrar
           </button>
         )}
-        <button type="button" className="btn-soft" disabled={busy} data-testid="scan-qr" onClick={() => setScanning(true)}>
+        <button type="button" className="btn-soft" disabled={busy} data-testid="scan-qr" onClick={() => {
+            if (!hasNativeScanner()) return setScanning(true);
+            void act(async () => {
+              const scan = await scanQrNative();
+              if (!scan.ok) return setMsg(scan.message || null);
+              const r = await core.auth.signInWithPairing(scan.text);
+              setMsg(r.ok ? null : r.message);
+            });
+          }}>
           Escanear QR do PC (sem e-mail)
         </button>
         {msg && (

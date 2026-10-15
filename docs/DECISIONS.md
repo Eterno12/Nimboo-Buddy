@@ -673,3 +673,7 @@ descrição de **como** está implementado fica em `ARCHITECTURE.md`; o estado a
 - **Câmera:** permissão `CAMERA` no Android; se negada, dá para colar o texto do QR.
 - **Limite:** o token de e-mail do Supabase vale até o tempo de OTP do projeto (padrão 1 h) mesmo que o QR do app
   expire em 2 min; a recusa dos 2 min é do app, a de "uso único" é do servidor.
+- **Leitor no Android (correção):** o `getUserMedia` do WebView ficou pendente para sempre no Motorola Edge 50 Pro
+  (testado por CDP: sem erro, sem aviso, mesmo com a permissão concedida). O app agora usa o leitor nativo do Google
+  (`@capacitor-mlkit/barcode-scanning`, `scan()`): roda fora do WebView e não exige permissão de câmera. O leitor
+  por câmera da web continua só para o navegador (desenvolvimento), com a opção de colar o texto.
