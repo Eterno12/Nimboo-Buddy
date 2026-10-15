@@ -189,6 +189,36 @@ try {
     assert.match(await page.ev(`document.querySelector('[data-testid="focus-today"]').textContent`), /0 sessões · 0 min/);
   });
 
+  await step('Notas: criar escrevendo, voltar, buscar, recarregar e excluir', async () => {
+    await click(page, 'tab-notes');
+    await page.waitFor(`!!document.querySelector('[data-testid="fab-note"]')`, 'tela de notas');
+    await click(page, 'fab-note');
+    await page.waitFor(`!!document.querySelector('[data-testid="note-screen"] .note-prose')`, 'editor');
+    await page.ev(`document.querySelector('.note-prose').focus()`);
+    await page.call('Input.insertText', { text: 'Ideias para sexta' });
+    await sleep(900); // salvamento automático
+    await click(page, 'note-back');
+    await page.waitFor(`[...document.querySelectorAll('[data-testid="note-item"]')].some((b) => b.textContent.includes('Ideias para sexta'))`, 'nota na lista');
+
+    await setValue(page, 'notes-search', 'sexta');
+    await page.waitFor(`document.querySelectorAll('[data-testid="note-item"]').length === 1`, 'busca acha');
+    await setValue(page, 'notes-search', 'zzzz');
+    await page.waitFor(`document.querySelectorAll('[data-testid="note-item"]').length === 0`, 'busca não acha');
+    await setValue(page, 'notes-search', '');
+
+    await sleep(600);
+    await page.call('Page.reload');
+    await page.waitFor(`!!document.querySelector('[data-testid="screen-today"]')`, 'recarregou', 15000);
+    await click(page, 'tab-notes');
+    await page.waitFor(`document.querySelectorAll('[data-testid="note-item"]').length === 1`, 'nota depois de recarregar', 10000);
+
+    await page.ev(`document.querySelector('[data-testid="note-item"]').click()`);
+    await page.waitFor(`!!document.querySelector('[data-testid="note-delete"]')`, 'editor aberto');
+    await click(page, 'note-delete');
+    await click(page, 'note-delete-confirm');
+    await page.waitFor(`!!document.querySelector('[data-testid="fab-note"]') && document.querySelectorAll('[data-testid="note-item"]').length === 0`, 'lista vazia');
+  });
+
   await step('Hoje reflete as tarefas e recarregar a página não perde nada (banco persistido)', async () => {
     await sleep(600);
     await page.call('Page.reload');

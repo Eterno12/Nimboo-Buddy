@@ -7,8 +7,8 @@ import { useTasks } from './useTasks';
 import { Icon } from './ui/Icon';
 import { AddTaskSheet, EditTaskSheet } from './ui/TaskSheets';
 import { FocusScreen } from './screens/FocusScreen';
+import { NotesScreen } from './screens/NotesScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
-import { SoonScreen } from './screens/SoonScreen';
 import { TasksScreen } from './screens/TasksScreen';
 import { TodayScreen } from './screens/TodayScreen';
 
@@ -97,7 +97,7 @@ export function App({ core }: { core: Core }) {
           <TasksScreen active={tasks.active} completed={tasks.completed} onToggle={toggle} onOpen={openEdit} onAdd={() => setAdding(true)} />
         )}
         {tab === 'focus' && <FocusScreen core={core} tasks={tasks.active} onCompleteTask={toggle} />}
-        {tab === 'notes' && <SoonScreen title="Notas" icon="notes" text="Notas com formatação." />}
+        {tab === 'notes' && <NotesScreen core={core} />}
         {tab === 'profile' && <ProfileScreen core={core} profile={profile} onChange={changeProfile} />}
       </main>
 

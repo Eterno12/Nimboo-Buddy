@@ -868,3 +868,127 @@ button:disabled {
   font-size: 20px;
   font-weight: 700;
 }
+
+/* ---- Notas ---- */
+.search {
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  width: 100%;
+}
+
+.note-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.note-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--paper-edge);
+  border-left-width: 8px;
+  border-radius: 16px;
+  background: var(--paper);
+  color: #3b3040;
+  text-align: left;
+}
+
+.note-item-title {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.note-item-preview {
+  font-size: 14px;
+  color: #5a4f63;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.note-item-date {
+  font-size: 12px;
+  color: #6f6478;
+}
+
+.note-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  background: var(--paper);
+  color: #3b3040;
+}
+
+.note-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--paper-edge);
+}
+
+.note-bar .icon-btn {
+  color: #3b3040;
+  width: 48px;
+  height: 48px;
+}
+
+.note-bar .icon-btn[aria-label='Voltar'] svg {
+  transform: rotate(180deg);
+}
+
+.note-colors {
+  display: flex;
+  gap: 8px;
+}
+
+.note-color {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--paper-edge);
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.note-color[aria-checked='true'] {
+  border-color: #3b3040;
+  box-shadow: 0 0 0 2px var(--paper);
+}
+
+.note-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Editor reaproveitado do PC: alvos de toque maiores e fonte legível. */
+.note-screen .note-tool {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.note-screen .note-prose {
+  min-height: 40dvh;
+  font-size: 17px;
+}
+
+.note-screen .note-editor {
+  flex: 1;
+  overflow-y: auto;
+}

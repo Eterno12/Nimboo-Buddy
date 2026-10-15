@@ -7,6 +7,7 @@ import { SupabaseTransport, type FetchLike } from '../../electron/sync/supabaseT
 import { openPersistedDb, type BlobStore, type PersistedDb } from '../db/persistence.ts';
 import type { SqlJsModule } from '../db/sqlJsDatabase.ts';
 import { SYNC_IDLE_INTERVAL_MS, SYNC_TICK_MS } from '../../shared/sync/config.ts';
+import { SqliteNotesRepository } from '../../electron/notes/sqliteNotesRepository.ts';
 import { FocusTimer } from '../../electron/focus/focusTimer.ts';
 import { FocusLog } from '../../electron/focus/focusLog.ts';
 import { DEFAULT_FOCUS_CONFIG, type FocusConfig, type FocusState, type FocusStats } from '../../shared/focus.ts';
@@ -29,6 +30,7 @@ export interface CoreOptions {
 /** Tudo que o app do celular precisa, sem depender de React: banco, tarefas, conta e sincronização. */
 export interface Core {
   tasks: SqliteTaskRepository;
+  notes: SqliteNotesRepository;
   store: SyncStore;
   auth: SupabaseAuth;
   recovered: boolean;
@@ -62,6 +64,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
   const emit = () => listeners.forEach((l) => l());
 
   const tasks = new SqliteTaskRepository(asNode, { onChange: emit });
+  const notes = new SqliteNotesRepository(asNode, { onChange: emit });
   const store = new SyncStore(asNode);
   const auth = new SupabaseAuth({ url: o.url, anonKey: o.anonKey, fetch: o.fetch, storage: o.session });
   const transport = new SupabaseTransport({ url: o.url, anonKey: o.anonKey, fetch: o.fetch, token: () => auth.accessToken() });
@@ -156,6 +159,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
 
   return {
     tasks,
+    notes,
     store,
     auth,
     recovered: persisted.recovered,
