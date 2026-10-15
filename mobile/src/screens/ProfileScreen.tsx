@@ -3,6 +3,7 @@ import { Mascot } from '../../../src/features/mascot/Mascot';
 import { characterInfo } from '../../../src/features/mascot/characters';
 import type { Core } from '../core';
 import type { Profile } from '../profile';
+import { REMINDER_LEADS } from '../reminders';
 import { AccountPanel } from './AccountPanel';
 
 const COLOR_LABEL: Record<MochiColor, string> = { mint: 'Menta', peach: 'Pêssego', sky: 'Céu', lilac: 'Lilás', lemon: 'Limão', rose: 'Rosa' };
@@ -17,6 +18,7 @@ interface Props {
 /** Perfil: personagem, cor, nome e conta. */
 export function ProfileScreen({ core, profile, onChange, onOpenAchievements }: Props) {
   const snap = core.bond.snapshot();
+  const reminders = core.reminderConfig();
   return (
     <div className="screen" data-testid="screen-profile">
       <header className="screen-head">
@@ -74,6 +76,37 @@ export function ProfileScreen({ core, profile, onChange, onOpenAchievements }: P
           </small>
         </span>
       </button>
+
+      <section className="card" aria-labelledby="rem-h">
+        <h2 id="rem-h">Lembretes de prazo</h2>
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={reminders.enabled}
+            data-testid="reminders-enabled"
+            onChange={(e) => {
+              if (e.target.checked) void core.notifier.requestPermission();
+              core.setReminderConfig({ ...reminders, enabled: e.target.checked });
+            }}
+          />
+          <span>Avisar quando uma tarefa com prazo estiver chegando (com botões Concluir e Adiar).</span>
+        </label>
+        <label className="field">
+          <span>Avisar antes</span>
+          <select
+            value={reminders.leadMinutes}
+            disabled={!reminders.enabled}
+            data-testid="reminders-lead"
+            onChange={(e) => core.setReminderConfig({ ...reminders, leadMinutes: Number(e.target.value) })}
+          >
+            {REMINDER_LEADS.map((m) => (
+              <option key={m} value={m}>
+                {m === 0 ? 'Só na hora' : `${m} minutos antes`}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
 
       <AccountPanel core={core} />
 

@@ -243,6 +243,22 @@ try {
     await page.waitFor(`!document.querySelector('[data-testid="achievements-screen"]')`, 'voltou ao perfil');
   });
 
+  await step('Lembretes: opções no Perfil são guardadas e sobrevivem a recarregar', async () => {
+    await click(page, 'tab-profile');
+    await page.waitFor(`!!document.querySelector('[data-testid="reminders-lead"]')`, 'opções de lembrete');
+    assert.equal(await page.ev(`document.querySelector('[data-testid="reminders-lead"]').value`), '10');
+    await page.ev(`(() => { const sel = document.querySelector('[data-testid="reminders-lead"]'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(sel, '30'); sel.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await page.waitFor(`document.querySelector('[data-testid="reminders-lead"]').value === '30'`, 'antecedência 30');
+    await page.ev(`document.querySelector('[data-testid="reminders-enabled"]').click()`);
+    await page.waitFor(`document.querySelector('[data-testid="reminders-lead"]').disabled === true`, 'desligado');
+    await sleep(600);
+    await page.call('Page.reload');
+    await page.waitFor(`!!document.querySelector('[data-testid="screen-today"]')`, 'recarregou', 15000);
+    await click(page, 'tab-profile');
+    await page.waitFor(`document.querySelector('[data-testid="reminders-enabled"]').checked === false`, 'continua desligado');
+    assert.equal(await page.ev(`document.querySelector('[data-testid="reminders-lead"]').value`), '30');
+  });
+
   await step('Hoje reflete as tarefas e recarregar a página não perde nada (banco persistido)', async () => {
     await sleep(600);
     await page.call('Page.reload');

@@ -29,6 +29,9 @@ function fakeNotifier() {
     },
     cancelFocusEnd: async () => void calls.push('cancel'),
     requestPermission: async () => true,
+    scheduleReminders: async () => {},
+    scheduleSnooze: async () => {},
+    onReminderAction: () => () => {},
   };
   return n;
 }

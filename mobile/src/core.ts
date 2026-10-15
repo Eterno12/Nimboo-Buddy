@@ -17,6 +17,7 @@ import { FocusTimer } from '../../electron/focus/focusTimer.ts';
 import { FocusLog } from '../../electron/focus/focusLog.ts';
 import { DEFAULT_FOCUS_CONFIG, type FocusConfig, type FocusState, type FocusStats } from '../../shared/focus.ts';
 import { silentNotifier, type Notifier } from './platform/notifier.ts';
+import { DEFAULT_REMINDER_CONFIG, REMINDER_LEADS, planReminders, type ReminderConfig } from './reminders.ts';
 
 export interface CoreOptions {
   SQL: SqlJsModule;
@@ -30,6 +31,8 @@ export interface CoreOptions {
   notifier?: Notifier;
   /** Relógio (ms); injetável nos testes. */
   now?: () => number;
+  /** Espera antes de reagendar os lembretes depois de mudanças (agrupa várias). */
+  reminderDelayMs?: number;
 }
 
 /** Tudo que o app do celular precisa, sem depender de React: banco, tarefas, conta e sincronização. */
@@ -56,6 +59,8 @@ export interface Core {
   /** Focos concluídos hoje. */
   focusToday(): FocusStats;
   notifier: Notifier;
+  reminderConfig(): ReminderConfig;
+  setReminderConfig(config: ReminderConfig): void;
   syncState(): RunnerState;
   /** Sincroniza agora (nada acontece sem conta e sem consentimento). */
   syncNow(): Promise<void>;
@@ -73,6 +78,16 @@ export async function createCore(o: CoreOptions): Promise<Core> {
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach((l) => l());
 
+  let reminderTimer: ReturnType<typeof setTimeout> | undefined;
+  let reminderRun: (() => void) | null = null;
+  const scheduleReminderPlan = () => {
+    if (reminderTimer !== undefined) clearTimeout(reminderTimer);
+    reminderTimer = setTimeout(() => {
+      reminderTimer = undefined;
+      reminderRun?.();
+    }, o.reminderDelayMs ?? 400);
+  };
+
   const bondEngine = new BondEngine({
     store: new SqliteBondStore(asNode),
     now: () => new Date((o.now ?? (() => Date.now()))()),
@@ -82,6 +97,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     onChange: (change) => {
       if (change.type === 'created') bondEngine.handle({ type: 'task_created' });
       else if (change.type === 'completed') bondEngine.handle({ type: 'task_completed' });
+      scheduleReminderPlan();
       emit();
     },
   });
@@ -125,6 +141,27 @@ export async function createCore(o: CoreOptions): Promise<Core> {
       return { ...DEFAULT_FOCUS_CONFIG };
     }
   };
+
+  const readReminderConfig = (): ReminderConfig => {
+    try {
+      const raw = JSON.parse(prefGet('reminder_config') ?? '{}') as Partial<ReminderConfig>;
+      const lead = (REMINDER_LEADS as readonly number[]).includes(raw.leadMinutes as number) ? (raw.leadMinutes as number) : DEFAULT_REMINDER_CONFIG.leadMinutes;
+      return { enabled: raw.enabled !== false, leadMinutes: lead };
+    } catch {
+      return { ...DEFAULT_REMINDER_CONFIG };
+    }
+  };
+  reminderRun = () => {
+    void tasks
+      .list()
+      .then((lists) => notifier.scheduleReminders(planReminders(lists.active, now(), readReminderConfig())))
+      .catch((error) => console.error('Falha ao agendar os lembretes:', error));
+  };
+  // Ações dos avisos (Concluir / Adiar 10 min), mesmo com o app fechado quando a pessoa toca no botão.
+  const stopReminderActions = notifier.onReminderAction((a) => {
+    if (a.action === 'complete') void tasks.complete(a.taskId);
+    else void notifier.scheduleSnooze(a.taskId, a.title, now() + 10 * 60_000);
+  });
 
   let focusEndScheduled = false;
   const syncFocusNotice = (state: FocusState) => {
@@ -174,6 +211,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     onApplied: (_count, tables) => {
       // Conquistas/acessórios vindos do PC: o motor do vínculo relê o banco antes de redesenhar.
       if (tables.includes('achievements') || tables.includes('skins_owned')) bondEngine.reload();
+      if (tables.includes('tasks')) scheduleReminderPlan();
       emit();
     },
     onState: emit,
@@ -189,6 +227,7 @@ export async function createCore(o: CoreOptions): Promise<Core> {
   };
 
   bondEngine.handle({ type: 'open' });
+  scheduleReminderPlan();
 
   return {
     tasks,
@@ -211,6 +250,12 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     },
     focusToday: () => focusLog.today(new Date(now())),
     notifier,
+    reminderConfig: readReminderConfig,
+    setReminderConfig(config) {
+      prefSet('reminder_config', JSON.stringify(config));
+      scheduleReminderPlan();
+      emit();
+    },
     getProfile() {
       const stored = store.getProfile();
       if (stored) return stored.profile;
@@ -261,6 +306,8 @@ export async function createCore(o: CoreOptions): Promise<Core> {
     },
     close: async () => {
       focus.dispose();
+      stopReminderActions();
+      if (reminderTimer !== undefined) clearTimeout(reminderTimer);
       await persisted.close();
     },
   };
