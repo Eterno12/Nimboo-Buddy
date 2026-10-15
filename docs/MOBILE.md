@@ -31,10 +31,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk   # celular com depura√
 Compilar no PowerShell (o `local.properties` usa barras normais: `sdk.dir=G:/Android/sdk`):
 
 ```powershell
-cd G:Mochi-Desktopandroid
-$env:JAVA_HOME='G:Androidjdkjdk-21.0.12.1+1'; $env:ANDROID_HOME='G:Androidsdk'; $env:GRADLE_USER_HOME='G:Androidgradle-home'
-.gradlew.bat assembleDebug
-& 'G:Androidsdkplatform-toolsadb.exe' install -r appuildoutputsapkdebugapp-debug.apk
+cd G:\Mochi-Desktop\android
+$env:JAVA_HOME='G:\Android\jdk\jdk-21.0.12.1+1'; $env:ANDROID_HOME='G:\Android\sdk'; $env:GRADLE_USER_HOME='G:\Android\gradle-home'
+.\gradlew.bat assembleDebug
+& 'G:\Android\sdk\platform-tools\adb.exe' install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
 ## Arquitetura resumida
