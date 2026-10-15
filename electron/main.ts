@@ -190,6 +190,7 @@ function applyDoNotDisturb(enabled: boolean): void {
   if (!enabled) {
     fullscreenWatcher?.stop();
     fullscreenWatcher = null;
+    inFullscreen = false;
     if (hiddenByFullscreen && mascot && !mascot.isDestroyed()) mascot.show();
     hiddenByFullscreen = false;
     return;
@@ -197,6 +198,7 @@ function applyDoNotDisturb(enabled: boolean): void {
   if (fullscreenWatcher) return;
   fullscreenWatcher = startFullscreenWatcher({
     onChange: (fullscreen) => {
+      inFullscreen = fullscreen;
       if (!mascot || mascot.isDestroyed()) return;
       if (fullscreen) {
         if (mascot.isVisible()) {
@@ -384,13 +386,20 @@ function registerDragHandlers(): void {
 }
 
 const CURSOR_POLL_MS = 40;
+/** Há um app em tela cheia (só é atualizado com "Não incomodar" ligado). */
+let inFullscreen = false;
 let cursorTimer: NodeJS.Timeout | null = null;
 
 /** Envia ao mascote a posição do cursor (somente leitura), apenas quando muda. */
 function startCursorBroadcast(): void {
   let last = '';
   cursorTimer = setInterval(() => {
-    if (!mascot || mascot.isDestroyed() || !mascot.isVisible()) return;
+    if (!mascot || mascot.isDestroyed()) return;
+    if (!mascot.isVisible()) {
+      // "Só a ilha": o Nimboo oculto não impede a revelação pela borda superior (exceto com app em tela cheia).
+      if (windowMode?.isStealth() && !inFullscreen) windowMode.onCursor(screen.getCursorScreenPoint());
+      return;
+    }
     const cursor = screen.getCursorScreenPoint();
     windowMode?.onCursor(cursor); // revelação da ilha pela borda superior
     const bounds = mascot.getBounds();

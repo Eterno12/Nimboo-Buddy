@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const electronPath = createRequire(import.meta.url)('electron');
@@ -118,6 +119,15 @@ try {
   await step('opção ligada de novo com o Nimboo no canto: ele some na hora', async () => {
     await page.ev('window.mochi.settings.update({ hideWhenAway: true })');
     await page.waitFor(`document.visibilityState === 'hidden'`, 'janela oculta');
+  });
+
+  await step('cursor no topo, no centro: a ilha reaparece sozinha (sem o Nimboo no canto)', async () => {
+    // Move o cursor REAL do Windows (o main lê a posição global); a ilha vive no monitor principal.
+    const width = await page.ev('screen.availWidth');
+    const ps = `Add-Type -Name W -Namespace N -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);'; [N.W]::SetCursorPos(${Math.round(width / 2)}, 0)`;
+    await sleep(1800); // respeita a pausa depois que o Nimboo some
+    execFileSync('powershell.exe', ['-NoProfile', '-Command', ps]);
+    await page.waitFor(`document.visibilityState === 'visible' && document.querySelector('.shell').dataset.mode === 'island'`, 'ilha de volta', 6000);
   });
 } catch (error) {
   console.log(`  FAIL (infra) ${error.message}`);
