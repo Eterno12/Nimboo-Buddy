@@ -22,6 +22,7 @@ M (1–2), G (2+).
 | 13 | **Acessibilidade e multi-monitor:** teclado na ilha, leitor de tela, DPI 125/150 %, 2º monitor | M | — | Você testa em outro monitor comigo? |
 | 14 ◐ | **Distribuição:** assinatura de código, atualização automática, log de erros local | G | todas | parcial: log local e instalador 0.5.0 (sem assinatura) feitos; assinatura e atualização automática dependem de decisão (certificado e onde hospedar) |
 | 15 | **Opcionais grandes:** nota atrás dos apps (WorkerW), sincronização/mobile (S1–S13), criar evento no Google (OAuth) | G | — | Só se quiser; são os mais arriscados |
+| 16 | **Nimboo no Android:** sincronização com Supabase, app e widget (plano em [`PLANO-MOBILE.md`](PLANO-MOBILE.md)) | G | 14 | Aguardando aprovação do plano e decisões D1–D5 |
 
 ## Ordem sugerida
 `0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14` (15 só sob demanda).
