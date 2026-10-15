@@ -42,3 +42,12 @@ $env:JAVA_HOME='G:\Android\jdk\jdk-21.0.12.1+1'; $env:ANDROID_HOME='G:\Android\s
 - No Android o banco é um arquivo no armazenamento privado do app (`@capacitor/filesystem`);
   no navegador, IndexedDB. A sessão (tokens) é cifrada com AES-GCM e uma chave não extraível.
 - A sincronização é o mesmo motor do PC (`shared/sync/engine.ts`).
+
+## APK assinado (release)
+
+- Keystore: `G:\Android\keys\nimboo-release.jks` (alias `nimboo`); a senha está em `G:\Android\keys\LEIA-ME-senha.txt`.
+  **Guarde os dois fora do computador.** Sem eles não há como atualizar o app por cima (só desinstalar e instalar).
+- `android/keystore.properties` aponta para a keystore e fica fora do git (`.gitignore`).
+- Gerar: `cd android && ./gradlew assembleRelease` → `android/app/build/outputs/apk/release/app-release.apk`.
+- O APK assinado tem outra assinatura que o de teste (debug): para instalar por cima do debug é preciso desinstalar
+  o app antes (os dados sincronizados voltam da nuvem ao entrar de novo).

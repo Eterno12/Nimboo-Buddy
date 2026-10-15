@@ -84,3 +84,8 @@ release/
 # Trilha exportada do filme de lançamento (gerada; não versionar)
 launch/*.wav
 dist-mobile/
+
+# Assinatura do APK (nunca versionar)
+android/keystore.properties
+*.jks
+*.keystore
